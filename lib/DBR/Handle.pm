@@ -1,4 +1,9 @@
-package DBR::DBRH;
+# the contents of this file are Copyright (c) 2004-2009 Daniel Norman
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation.
+
+package DBR::Handle;
 
 use strict;
 use base 'DBR::Common';
@@ -27,9 +32,9 @@ sub new {
       return $self->_error( 'failed to retrieve schema' ) unless defined($self->{schema});
 
       $self->{sql} = DBR::BuildSql->new(
-						     logger => $self->{logger},
-						     dbh    => $self->{dbh}
-						    ) or return $self->_error('failed to create BuildSql object');
+					logger => $self->{logger},
+					dbh    => $self->{dbh}
+				       ) or return $self->_error('failed to create BuildSql object');
 
       return( $self );
 }

@@ -88,14 +88,14 @@ sub new {
   return( $self );
 }
 
-sub buildQpart{
+sub makevalue{
       my $self = shift;
       my $value = shift;
 
-      DBR::Query::QPart->new(
-					  value  => $value,
-					  number => $self->is_numeric,
-					 ) or return $self->_error('failed to create qpart');
+      DBR::Query::Value->new(
+			     value  => $value,
+			     number => $self->is_numeric,
+			    ) or return $self->_error('failed to create value object');
 
 }
 

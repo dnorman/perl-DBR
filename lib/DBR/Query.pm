@@ -38,7 +38,7 @@ sub where{
 
  	    my $field = $table->get_field( $fieldname ) or return $self->_error("invalid field $fieldname");
 
- 	    $outwhere{ $field->name } = $field->makepart( $where{ $fieldname } ) or return $self->_error("failed to build Qpart for $fieldname");
+ 	    $outwhere{ $field->name } = $field->makevalue( $where{ $fieldname } ) or return $self->_error("failed to build value object for $fieldname");
 
       }
 
@@ -54,10 +54,10 @@ sub where{
       my $sth = $self->{dbh}->prepare($sql) or return $self->_error('failed to prepare statement');
 
       my $resultset = DBR::Query::ResultSet->new(
-							      logger => $self->{logger},
-							      query  => $self,
-							      sth    => $sth
-							     ) or return $self->_error('failed to create resultset');
+						 logger => $self->{logger},
+						 query  => $self,
+						 sth    => $sth
+						) or return $self->_error('failed to create resultset');
       return $resultset;
 }
 

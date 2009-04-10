@@ -1,4 +1,4 @@
-package DBR::Query::QPart;
+package DBR::Query::Value;
 
 use strict;
 use base 'DBR::Common';

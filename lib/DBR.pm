@@ -1,19 +1,9 @@
-package DBR;
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# the contents of this file are Copyright (c) 2004-2008 Daniel Norman
+# the contents of this file are Copyright (c) 2004-2009 Daniel Norman
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation.
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-#=======================================================================
-#
-#  $Id: DBR.pm,v 1.3.2.4 2009/03/17 02:22:48 impious Exp $
-#  $Source: /cvsroot/apollo-handler/apollo-utils/lib/ApolloUtils/DBR.pm,v $
-#
-#=======================================================================
-
+package DBR;
 
 use strict;
 use DBR::DBRH;
@@ -68,7 +58,7 @@ sub connect {
 	    return $dbh;
       } else {
 
-	    my $hclass = 'DBR::DBRH::' . $instance->module;
+	    my $hclass = 'DBR::Handle::' . $instance->module;
 	    return $self->_error("Failed to Load $hclass ($@)") unless eval "require $hclass";
 
 	    return $self->_error("Failed to create $hclass object") unless
