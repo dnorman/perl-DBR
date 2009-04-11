@@ -1,4 +1,9 @@
-package DBR::Query;
+# the contents of this file are Copyright (c) 2009 Daniel Norman
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation.
+
+package DBR::Object;
 
 use strict;
 use base 'DBR::Common';
@@ -12,14 +17,14 @@ sub new {
 		  logger => $params{logger},
 		  table  => $params{table},
 		  dbh    => $params{dbh},
-		  sqlobj => $params{sql},
+		  sqlbuilder => $params{sqlbuilder},
 		 };
 
       bless( $self, $package );
 
       return $self->_error('table object must be specified') unless $self->{table};
       return $self->_error('dbh object must be specified')   unless $self->{dbh};
-      return $self->_error('sql object must be specified')   unless $self->{sqlobj};
+      return $self->_error('sqlbuilder must be specified')   unless $self->{sqlbuilder};
 
       return( $self );
 }

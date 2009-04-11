@@ -31,10 +31,10 @@ sub new {
       $self->{schema} = $self->{instance}->schema;
       return $self->_error( 'failed to retrieve schema' ) unless defined($self->{schema});
 
-      $self->{sql} = DBR::BuildSql->new(
-					logger => $self->{logger},
-					dbh    => $self->{dbh}
-				       ) or return $self->_error('failed to create BuildSql object');
+      $self->{sqlbuilder} = DBR::BuildSql->new(
+					       logger => $self->{logger},
+					       dbh    => $self->{dbh}
+					      ) or return $self->_error('failed to create BuildSql object');
 
       return( $self );
 }
@@ -55,7 +55,7 @@ sub select{
 	  $sql = $params{-sql};
     }else{
 	  return $self->_error('failed to build select sql') unless
-	    $sql = $self->{sql}->buildSelect(%params);
+	    $sql = $self->{sqlbuilder}->buildSelect(%params);
     }
 
     #print STDERR "sql: $sql\n";
@@ -122,7 +122,7 @@ sub delete{
 	return $self->_error('Invalid -where parameter');
   }
 
-  my $where = $self->{sql}->buildWhere($params{-where});
+  my $where = $self->{sqlbuilder}->buildWhere($params{-where});
   return $self->_error("Failed to build where clause") unless defined($where);
   return $self->_error("Empty where clauses are not allowed") unless length($where);
   $sql .= $where;
@@ -150,7 +150,7 @@ sub modify{
   my $fcount;
   foreach my $field (keys %{$params{-fields}}){
     next unless $field =~ /^[A-Za-z0-9_-]+$/;
-    ($fields{$field}) = $self->{sql}->quote($params{-fields}->{$field});
+    ($fields{$field}) = $self->{sqlbuilder}->quote($params{-fields}->{$field});
     return $self->_error("failed to quote value for field '$field'") unless defined($fields{$field});
     $fcount++;
   }
@@ -178,7 +178,7 @@ sub modify{
 	  return $self->_error('Invalid -where parameter');
     }
 
-    my $where = $self->{sql}->buildWhere($params{-where});
+    my $where = $self->{sqlbuilder}->buildWhere($params{-where});
     return $self->_error("Failed to build where clause") unless $where;
     $sql .= $where;
   }else{
@@ -298,17 +298,14 @@ sub AUTOLOAD {
       my $table = $self->{schema}->fetch_table($method) or return $self->_error("no such table '$method' exists in this schema");
 
       my $query = DBR::Query->new(
-					       logger => $self->{logger},
-					       dbh    => $self->{dbh},
-					       table  => $table,
-					       sql    => $self->{sql},
-					      ) or return $self->_error('failed to create query object');
+				  logger => $self->{logger},
+				  dbh    => $self->{dbh},
+				  table  => $table,
+				  sqlbuilder => $self->{sqlbuilder},
+				 ) or return $self->_error('failed to create query object');
 
       return $query;
 }
-
-# object is slightly shotgunned - clean this shiat
-
 
 sub begin{
       my $self = shift;

@@ -1,3 +1,8 @@
+# the contents of this file are Copyright (c) 2009 Daniel Norman
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation.
+
 package DBR::Config::Field;
 
 use strict;
@@ -92,10 +97,10 @@ sub makevalue{
       my $self = shift;
       my $value = shift;
 
-      DBR::Query::Value->new(
-			     value  => $value,
-			     number => $self->is_numeric,
-			    ) or return $self->_error('failed to create value object');
+      return DBR::Query::Value->new(
+				    value  => $value,
+				    number => $self->is_numeric,
+				   );# or return $self->_error('failed to create value object');
 
 }
 
