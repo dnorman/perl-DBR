@@ -1,8 +1,7 @@
-package DBR::DBRH::Pg;
+package DBR::Driver::Pg;
 
 use strict;
-use DBR::DBRH;
-our @ISA = qw(DBR::DBRH);
+use base 'DBR::Driver';
 
 
 sub _prepareSequence{
@@ -39,7 +38,7 @@ sub _getSequenceName{
 	}
 	return undef;
     }
-    
+
     # figure out the sequence name based on the field name specified
     return $self->_error('Bad -sequence parameter') unless $seq =~ /^[A-Za-z0-9_-]*$/;
 

@@ -16,6 +16,8 @@ sub new{
       return ( $self );
 }
 
+sub operator {$_[0]->[0]}
+sub value    {$_[0]->[1]}
 
 # EXPORTED:
 

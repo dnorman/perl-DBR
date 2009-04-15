@@ -8,7 +8,7 @@ package DBR::Handle;
 use strict;
 use base 'DBR::Common';
 use DBR::Query;
-use DBR::BuildSql;
+use DBR::Object;
 our $AUTOLOAD;
 
 sub new {
@@ -31,10 +31,6 @@ sub new {
       $self->{schema} = $self->{instance}->schema;
       return $self->_error( 'failed to retrieve schema' ) unless defined($self->{schema});
 
-      $self->{sqlbuilder} = DBR::BuildSql->new(
-					       logger => $self->{logger},
-					       dbh    => $self->{dbh}
-					      ) or return $self->_error('failed to create BuildSql object');
 
       return( $self );
 }
@@ -49,6 +45,19 @@ sub select{
     }else{
       %params = @params;
     }
+
+
+    my $query = DBR::Query->new(
+				logger => $self->{logger},
+				dbh    => $self->{dbh},
+				type   => 'select',
+				where  => ,
+				table  => ,
+				fields => 
+			       ) or return $self->_error('failed to create BuildSql object');
+
+    $query->execute;
+    die 'FAIL';
 
     my $sql;
     if($params{-sql}){
@@ -112,101 +121,6 @@ sub delete{
   return $self->_error('No valid -where parameter specified') unless ref($params{-where}) eq 'HASH';
   return $self->_error('No -table parameter specified') unless $params{-table} =~ /^[A-Za-z0-9_-]+$/;
 
-  my $sql = "DELETE FROM $params{-table} ";
-
-  if(ref($params{-where}) eq 'HASH'){
-	return $self->_error('At least one where parameter must be provided') unless scalar(%{$params{-where}});
-  }elsif(ref($params{-where}) eq 'ARRAY'){
-	return $self->_error('At least one where parameter must be provided') unless scalar(@{$params{-where}});
-  }else{
-	return $self->_error('Invalid -where parameter');
-  }
-
-  my $where = $self->{sqlbuilder}->buildWhere($params{-where});
-  return $self->_error("Failed to build where clause") unless defined($where);
-  return $self->_error("Empty where clauses are not allowed") unless length($where);
-  $sql .= $where;
-  #print STDERR "sql: $sql\n";
-  $self->_logDebug($sql);
-  my $success = $self->{dbh}->do($sql);
-
-  return 1 if $success;
-  return undef;
-}
-
-sub modify{
-  my $self = shift;
-  my %params = @_;
-
-
-
-  $params{-table} ||= $params{-insert} || $params{-update};
-
-  return $self->_error('No proper -fields parameter specified') unless ref($params{-fields}) eq 'HASH';
-  return $self->_error('No -table parameter specified') unless $params{-table} =~ /^[A-Za-z0-9_-]+$/;
-
-  my %fields;
-  my $call = {params => \%params,fields => \%fields, tmp => {}};
-  my $fcount;
-  foreach my $field (keys %{$params{-fields}}){
-    next unless $field =~ /^[A-Za-z0-9_-]+$/;
-    ($fields{$field}) = $self->{sqlbuilder}->quote($params{-fields}->{$field});
-    return $self->_error("failed to quote value for field '$field'") unless defined($fields{$field});
-    $fcount++;
-  }
-  return $self->_error('No valid fields specified') unless $fcount;
-
-  my $sql;
-
-  my @fkeys = keys %fields;
-  if($params{-insert}){
-	return $self->_error('Failed to prepare sequence') unless $self->_prepareSequence($call);
-
-	$sql = "INSERT INTO $params{-table} ";
-	$sql .= '(' . join (',',@fkeys) . ')';
-	$sql .= ' VALUES ';
-	$sql .= '(' . join (',',map {$fields{$_}} @fkeys) . ')';
-  }elsif($params{-where}){
-    $sql = "UPDATE $params{-table} SET ";
-    $sql .= join (', ',map {"$_ = $fields{$_}"} @fkeys);
-
-    if(ref($params{-where}) eq 'HASH'){
-	  return $self->_error('At least one where parameter must be provided') unless scalar(%{$params{-where}});
-    }elsif(ref($params{-where}) eq 'ARRAY'){
-	  return $self->_error('At least one where parameter must be provided') unless scalar(@{$params{-where}});
-    }else{
-	  return $self->_error('Invalid -where parameter');
-    }
-
-    my $where = $self->{sqlbuilder}->buildWhere($params{-where});
-    return $self->_error("Failed to build where clause") unless $where;
-    $sql .= $where;
-  }else{
-      return $self->_error('-insert flag or -where hashref/arrayref (for updates) must be specified');
-  }
-  #print STDERR "sql: $sql\n";
-  $self->_logDebug($sql);
-
-  my $rows;
-  if($params{-quiet}){
-	do {
-	      local $self->{dbh}->{PrintError} = 0; # make DBI quiet
-	      $rows = $self->{dbh}->do($sql);
-	};
-	return undef unless defined ($rows);
-  }else{
-	$rows = $self->{dbh}->do($sql);
-	return $self->_error('failed to execute statement') unless defined($rows);
-  }
-
-  if ($params{-insert}) {
-	my ($sequenceval) = $self->_getSequenceValue($call);
-	return $sequenceval;
-  } else {
-	return $rows || 0;	# number of rows updated or 0
-  }
-
-
 
 }
 
@@ -224,53 +138,6 @@ sub update{
     return $self->_error('No -table parameter specified') unless $params{-table} =~ /^[A-Za-z0-9_-]+$/;
     return $self->modify(@_,-update => 1);
 }
-
-sub getserial{
-      my $self = shift;
-      my $name = shift;
-      my $table = shift  || 'serials';
-      my $field1 = shift || 'name';
-      my $field2 = shift || 'serial';
-      return $self->_error('name must be specified') unless $name;
-
-      $self->begin();
-
-      my $row = $self->select(
-			      -table => $table,
-			      -field => $field2,
-			      -where => {$field1 => $name},
-			      -single => 1,
-			      -lock => 'update',
-			     );
-
-      return $self->_error('serial select failed') unless defined($row);
-      return $self->_error('serial is not primed') unless $row;
-
-      my $id = $row->{$field2};
-
-      return $self->_error('serial update failed') unless 
-	$self->update(
-		      -table => $table,
-		      -fields => {$field2 => ['d',$id + 1]},
-		      -where => {
-				 $field1 => $name
-				},
-		     );
-
-      $self->commit();
-
-      return $id;
-}
-
-############ sequence stubs ###########
-#parameters: $self,$call
-sub _prepareSequence{
-      return 1;
-}
-sub _getSequenceValue{
-      return -1;
-}
-#######################################
 
 sub _disconnect{
       my $self = shift;
@@ -386,4 +253,3 @@ sub DESTROY{
 }
 
 1;
- 

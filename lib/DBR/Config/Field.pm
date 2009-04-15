@@ -63,10 +63,10 @@ sub load{
       foreach my $field (@$fields){
 
 	    DBR::Config::Table->_register_field(
-							     table_id => $table->{table_id},
-							     name     => $table->{name},
-							     field_id => $table->{field_id},
-							    ) or return $self->_error('failed to register field');
+						table_id => $table->{table_id},
+						name     => $table->{name},
+						field_id => $table->{field_id},
+					       ) or return $self->_error('failed to register field');
 	    $FIELDS_BY_ID{ $field->{field_id} } = $field;
       }
 
@@ -93,13 +93,14 @@ sub new {
   return( $self );
 }
 
-sub makevalue{
+sub makevalue{ # shortcut function?
       my $self = shift;
       my $value = shift;
 
       return DBR::Query::Value->new(
 				    value  => $value,
 				    number => $self->is_numeric,
+				    field  => $self,
 				   );# or return $self->_error('failed to create value object');
 
 }

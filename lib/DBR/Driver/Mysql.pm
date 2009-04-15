@@ -1,8 +1,7 @@
-package DBR::DBRH::Mysql;
+package DBR::Driver::Mysql;
 
 use strict;
-use DBR::DBRH;
-our @ISA = qw(DBR::DBRH);
+use base 'DBR::Driver';
 
 
 sub _getSequenceValue{

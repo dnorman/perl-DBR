@@ -8,27 +8,49 @@ package DBR::Query::Value;
 use strict;
 use base 'DBR::Common';
 
-my %opflags = (
-	       like => 'like',
-	       '<>' => 'not',
-	       '>=' => 'ge',
-	       '<=' => 'le',
-	       '>'  => 'gt',
-	       '<'  => 'lt',
-	       '!'  => 'not',
-	      );
 
+my %str_operators = map {$_ => 1} qw'like eq not';
+my %num_operators = map {$_ => 1} qw'eq not ge le gt lt';
 
 sub new{
       my( $package ) = shift;
       my %params = @_;
 
-      # #Translation plugins go HERE
+      my $field = $params{field}; # optional
+
+      my $value = $params{value};
+      return $self->_error('value must be specified') unless $value;
+
+      my $is_number = $params{is_number}? 1 : 0;
+      my $operator;
+
+      if ( ref ($value) eq 'DBR::Operator' ) {
+	    my $wrapper = $value;
+
+	    $value    = $wrapper->value;
+	    $operator = $wrapper->operator;
+      } else {
+	    $operator = $params{operator} || 'eq';
+      }
+
+      # #Translation plugins go here
+      if($field){
+      }
+
+
+      if ($is_number){
+	    return $self->_error("invalid operator '$operator'") unless $num_operators{ $operator };
+	    # check numeric range HERE
+      }else{
+	    return $self->_error("invalid operator '$operator'") unless $str_operators{ $operator };
+      }
+
+
 
       my $self = {
-		  number   => $params{number} || 0,
-		  value    => $params{value}, # translate this
-		  operator => $params{operator},
+		  is_number => is_number,
+		  value     => $values,
+		  operator  => $operator,
 		 };
 
       return $self;
@@ -41,7 +63,7 @@ sub direct {
 
       my $value = $params{value} or return $self->_error('value must be specified');
 
-      my $numeric = 0;
+      my $is_number = 0;
       my $operator;
 
       if(ref($value) eq 'ARRAY'){
@@ -55,23 +77,24 @@ sub direct {
 		  $operator = 'not';
 
 	    } elsif ($flags =~ /\<\>/) { # greater than less than
-		  $operator = 'not'; $numeric = 1;
+		  $operator = 'not'; $is_number = 1;
 
 	    } elsif ($flags =~ /\>=/) { # greater than eq
-		  $operator = 'ge'; $numeric = 1;
+		  $operator = 'ge'; $is_number = 1;
 
 	    } elsif ($flags =~ /\<=/) { # less than eq
-		  $operator = 'le'; $numeric = 1;
+		  $operator = 'le'; $is_number = 1;
 
 	    } elsif ($flags =~ /\>/) { # greater than
-		  $operator = 'gt'; $numeric = 1;
+		  $operator = 'gt'; $is_number = 1;
 
 	    } elsif ($flags =~ /\</) { # less than
-		  $operator = 'lt'; $numeric = 1;
+		  $operator = 'lt'; $is_number = 1;
 
 	    }
+
 	    if($flags =~ /d/){
-		  $numeric = 1;
+		  $is_number = 1;
 	    }
 
       }
@@ -79,7 +102,7 @@ sub direct {
       $operator ||= 'eq';
 
       return $package->new(
-			   number   => $number,
+			   is_number   => $is_number,
 			   operator => $operator,
 			   value    => $value,
 			  );
