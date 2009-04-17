@@ -47,33 +47,33 @@ sub select{
     }
 
 
+
     my $query = DBR::Query->new(
 				logger => $self->{logger},
 				dbh    => $self->{dbh},
 				type   => 'select',
-				where  => ,
-				table  => ,
-				fields => 
-			       ) or return $self->_error('failed to create BuildSql object');
+			       ) or return $self->_error('failed to create Query object');
+
+    $query->where
 
     $query->execute;
     die 'FAIL';
 
-    my $sql;
-    if($params{-sql}){
-	  $sql = $params{-sql};
-    }else{
-	  return $self->_error('failed to build select sql') unless
-	    $sql = $self->{sqlbuilder}->buildSelect(%params);
-    }
+#     my $sql;
+#     if($params{-sql}){
+# 	  $sql = $params{-sql};
+#     }else{
+# 	  return $self->_error('failed to build select sql') unless
+# 	    $sql = $self->{sqlbuilder}->buildSelect(%params);
+#     }
 
-    #print STDERR "sql: $sql\n";
-    $self->_logDebug($sql);
-    return $self->_error('failed to prepare statement') unless
-      my $sth = $self->{dbh}->prepare($sql);
-      my $rowct = $sth->execute();
+#     #print STDERR "sql: $sql\n";
+#     $self->_logDebug($sql);
+#     return $self->_error('failed to prepare statement') unless
+#       my $sth = $self->{dbh}->prepare($sql);
+#       my $rowct = $sth->execute();
 
-    return $self->_error('failed to execute statement') unless defined($rowct);
+#     return $self->_error('failed to execute statement') unless defined($rowct);
 
 
     my $count = 0;

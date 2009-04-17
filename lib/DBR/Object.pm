@@ -47,20 +47,23 @@ sub where{
 
       }
 
-      return $self->_error('failed to build select sql') unless
-	my $sql = $self->{sqlobj}->buildSelect(
-					       -table => $self->{table}->name,
-					       -where => \%where,
-					       -fields => 'order_id'
-					      );
+      my $query = DBR::Query->new(
+				  logger => $self->{logger},
+				  dbh    => $self->{dbh},
+				  type   => 'select',
+				  params => {
+					     -table => $table->name,
+					     -where => \%outwhere
+					    }, # ugly
+				 ) or return $self->_error('failed to create Query object');
 
-      $self->_logDebug($sql);
+      $self->_logDebug($query->sql);
 
       my $sth = $self->{dbh}->prepare($sql) or return $self->_error('failed to prepare statement');
 
       my $resultset = DBR::Query::ResultSet->new(
 						 logger => $self->{logger},
-						 query  => $self,
+						 #query  => $self,
 						 sth    => $sth
 						) or return $self->_error('failed to create resultset');
       return $resultset;

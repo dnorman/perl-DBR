@@ -28,15 +28,18 @@ sub new {
       my $tables = $params{-table} || $params{-tables};
       $self->_tables( $tables )         or return undef;
 
-      $self->_where ( $params{-where} ) or return undef;
+      my $where = $self->_where ( $params{-where} ) or return undef;
 
       if($type eq 'select'){
 	    my $fields = $params{-fields} || $params{-field};
 
 	    $self->_select( $fields ) or return undef;
       }elsif($type eq 'insert'){
+	    
       }elsif($type eq 'update'){
+	    
       }elsif($type eq 'delete'){
+	    
       }else{
 	    return $self->_error("invalid query type '$type'");
       }
@@ -64,6 +67,8 @@ sub new {
 
       return( $self );
 }
+
+
 
 
 sub _tables{
@@ -120,100 +125,78 @@ sub _tables{
 #specify dbh handle and field => value pairs. use scalarrefs to values to prevent their being escaped.
 #$dbrh->_buildWhere('textfield' => 'value1', 'numfield_with_trusted_source' => \'2222','untrusted_numfield' => ['! > < d <> in !in',2222]);
 sub _where{
-    my $self = shift;
-    my $param = shift;
+      my $self = shift;
+      my $param = shift;
 
-    $param = [%{$param}] if (ref($param) eq 'HASH');
-    $param = [] unless (ref($param) eq 'ARRAY');
+      $param = [%{$param}] if (ref($param) eq 'HASH');
+      $param = [] unless (ref($param) eq 'ARRAY');
 
-    my $where;
+      my $where;
 
-    while (@{$param}) {
-	my $key = shift @{$param};
+      while (@{$param}) {
+	    my $key = shift @{$param};
 
-	# is it an OR? (single element)
-	if (ref($key) eq 'ARRAY') {
-	      my $or;
-	      foreach my $element(@{$key}){
-		    if(ref($element)){
-			  $or .= ' OR' if $or;
-			  $or .= $self->buildWhere($element,'sub');
-		    }
-	      }
-	      $where .= ' AND' if $where;
-	      $where .= " ($or)";
-	} else {
+	    # is it an OR? (single element)
+	    if (ref($key) eq 'ARRAY') {
+		  my $or;
+		  foreach my $element(@{$key}){
+			if(ref($element)){
+			      $or .= ' OR' if $or;
+			      $or .= $self->_where($element,'sub');
+			}
+		  }
+		  $where .= ' AND' if $where;
+		  $where .= " ($or)";
+	    } else {
 
-	      my $value = shift @{$param};
+		  my $value = shift @{$param};
 
-	      my $operator;
-	      my $fvalue;
+		  my $operator;
+		  my $fvalue;
 
-	      if (ref($value) eq 'HASH') {
-		    if($value->{-table} && ($value->{-field} || $value->{-fields})){#is it a subquery?
-			  $operator = 'IN';
-			  return $self->_error('failed to build subquery sql') unless
-			    my $sql = $self->buildSelect(%{$value});
-			    # create new query object HERE
-			  
+		  if (ref($value) eq 'HASH') {
+			if( $value->{-table} && ($value->{-field} || $value->{-fields}) ){ #is it a subquery?
+			      $operator = 'IN';
 
-			  $fvalue = "($sql)";
+			      my $subquery = DBR::Query->new(
+							     logger => $self->{logger},
+							     dbh    => $self->{dbh},
+							     type   => 'select',
+							     params => $value, # ugly
+							    ) or return $self->_error('failed to create Query object');
+			      my $sql = $subquery->sql;
+			      $fvalue = "($sql)";
+			      $where .= $where?' AND':'' . " $key $operator $sql";
+			}elsif($self->{aliasmap}){ #not a subquery... are we doing a join?
+			      my $alias = $key;
+			      return $self->_error("invalid table alias '$alias' in -fields") unless $self->{aliasmap}->{$alias};
 
-		    }elsif($aliasmap){ #not a subquery... are we doing a join?
-			  my $alias = $key;
-			  return $self->_error("invalid table alias '$alias' in -fields") unless $aliasmap->{$alias};
+			      if(%{$value}){
+				    my %afields;
+				    foreach my $k (keys %{$value}) {
+					  $afields{"$alias.$k"} = $value->{$k};
+				    }
 
-			  if(%{$value}){
-				my %afields;
-				foreach my $k (keys %{$value}) {
-				      $afields{"$alias.$k"} = $value->{$k};
-				}
+				    return $self->_error('where part failed') unless
+				      my $wherepart = $self->_where(\%afields);
 
-				return $self->_error('where part failed') unless
-				  my $wherepart = $self->buildWhere(\%afields,'sub',$aliasmap);
+				    $where .= $where?' AND':'' . $wherepart;
+			      }
 
-				$where .= ' AND' if $where;
-				$where .= $wherepart;
-			  }
+			      next;	# get out of this loop... we are recursing instead
 
-			  next;	# get out of this loop... we are recursing instead
+			}else{
+			      return $self->_error("invalid use of a hashref for key $key in -fields");
+			}
 
-		    }else{
-			  return $self->_error("invalid use of a hashref for key $key in -fields");
-		    }
+		  } else {
+			ref($value) eq 'DBR::Query::Value' or return $self->_error('value must be a DBR::Query::Value object');
 
-	      } else {
-		    my $flags;
-		    $flags = lc($value->[0]) if (ref($value) eq 'ARRAY');
-		    my $blist = 0;
+			$where .= $where?' AND':'' . " $key $operator " . $value->sql;
+		  }
+      }
 
-
-		    ########### #######QUOTING WAS HERE
-
-
-		    #//////////////////////////////////////////////////
-
-		    if ($blist) {
-			  $fvalue = '(' . join(',',@fvalues) . ')';
-		    } else {
-			  $fvalue = $fvalues[0];
-		    }
-	      }
-
-	      $operator = 'IS' if (($fvalue eq 'NULL') && ($operator eq '='));
-	      $operator = 'IS NOT' if (($fvalue eq 'NULL') && ($operator eq '!='));
-
-	      $where .= ' AND' if $where;
-	      $where .= " $key $operator $fvalue";
-	}
-  }
-
-    return '' unless $where;
-    if($flag eq 'sub'){
-	  return $where;
-    }else{
-	  return " WHERE$where";
-    }
+      return $where || '';
 }
 
 
@@ -445,7 +428,6 @@ sub _delete{
 sub quote{
   my $self = shift;
   my $inval = shift;
-  my $aliasmap = shift;
 
   my @values;
   my @fvalues;
@@ -470,8 +452,8 @@ sub quote{
 		    ($field) = @parts;
 	      }elsif(@parts == 2){
 		    ($alias,$field) = @parts;
-		    return $self->_error("table alias '$value' is invalid without a join") unless $aliasmap;
-		    return $self->_error("invalid table alias '$value' in -fields") unless $aliasmap->{$alias};
+		    return $self->_error("table alias '$value' is invalid without a join") unless $self->{aliasmap};
+		    return $self->_error("invalid table alias '$value' in -fields") unless $self->{aliasmap};
 	      }
 	      return $self->_error("invalid fieldname '$value' in -fields") unless $field =~ /^[A-Za-z][A-Za-z0-9_-]*$/;
 	      $fvalue = $value;
@@ -493,6 +475,68 @@ sub quote{
 
   return @fvalues;
 }
+
+sub convertvals{
+      my $self = shift;
+      my $where = shift;
+
+      $param = [%{$param}] if (ref($param) eq 'HASH');
+      $param = [] unless (ref($param) eq 'ARRAY');
+
+      my $where;
+
+      my @out;
+      while (@{$param}) {
+	    my $key = shift @{$param};
+
+	    # is it an OR? (single element)
+	    if (ref($key) eq 'ARRAY') {
+		  my @or;
+		  foreach my $element (@{$key}){
+			push @or, $self->convertvals($element) or $self->_error('convertvals failed');
+		  }
+		  push @out, \@or;
+
+	    } else {
+
+		  my $value = shift @{$param};
+
+		  if (ref($value) eq 'HASH') {
+			if($value->{-table} && ($value->{-field} || $value->{-fields})){ #is it a subquery?
+			      my $subqval = $self->convertvals($value) or $self->_error('convertvals failed');
+
+			      $outval = { %${value}, -where => $subqval };
+
+			}elsif($self->{aliasmap}){ #not a subquery... are we doing a join?
+			      my $alias = $key;
+			      return $self->_error("invalid table alias '$alias' in -fields") unless $self->{aliasmap}->{$alias};
+
+			      if(%{$value}){
+				    my %ofields;
+				    foreach my $k (keys %{$value}) {
+					  $ofields{$k} = DBR::Query::Value->direct( value  => $value->{$k} )
+					    or return $self->_error('failed to create value object');
+				    }
+			      }
+
+			}else{
+			      return $self->_error("invalid use of a hashref for key $key in -fields");
+			}
+
+		  } else {
+			$outval = $value; # testing only - should be identical
+			$outval =  DBR::Query::Value->direct( value  => $value ) or return $self->_error('failed to create value object');
+		  }
+
+		  push @out, $key, $outval;
+
+	    }
+      }
+
+      return $where || '';
+}
+
+
 
 1;
 
