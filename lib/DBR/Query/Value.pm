@@ -72,6 +72,8 @@ sub new{
 		  operator  => $operator,
 		 };
 
+      bless( $self, $package );
+
       return $self;
 
 }

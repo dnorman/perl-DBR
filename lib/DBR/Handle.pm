@@ -48,15 +48,15 @@ sub select{
 
 
 
-    my $query = DBR::Query->new(
-				logger => $self->{logger},
-				dbh    => $self->{dbh},
-				type   => 'select',
-			       ) or return $self->_error('failed to create Query object');
+    my $compat = DBR::Query::Compat::DBRv1->new(
+					     logger => $self->{logger},
+					     dbh    => $self->{dbh},
+					    ) or return $self->_error('failed to create Query object');
 
-    $query->where
+    my $query = $compat->select(%params);
 
     $query->execute;
+
     die 'FAIL';
 
 #     my $sql;

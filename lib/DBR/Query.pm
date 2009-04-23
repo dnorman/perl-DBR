@@ -7,6 +7,9 @@ package DBR::Query;
 
 use strict;
 use base 'DBR::Common';
+my $VALUE_OBJECT = 'DBR::Query::Value';
+my $QUERY_OBJECT = _PACKAGE_;
+use DBR::Query::Part;
 
 sub new {
       my( $package ) = shift;
@@ -28,7 +31,7 @@ sub new {
       my $tables = $params{-table} || $params{-tables};
       $self->_tables( $tables )         or return undef;
 
-      my $where = $self->_where ( $params{-where} ) or return undef;
+      $self->{where} = $self->_where ( $params{-where} ) or return undef;
 
       if($type eq 'select'){
 	    my $fields = $params{-fields} || $params{-field};
@@ -128,73 +131,64 @@ sub _where{
       my $self = shift;
       my $param = shift;
 
-      $param = [%{$param}] if (ref($param) eq 'HASH');
-      $param = [] unless (ref($param) eq 'ARRAY');
+      return $self->_error('param must be an array') unless ref($param) eq 'ARRAY';
 
       my $where;
 
       while (@{$param}) {
 	    my $key = shift @{$param};
+	    $where .= ' AND' if $where;
 
 	    # is it an OR? (single element)
 	    if (ref($key) eq 'ARRAY') {
 		  my $or;
-		  foreach my $element(@{$key}){
+		  foreach my $element (@{$key}){
 			if(ref($element)){
 			      $or .= ' OR' if $or;
-			      $or .= $self->_where($element,'sub');
+			      $or .= $self->_where($element);
 			}
 		  }
-		  $where .= ' AND' if $where;
+
 		  $where .= " ($or)";
 	    } else {
-
 		  my $value = shift @{$param};
 
 		  my $operator;
 		  my $fvalue;
+		  if(ref($value) eq $QUERY_OBJECT){ #is it a subquery?
+		              return $self->_error('Invalid subquery') unless $value->can_be_qubquery;
 
-		  if (ref($value) eq 'HASH') {
-			if( $value->{-table} && ($value->{-field} || $value->{-fields}) ){ #is it a subquery?
 			      $operator = 'IN';
-
-			      my $subquery = DBR::Query->new(
-							     logger => $self->{logger},
-							     dbh    => $self->{dbh},
-							     type   => 'select',
-							     params => $value, # ugly
-							    ) or return $self->_error('failed to create Query object');
-			      my $sql = $subquery->sql;
+			      my $sql = $value->sql;
 			      $fvalue = "($sql)";
-			      $where .= $where?' AND':'' . " $key $operator $sql";
-			}elsif($self->{aliasmap}){ #not a subquery... are we doing a join?
-			      my $alias = $key;
-			      return $self->_error("invalid table alias '$alias' in -fields") unless $self->{aliasmap}->{$alias};
+			      $where .= " $key $operator $sql";
 
-			      if(%{$value}){
-				    my %afields;
-				    foreach my $k (keys %{$value}) {
-					  $afields{"$alias.$k"} = $value->{$k};
-				    }
+		  }elsif (ref($value) eq 'HASH') { # Ok, so it's part of a join
 
-				    return $self->_error('where part failed') unless
-				      my $wherepart = $self->_where(\%afields);
+			$self->{aliasmap} or return $self->_error("invalid use of a hashref for key $key in fields");
 
-				    $where .= $where?' AND':'' . $wherepart;
+			my $alias = $key;
+			return $self->_error("invalid table alias '$alias' in fields") unless $self->{aliasmap}->{$alias};
+
+			if(%{$value}){
+			      my %afields;
+			      foreach my $k (keys %{$value}) {
+				    $afields{"$alias.$k"} = $value->{$k};
 			      }
 
-			      next;	# get out of this loop... we are recursing instead
+			      return $self->_error('where part failed') unless
+				my $wherepart = $self->_where([%afields]);
 
-			}else{
-			      return $self->_error("invalid use of a hashref for key $key in -fields");
+			      $where .= $wherepart;
 			}
 
 		  } else {
-			ref($value) eq 'DBR::Query::Value' or return $self->_error('value must be a DBR::Query::Value object');
+			ref($value) eq $VALUE_OBJECT or return $self->_error('value must be a DBR::Query::Value object');
 
-			$where .= $where?' AND':'' . " $key $operator " . $value->sql;
+			$where .= " $key $operator " . $value->sql;
 		  }
-      }
+
+	    }
 
       return $where || '';
 }
@@ -235,8 +229,10 @@ sub _select{
 		  }
 
 		  next unless $field =~ /^[A-Za-z][A-Za-z0-9_-]*$/; # should bomb out, but leave this cus of legacy code
-
 		  push @fields, $outf;
+
+		  $self->{flags}->{can_be_subquery} = 1 if scalar(@fields) == 1;
+
 	    }
 	    return $self->_error('No valid fields specified') unless @fields;
 	    $sql .= join(',',@fields) . ' ';
@@ -250,6 +246,11 @@ sub _select{
       $self->{sql} = $sql;
 
       return 1;
+}
+
+sub can_be_subquery {
+      my $self = shift;
+      return $self->{flags}->{can_be_subquery} ? 1:0;
 }
 
 # -table -fields -where
@@ -476,70 +477,6 @@ sub quote{
   return @fvalues;
 }
 
-sub convertvals{
-      my $self = shift;
-      my $where = shift;
-
-      $param = [%{$param}] if (ref($param) eq 'HASH');
-      $param = [] unless (ref($param) eq 'ARRAY');
-
-      my $where;
-
-      my @out;
-      while (@{$param}) {
-	    my $key = shift @{$param};
-
-	    # is it an OR? (single element)
-	    if (ref($key) eq 'ARRAY') {
-		  my @or;
-		  foreach my $element (@{$key}){
-			push @or, $self->convertvals($element) or $self->_error('convertvals failed');
-		  }
-		  push @out, \@or;
-
-	    } else {
-
-		  my $value = shift @{$param};
-
-		  if (ref($value) eq 'HASH') {
-			if($value->{-table} && ($value->{-field} || $value->{-fields})){ #is it a subquery?
-			      my $subqval = $self->convertvals($value) or $self->_error('convertvals failed');
-
-			      $outval = { %${value}, -where => $subqval };
-
-			}elsif($self->{aliasmap}){ #not a subquery... are we doing a join?
-			      my $alias = $key;
-			      return $self->_error("invalid table alias '$alias' in -fields") unless $self->{aliasmap}->{$alias};
-
-			      if(%{$value}){
-				    my %ofields;
-				    foreach my $k (keys %{$value}) {
-					  $ofields{$k} = DBR::Query::Value->direct( value  => $value->{$k} )
-					    or return $self->_error('failed to create value object');
-				    }
-			      }
-
-			}else{
-			      return $self->_error("invalid use of a hashref for key $key in -fields");
-			}
-
-		  } else {
-			$outval = $value; # testing only - should be identical
-			$outval =  DBR::Query::Value->direct( value  => $value ) or return $self->_error('failed to create value object');
-		  }
-
-		  push @out, $key, $outval;
-
-	    }
-      }
-
-      return $where || '';
-}
-
-
-
-1;
-
 
 sub getserial{
       my $self = shift;
@@ -578,3 +515,4 @@ sub getserial{
       return $id;
 }
 
+1;
