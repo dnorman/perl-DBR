@@ -6,6 +6,7 @@
 package DBR::Query;
 
 use strict;
+no strict 'subs';
 use base 'DBR::Common';
 my $VALUE_OBJECT = 'DBR::Query::Value';
 my $QUERY_OBJECT = _PACKAGE_;
@@ -22,6 +23,8 @@ sub new {
 
       return $self->_error('dbh object is required') unless $self->{dbh};
       bless( $self, $package );
+
+      my $type = $params{type} || return $self->_error('type is required');
 
       $self->{flags} = {
 			alias   => $params{-alias}   ? 1:0,
@@ -189,6 +192,7 @@ sub _where{
 		  }
 
 	    }
+      }
 
       return $where || '';
 }
@@ -196,6 +200,7 @@ sub _where{
 
 sub _select{
       my $self   = shift;
+      my $fields = shift;
 
       my $sql = 'SELECT ';
 
@@ -254,74 +259,76 @@ sub can_be_subquery {
 }
 
 # -table -fields -where
-sub _insert{
-  my $self = shift;
-  my %params = @_;
+# sub _insert{
+#   my $self = shift;
+#   my %params = @_;
 
 
-  my $call = {params => \%params,fields => \%fields, tmp => {}};
-  my $fcount;
-  foreach my $field (keys %{$params{-fields}}){
-    next unless $field =~ /^[A-Za-z0-9_-]+$/;
-    ($fields{$field}) = $self->quote($params{-fields}->{$field});
-    return $self->_error("failed to quote value for field '$field'") unless defined($fields{$field});
-    $fcount++;
-  }
-  return $self->_error('No valid fields specified') unless $fcount;
+#   #my $call = {params => \%params,fields => \%fields, tmp => {}};
+#   my $fcount;
+#   foreach my $field (keys %{$params{-fields}}){
+#     next unless $field =~ /^[A-Za-z0-9_-]+$/;
+#     ($fields{$field}) = $self->quote($params{-fields}->{$field});
+#     return $self->_error("failed to quote value for field '$field'") unless defined($fields{$field});
+#     $fcount++;
+#   }
+#   return $self->_error('No valid fields specified') unless $fcount;
 
-  my $sql;
+#   my $sql;
 
-  my @fkeys = keys %fields;
-  if($params{-insert}){
-	return $self->_error('Failed to prepare sequence') unless $self->_prepareSequence($call);
+#   my @fkeys = keys %fields;
+#   if($params{-insert}){
+# 	return $self->_error('Failed to prepare sequence') unless $self->_prepareSequence($call);
 
-	$sql = "INSERT INTO $params{-table} ";
-	$sql .= '(' . join (',',@fkeys) . ')';
-	$sql .= ' VALUES ';
-	$sql .= '(' . join (',',map {$fields{$_}} @fkeys) . ')';
-  }elsif($params{-where}){
-    $sql = "UPDATE $params{-table} SET ";
-    $sql .= join (', ',map {"$_ = $fields{$_}"} @fkeys);
+# 	$sql = "INSERT INTO $params{-table} ";
+# 	$sql .= '(' . join (',',@fkeys) . ')';
+# 	$sql .= ' VALUES ';
+# 	$sql .= '(' . join (',',map {$fields{$_}} @fkeys) . ')';
+#   }elsif($params{-where}){
+#     $sql = "UPDATE $params{-table} SET ";
+#     $sql .= join (', ',map {"$_ = $fields{$_}"} @fkeys);
 
-    if(ref($params{-where}) eq 'HASH'){
-	  return $self->_error('At least one where parameter must be provided') unless scalar(%{$params{-where}});
-    }elsif(ref($params{-where}) eq 'ARRAY'){
-	  return $self->_error('At least one where parameter must be provided') unless scalar(@{$params{-where}});
-    }else{
-	  return $self->_error('Invalid -where parameter');
-    }
+#     if(ref($params{-where}) eq 'HASH'){
+# 	  return $self->_error('At least one where parameter must be provided') unless scalar(%{$params{-where}});
+#     }elsif(ref($params{-where}) eq 'ARRAY'){
+# 	  return $self->_error('At least one where parameter must be provided') unless scalar(@{$params{-where}});
+#     }else{
+# 	  return $self->_error('Invalid -where parameter');
+#     }
 
-    my $where = $self->{sqlbuilder}->buildWhere($params{-where});
-    return $self->_error("Failed to build where clause") unless $where;
-    $sql .= $where;
-  }else{
-      return $self->_error('-insert flag or -where hashref/arrayref (for updates) must be specified');
-  }
-  #print STDERR "sql: $sql\n";
-  $self->_logDebug($sql);
+#     my $where = $self->{sqlbuilder}->buildWhere($params{-where});
+#     return $self->_error("Failed to build where clause") unless $where;
+#     $sql .= $where;
+#   }else{
+#       return $self->_error('-insert flag or -where hashref/arrayref (for updates) must be specified');
+#   }
+#   #print STDERR "sql: $sql\n";
+#   $self->_logDebug($sql);
 
-  my $rows;
-  if($params{-quiet}){
-	do {
-	      local $self->{dbh}->{PrintError} = 0; # make DBI quiet
-	      $rows = $self->{dbh}->do($sql);
-	};
-	return undef unless defined ($rows);
-  }else{
-	$rows = $self->{dbh}->do($sql);
-	return $self->_error('failed to execute statement') unless defined($rows);
-  }
+#   my $rows;
+#   if($params{-quiet}){
+# 	do {
+# 	      local $self->{dbh}->{PrintError} = 0; # make DBI quiet
+# 	      $rows = $self->{dbh}->do($sql);
+# 	};
+# 	return undef unless defined ($rows);
+#   }else{
+# 	$rows = $self->{dbh}->do($sql);
+# 	return $self->_error('failed to execute statement') unless defined($rows);
+#   }
 
-  if ($params{-insert}) {
-	my ($sequenceval) = $self->_getSequenceValue($call);
-	return $sequenceval;
-  } else {
-	return $rows || 0;	# number of rows updated or 0
-  }
+#   if ($params{-insert}) {
+# 	my ($sequenceval) = $self->_getSequenceValue($call);
+# 	return $sequenceval;
+#   } else {
+# 	return $rows || 0;	# number of rows updated or 0
+#   }
 
 
 
-}
+# }
+
+
 sub _modify{
   my $self = shift;
   my %params = @_;

@@ -30,11 +30,12 @@ sub new {
 
 sub _where {
       my $self = shift;
-      my $where = shift;
+      my $param = shift;
 
       $param = [%{$param}] if (ref($param) eq 'HASH');
       $param = [] unless (ref($param) eq 'ARRAY');
-
+      use Data::Dumper;
+      print Dumper ($param);
       my $where;
 
       my @out;
@@ -67,9 +68,9 @@ sub _where {
 
 			      push @out, DBR::Query::Part::FIELD->new($key, $query);
 
-			}elsif( $self->{aliasmap} ){ #not a subquery... are we doing a join?
+			}else{ #if( $self->{aliasmap} ){ #not a subquery... are we doing a join?
 			      my $alias = $key;
-			      return $self->_error("invalid table alias '$alias' in -fields") unless $self->{aliasmap}->{$alias};
+			      #return $self->_error("invalid table alias '$alias' in -fields") unless $self->{aliasmap}->{$alias};
 
 			      if(%{$value}){
 				    foreach my $k (keys %{$value}) {
@@ -78,9 +79,9 @@ sub _where {
 				    }
 			      }
 
-			}else{
-			      return $self->_error("invalid use of a hashref for key $key in -fields");
-			}
+			}#else{
+			 #     return $self->_error("invalid use of a hashref for key $key in -fields");
+			#}
 
 		  } else {
 			my $ret = $self->_processfield($key,$value) or return $self->_error('failed to process field object');
@@ -101,20 +102,18 @@ sub _where {
 
 sub _processfield{
       my $self  = shift;
-      my $k   = shift;
-      my $v   = shift;
+      my $field   = shift;
+      my $value   = shift;
 
       my $flags;
-      my @values;
 
-      if (ref($v) eq 'ARRAY'){
-	    ($flags,@values) = @{$inval};
-      }else{
-	    @values = ($v);
+      if (ref($value) eq 'ARRAY'){
+	    $flags = shift @{$value}; # yes, we are damaging the original ref, big whoop... why dontcha cry about it?
       }
 
       if ($flags =~ /j/) {	# join
-	    my @parts = split(/\./,$value);
+	    my $jointo = $value->[0];
+	    my @parts = split(/\./,$jointo);
 	    my ($field,$alias);
 
 	    if (@parts == 1) {
@@ -122,25 +121,22 @@ sub _processfield{
 		  return $self->_error("field $field cannot be referenced without a table alias");
 	    } elsif (@parts == 2) {
 		  ($alias,$field) = @parts;
-		  #return $self->_error("table alias '$value' is invalid without a join") unless $aliasmap;
-		  #return $self->_error("invalid table alias '$value' in -fields") unless $aliasmap->{$alias};
+		  #return $self->_error("table alias '$jointo' is invalid without a join") unless $aliasmap;
+		  #return $self->_error("invalid table alias '$jointo' in -fields") unless $aliasmap->{$alias};
 
-		  return $self->_error("invalid fieldname '$value' in -fields") unless $field =~ /^[A-Za-z][A-Za-z0-9_-]*$/;
+		  return $self->_error("invalid fieldname '$jointo' in -fields") unless $field =~ /^[A-Za-z][A-Za-z0-9_-]*$/;
 
-		  my $join = DBR::Query::Part::JOIN->new(
-							 from => $k,
-							 to   => $value
-							) or return $self->_error('failed to create join object');
+		  my $join = DBR::Query::Part::JOIN->new($field,$jointo) or return $self->_error('failed to create join object');
 
 		  return $join;
 	    }
 
       } else {
+	    my $outval =  DBR::Query::Value->direct( value  => $value ) or return $self->_error('failed to create value object');
 
-	    my $outval =  DBR::Query::Value->direct( value  => $v ) or return $self->_error('failed to create value object');
+	    my $outfield = DBR::Query::Part::FIELD->new($field, $outval) or return $self->_error('failed to create field object');
 
-	    return DBR::Query::Part::FIELD->new($k, $outval);
-
+	    return $outfield;
       }
 
 }

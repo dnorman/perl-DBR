@@ -18,10 +18,15 @@ sub new{
 
       my $field = $params{field}; # optional
 
+      my $self = {};
+
+      bless( $self, $package );
+
+
       my $value = $params{value};
       return $self->_error('value must be specified') unless $value;
 
-      my $is_number = $params{is_number}? 1 : 0;
+      $self->{is_number}  = $params{is_number}? 1 : 0;
       my $operator;
       my $ref = ref($value);
 
@@ -57,7 +62,7 @@ sub new{
       }
 
 
-      if ($is_number){
+      if ($self->{is_number}){
 	    return $self->_error("invalid operator '$operator'") unless $num_operators{ $operator };
 	    # check numeric range HERE
       }else{
@@ -65,14 +70,9 @@ sub new{
       }
 
 
+      $self->{value}    = $value;
+      $self->{operator} = $operator;
 
-      my $self = {
-		  is_number => is_number,
-		  value     => $values,
-		  operator  => $operator,
-		 };
-
-      bless( $self, $package );
 
       return $self;
 
@@ -98,7 +98,7 @@ sub direct {
       my( $package ) = shift;
       my %params = @_;
 
-      my $value = $params{value} or return $self->_error('value must be specified');
+      my $value = $params{value} or return $package->_error('value must be specified');
 
       my $is_number = 0;
       my $operator;

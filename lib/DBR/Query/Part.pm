@@ -12,7 +12,7 @@ sub new{
       my( $package ) = shift;
 
       map {
-	    /^DBR::Query::Part/ || return _PACKAGE_->_error('arguments must be logic objects')
+	    /^DBR::Query::Part/ || return $package->_error('arguments must be logic objects')
       } @_;
 
       my $self = [@_];
@@ -49,8 +49,8 @@ sub new{
       my( $package ) = shift;
       my ($key,$value) = @_;
 
-      return _PACKAGE_->_error('key must be specified') unless $key;
-      return _PACKAGE_->_error('value bust be a Value object') unless $value eq 'DBR::Query::Value';
+      return $package->_error('key must be specified') unless $key;
+      return $package->_error('value must be a Value object') unless ref($value) eq 'DBR::Query::Value';
 
       my $self = [ $key, $value ];
 
@@ -70,18 +70,20 @@ use strict; our @ISA = ('DBR::Query::Part');
 
 sub new{
       my( $package ) = shift;
-      my ($key,$value) = @_;
+      my ($from,$to) = @_;
 
-      return _PACKAGE_->_error('key must be specified') unless $key;
-      return _PACKAGE_->_error('value bust be a Value object') unless $value eq 'DBR::Query::Value';
+      return $package->_error('from must be specified') unless $from;
+      return $package->_error( 'to must be specified' ) unless  $to;
 
-      my $self = [ $key, $value ];
+      my $self = [ $from, $to ];
 
       bless( $self, $package );
       return $self;
 }
 
-sub type { return 'FIELD' };
+sub type { return 'JOIN' };
 sub children { return undef };
+sub from { return $_[0]->[0] }
+sub to   { return $_[0]->[1] }
 
 1;
