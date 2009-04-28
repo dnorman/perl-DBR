@@ -35,6 +35,8 @@ sub new {
       return( $self );
 }
 
+sub dbh { $_[0]->{dbh} }
+
 # -table -fields -where
 sub select{
     my $self = shift;
@@ -49,13 +51,13 @@ sub select{
 
 
     my $compat = DBR::Query::Compat::DBRv1->new(
-					     logger => $self->{logger},
-					     dbh    => $self->{dbh},
-					    ) or return $self->_error('failed to create Query object');
+						logger  => $self->{logger},
+						dbrh    => $self->{dbrh},
+					       ) or return $self->_error('failed to create Query object');
 
-    my $query = $compat->select(%params);
+    my $query = $compat->select(%params) or return $self->_error('failed to prepare select');
 
-    $query->execute;
+    return $query->sql;
 
     die 'FAIL';
 
@@ -76,40 +78,40 @@ sub select{
 #     return $self->_error('failed to execute statement') unless defined($rowct);
 
 
-    my $count = 0;
-    my $rows = [];
-    if ($rows) {
-	  if ($params{-rawsth}) {
-		return $sth;
-	  }elsif ($params{-count}) {
-		($count) = $sth->fetchrow_array();
-	  }elsif($params{-arrayref}){
-		$rows = $sth->fetchall_arrayref();
-	  }elsif ($params{-keycol}) {
-		return $sth->fetchall_hashref($params{-keycol});
-	  } else {
-		while (my $row = $sth->fetchrow_hashref()) {
-		      $count++;
-		      push @{$rows}, $row;
-		}
-	  }
-    }
+#     my $count = 0;
+#     my $rows = [];
+#     if ($rows) {
+# 	  if ($params{-rawsth}) {
+# 		return $sth;
+# 	  }elsif ($params{-count}) {
+# 		($count) = $sth->fetchrow_array();
+# 	  }elsif($params{-arrayref}){
+# 		$rows = $sth->fetchall_arrayref();
+# 	  }elsif ($params{-keycol}) {
+# 		return $sth->fetchall_hashref($params{-keycol});
+# 	  } else {
+# 		while (my $row = $sth->fetchrow_hashref()) {
+# 		      $count++;
+# 		      push @{$rows}, $row;
+# 		}
+# 	  }
+#     }
 
-    $sth->finish();
+#     $sth->finish();
 
-    if($rows){
-	if($params{-count}){
-	    return $count;
-	}elsif($params{-single}){
-	      return 0 unless @{$rows};
-	      my $row = $rows->[0];
-	      return $row;
-	}else{
-	      return $rows;
-	}
-    }
+#     if($rows){
+# 	if($params{-count}){
+# 	    return $count;
+# 	}elsif($params{-single}){
+# 	      return 0 unless @{$rows};
+# 	      my $row = $rows->[0];
+# 	      return $row;
+# 	}else{
+# 	      return $rows;
+# 	}
+#     }
 
-    return undef;
+#     return undef;
 
 }
 

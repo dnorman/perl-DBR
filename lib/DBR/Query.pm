@@ -17,29 +17,28 @@ sub new {
       my %params = @_;
 
       my $self = {
-		  dbh      => $params{dbh},
+		  dbrh      => $params{dbrh},
 		  logger   => $params{logger},
 		 };
 
-      return $self->_error('dbh object is required') unless $self->{dbh};
+      return $self->_error('dbrh object is required') unless $self->{dbrh};
       bless( $self, $package );
 
       my $type = $params{type} || return $self->_error('type is required');
 
       $self->{flags} = {
-			alias   => $params{-alias}   ? 1:0,
-			dealias => $params{-dealias} ? 1:0,
+			alias   => $params{alias}   ? 1:0,
+			dealias => $params{dealias} ? 1:0,
 		       };
 
-      my $tables = $params{-table} || $params{-tables};
-      $self->_tables( $tables )         or return undef;
+      $self->_tables( $params{tables} ) or return $self->_error('failed to prepare tables');
 
-      $self->{where} = $self->_where ( $params{-where} ) or return undef;
+      $self->{where_sql} = $self->_where ( $params{where} ) or return $self->_error('failed to prepare where');
 
       if($type eq 'select'){
-	    my $fields = $params{-fields} || $params{-field};
 
-	    $self->_select( $fields ) or return undef;
+	    $self->_select( $params{fields} ) or return $self->_error('failed to prepare select');
+
       }elsif($type eq 'insert'){
 	    
       }elsif($type eq 'update'){
@@ -49,44 +48,55 @@ sub new {
       }else{
 	    return $self->_error("invalid query type '$type'");
       }
-
-
-
-#       if($params{-lock}){
-# 	    my $mode = lc($params{-lock});
-
-# 	    if($mode eq 'update'){
-# 		  $sql .= ' FOR UPDATE'
-# 	    }
-#       }
-
-#       my $limit = $params{-limit};
-#       if($limit){
-# 	    return $self->_error('invalid limit') unless $limit =~ /^\d+$/;
-# 	    $sql .= " LIMIT $limit"
-#       }
-
-
-
-#       # insert table parts
-#       $sql .= "FROM " . join(',',@tparts);
+      $self->{type} = $type;
 
       return( $self );
 }
 
+sub sql{
+      my $self = shift;
+      my %params = @_;
 
+      my $sql;
+
+      my $tables = join(',',@{$self->{tparts}});
+      my $type = $self->{type};
+
+      if ($type eq 'select'){
+	    $sql .= "SELECT $self->{main_sql} FROM $tables";
+      }elsif($type eq 'insert'){
+	    $sql .= "INSERT INTO $tables $self->{main_sql}";
+      }elsif($type eq 'update'){
+	    $sql .= "UPDATE $tables SET $self->{main_sql}";
+      }elsif($type eq 'delete'){
+	    $sql .= "DELETE FROM $tables";
+      }
+
+      $sql .= " WHERE $self->{where_sql}";
+
+      if($params{-lock}){
+	    $sql .= ' FOR UPDATE'
+      }
+
+      my $limit = $params{-limit};
+      if($limit){
+ 	    return $self->_error('invalid limit') unless $limit =~ /^\d+$/;
+ 	    $sql .= " LIMIT $limit"
+       }
+
+
+      return $sql;
+}
 
 
 sub _tables{
       my $self   = shift;
       my $tables = shift;
 
-      unless (ref($tables)){
-	    my @tmptbl = split(/\s+/,$tables);
-	    $tables = \@tmptbl if @tmptbl > 1;
-      }
-
       return $self->_error("No -table[s] parameter specified") unless $tables;
+      if(ref($tables) eq 'ARRAY' and @{$tables} == 1){
+	    $tables = $tables->[0]
+      }
 
       my $aliasmap;
       my @tparts;
@@ -134,65 +144,67 @@ sub _where{
       my $self = shift;
       my $param = shift;
 
-      return $self->_error('param must be an array') unless ref($param) eq 'ARRAY';
+      return $self->_error('param must be an AND/OR object') unless ref($param) =~ /^DBR::Query::Part::(AND|OR)$/;
 
-      my $where;
+      my $where = $param->sql;
 
-      while (@{$param}) {
-	    my $key = shift @{$param};
-	    $where .= ' AND' if $where;
+  #     my $where;
 
-	    # is it an OR? (single element)
-	    if (ref($key) eq 'ARRAY') {
-		  my $or;
-		  foreach my $element (@{$key}){
-			if(ref($element)){
-			      $or .= ' OR' if $or;
-			      $or .= $self->_where($element);
-			}
-		  }
+#       while (@{$param}) {
+# 	    my $key = shift @{$param};
+# 	    $where .= ' AND' if $where;
 
-		  $where .= " ($or)";
-	    } else {
-		  my $value = shift @{$param};
+# 	    # is it an OR? (single element)
+# 	    if (ref($key) eq 'ARRAY') {
+# 		  my $or;
+# 		  foreach my $element (@{$key}){
+# 			if(ref($element)){
+# 			      $or .= ' OR' if $or;
+# 			      $or .= $self->_where($element);
+# 			}
+# 		  }
 
-		  my $operator;
-		  my $fvalue;
-		  if(ref($value) eq $QUERY_OBJECT){ #is it a subquery?
-		              return $self->_error('Invalid subquery') unless $value->can_be_qubquery;
+# 		  $where .= " ($or)";
+# 	    } else {
+# 		  my $value = shift @{$param};
 
-			      $operator = 'IN';
-			      my $sql = $value->sql;
-			      $fvalue = "($sql)";
-			      $where .= " $key $operator $sql";
+# 		  my $operator;
+# 		  my $fvalue;
+# 		  if(ref($value) eq $QUERY_OBJECT){ #is it a subquery?
+# 		              return $self->_error('Invalid subquery') unless $value->can_be_qubquery;
 
-		  }elsif (ref($value) eq 'HASH') { # Ok, so it's part of a join
+# 			      $operator = 'IN';
+# 			      my $sql = $value->sql;
+# 			      $fvalue = "($sql)";
+# 			      $where .= " $key $operator $sql";
 
-			$self->{aliasmap} or return $self->_error("invalid use of a hashref for key $key in fields");
+# 		  }elsif (ref($value) eq 'HASH') { # Ok, so it's part of a join
 
-			my $alias = $key;
-			return $self->_error("invalid table alias '$alias' in fields") unless $self->{aliasmap}->{$alias};
+# 			$self->{aliasmap} or return $self->_error("invalid use of a hashref for key $key in fields");
 
-			if(%{$value}){
-			      my %afields;
-			      foreach my $k (keys %{$value}) {
-				    $afields{"$alias.$k"} = $value->{$k};
-			      }
+# 			my $alias = $key;
+# 			return $self->_error("invalid table alias '$alias' in fields") unless $self->{aliasmap}->{$alias};
 
-			      return $self->_error('where part failed') unless
-				my $wherepart = $self->_where([%afields]);
+# 			if(%{$value}){
+# 			      my %afields;
+# 			      foreach my $k (keys %{$value}) {
+# 				    $afields{"$alias.$k"} = $value->{$k};
+# 			      }
 
-			      $where .= $wherepart;
-			}
+# 			      return $self->_error('where part failed') unless
+# 				my $wherepart = $self->_where([%afields]);
 
-		  } else {
-			ref($value) eq $VALUE_OBJECT or return $self->_error('value must be a DBR::Query::Value object');
+# 			      $where .= $wherepart;
+# 			}
 
-			$where .= " $key $operator " . $value->sql;
-		  }
+# 		  } else {
+# 			ref($value) eq $VALUE_OBJECT or return $self->_error('value must be a DBR::Query::Value object');
 
-	    }
-      }
+# 			$where .= " $key $operator " . $value->sql;
+# 		  }
+
+# 	    }
+#       }
 
       return $where || '';
 }
@@ -202,7 +214,7 @@ sub _select{
       my $self   = shift;
       my $fields = shift;
 
-      my $sql = 'SELECT ';
+      my $sql;
 
       if( $self->{count_only} ){
 	  $sql .= 'count(*) ';
@@ -240,15 +252,15 @@ sub _select{
 
 	    }
 	    return $self->_error('No valid fields specified') unless @fields;
-	    $sql .= join(',',@fields) . ' ';
+	    $sql .= join(',',@fields);
 
       } elsif ($fields eq '*') {
-	    $sql .= '* ';
+	    $sql .= '*';
       } else {
 	    return $self->_error('No valid fields specified');
       }
 
-      $self->{sql} = $sql;
+      $self->{main_sql} = $sql;
 
       return 1;
 }
@@ -329,197 +341,147 @@ sub can_be_subquery {
 # }
 
 
-sub _modify{
-  my $self = shift;
-  my %params = @_;
+# sub _modify{
+#   my $self = shift;
+#   my %params = @_;
 
 
 
-  $params{-table} ||= $params{-insert} || $params{-update};
+#   $params{-table} ||= $params{-insert} || $params{-update};
 
-  return $self->_error('No proper -fields parameter specified') unless ref($params{-fields}) eq 'HASH';
-  return $self->_error('No -table parameter specified') unless $params{-table} =~ /^[A-Za-z0-9_-]+$/;
+#   return $self->_error('No proper -fields parameter specified') unless ref($params{-fields}) eq 'HASH';
+#   return $self->_error('No -table parameter specified') unless $params{-table} =~ /^[A-Za-z0-9_-]+$/;
 
-  my %fields;
-  my $call = {params => \%params,fields => \%fields, tmp => {}};
-  my $fcount;
-  foreach my $field (keys %{$params{-fields}}){
-    next unless $field =~ /^[A-Za-z0-9_-]+$/;
-    ($fields{$field}) = $self->{sqlbuilder}->quote($params{-fields}->{$field});
-    return $self->_error("failed to quote value for field '$field'") unless defined($fields{$field});
-    $fcount++;
-  }
-  return $self->_error('No valid fields specified') unless $fcount;
+#   my %fields;
+#   my $call = {params => \%params,fields => \%fields, tmp => {}};
+#   my $fcount;
+#   foreach my $field (keys %{$params{-fields}}){
+#     next unless $field =~ /^[A-Za-z0-9_-]+$/;
+#     ($fields{$field}) = $self->{sqlbuilder}->quote($params{-fields}->{$field});
+#     return $self->_error("failed to quote value for field '$field'") unless defined($fields{$field});
+#     $fcount++;
+#   }
+#   return $self->_error('No valid fields specified') unless $fcount;
 
-  my $sql;
+#   my $sql;
 
-  my @fkeys = keys %fields;
-  if($params{-insert}){
-	return $self->_error('Failed to prepare sequence') unless $self->_prepareSequence($call);
+#   my @fkeys = keys %fields;
+#   if($params{-insert}){
+# 	return $self->_error('Failed to prepare sequence') unless $self->_prepareSequence($call);
 
-	$sql = "INSERT INTO $params{-table} ";
-	$sql .= '(' . join (',',@fkeys) . ')';
-	$sql .= ' VALUES ';
-	$sql .= '(' . join (',',map {$fields{$_}} @fkeys) . ')';
-  }elsif($params{-where}){
-    $sql = "UPDATE $params{-table} SET ";
-    $sql .= join (', ',map {"$_ = $fields{$_}"} @fkeys);
+# 	$sql = "INSERT INTO $params{-table} ";
+# 	$sql .= '(' . join (',',@fkeys) . ')';
+# 	$sql .= ' VALUES ';
+# 	$sql .= '(' . join (',',map {$fields{$_}} @fkeys) . ')';
+#   }elsif($params{-where}){
+#     $sql = "UPDATE $params{-table} SET ";
+#     $sql .= join (', ',map {"$_ = $fields{$_}"} @fkeys);
 
-    if(ref($params{-where}) eq 'HASH'){
-	  return $self->_error('At least one where parameter must be provided') unless scalar(%{$params{-where}});
-    }elsif(ref($params{-where}) eq 'ARRAY'){
-	  return $self->_error('At least one where parameter must be provided') unless scalar(@{$params{-where}});
-    }else{
-	  return $self->_error('Invalid -where parameter');
-    }
+#     if(ref($params{-where}) eq 'HASH'){
+# 	  return $self->_error('At least one where parameter must be provided') unless scalar(%{$params{-where}});
+#     }elsif(ref($params{-where}) eq 'ARRAY'){
+# 	  return $self->_error('At least one where parameter must be provided') unless scalar(@{$params{-where}});
+#     }else{
+# 	  return $self->_error('Invalid -where parameter');
+#     }
 
-    my $where = $self->{sqlbuilder}->buildWhere($params{-where});
-    return $self->_error("Failed to build where clause") unless $where;
-    $sql .= $where;
-  }else{
-      return $self->_error('-insert flag or -where hashref/arrayref (for updates) must be specified');
-  }
-  #print STDERR "sql: $sql\n";
-  $self->_logDebug($sql);
+#     my $where = $self->{sqlbuilder}->buildWhere($params{-where});
+#     return $self->_error("Failed to build where clause") unless $where;
+#     $sql .= $where;
+#   }else{
+#       return $self->_error('-insert flag or -where hashref/arrayref (for updates) must be specified');
+#   }
+#   #print STDERR "sql: $sql\n";
+#   $self->_logDebug($sql);
 
-  my $rows;
-  if($params{-quiet}){
-	do {
-	      local $self->{dbh}->{PrintError} = 0; # make DBI quiet
-	      $rows = $self->{dbh}->do($sql);
-	};
-	return undef unless defined ($rows);
-  }else{
-	$rows = $self->{dbh}->do($sql);
-	return $self->_error('failed to execute statement') unless defined($rows);
-  }
+#   my $rows;
+#   if($params{-quiet}){
+# 	do {
+# 	      local $self->{dbh}->{PrintError} = 0; # make DBI quiet
+# 	      $rows = $self->{dbh}->do($sql);
+# 	};
+# 	return undef unless defined ($rows);
+#   }else{
+# 	$rows = $self->{dbh}->do($sql);
+# 	return $self->_error('failed to execute statement') unless defined($rows);
+#   }
 
-  if ($params{-insert}) {
-	my ($sequenceval) = $self->_getSequenceValue($call);
-	return $sequenceval;
-  } else {
-	return $rows || 0;	# number of rows updated or 0
-  }
-
-
-
-}
-sub _delete{
-  my $self = shift;
-  my %params = @_;
-
-  return $self->_error('No valid -where parameter specified') unless ref($params{-where}) eq 'HASH';
-  return $self->_error('No -table parameter specified') unless $params{-table} =~ /^[A-Za-z0-9_-]+$/;
-
-  my $sql = "DELETE FROM $params{-table} ";
-
-  if(ref($params{-where}) eq 'HASH'){
-	return $self->_error('At least one where parameter must be provided') unless scalar(%{$params{-where}});
-  }elsif(ref($params{-where}) eq 'ARRAY'){
-	return $self->_error('At least one where parameter must be provided') unless scalar(@{$params{-where}});
-  }else{
-	return $self->_error('Invalid -where parameter');
-  }
-
-  my $where = $self->{sqlbuilder}->buildWhere($params{-where});
-  return $self->_error("Failed to build where clause") unless defined($where);
-  return $self->_error("Empty where clauses are not allowed") unless length($where);
-  $sql .= $where;
-  #print STDERR "sql: $sql\n";
-  $self->_logDebug($sql);
-  my $success = $self->{dbh}->do($sql);
-
-  return 1 if $success;
-  return undef;
-}
-
-sub quote{
-  my $self = shift;
-  my $inval = shift;
-
-  my @values;
-  my @fvalues;
-  my $flags;
+#   if ($params{-insert}) {
+# 	my ($sequenceval) = $self->_getSequenceValue($call);
+# 	return $sequenceval;
+#   } else {
+# 	return $rows || 0;	# number of rows updated or 0
+#   }
 
 
-  if (ref($inval) eq 'ARRAY'){
-	($flags,@values) = @{$inval};
-  }else{
-	@values = ($inval);
-  }
 
-  foreach my $value (@values){
-	my $fvalue;
-	if (ref($value) eq 'SCALAR') { # raw values are passed in as scalarrefs cus its super easy to do so.
-	      $fvalue=${$value};
-	}elsif($flags =~ /j/){ # join
-	      my @parts = split(/\./,$value);
-	      my ($field,$alias);
+# }
+# sub _delete{
+#   my $self = shift;
+#   my %params = @_;
 
-	      if (@parts == 1){
-		    ($field) = @parts;
-	      }elsif(@parts == 2){
-		    ($alias,$field) = @parts;
-		    return $self->_error("table alias '$value' is invalid without a join") unless $self->{aliasmap};
-		    return $self->_error("invalid table alias '$value' in -fields") unless $self->{aliasmap};
-	      }
-	      return $self->_error("invalid fieldname '$value' in -fields") unless $field =~ /^[A-Za-z][A-Za-z0-9_-]*$/;
-	      $fvalue = $value;
+#   return $self->_error('No valid -where parameter specified') unless ref($params{-where}) eq 'HASH';
+#   return $self->_error('No -table parameter specified') unless $params{-table} =~ /^[A-Za-z0-9_-]+$/;
 
-	}elsif ($flags =~ /d/) {	# numeric
-	      if ($value =~ /^-?\d*\.?\d+$/) {
-		    $fvalue = $value;
-	      }else{
-		    return $self->_error("value $value is not a legal number");
-		    next;
-	      }
-	} else {	# string
-	      $fvalue = $self->{dbh}->quote($value);
-	}
+#   my $sql = "DELETE FROM $params{-table} ";
 
-	$fvalue = 'NULL' unless defined($fvalue);
-	push @fvalues, $fvalue;
-  }
+#   if(ref($params{-where}) eq 'HASH'){
+# 	return $self->_error('At least one where parameter must be provided') unless scalar(%{$params{-where}});
+#   }elsif(ref($params{-where}) eq 'ARRAY'){
+# 	return $self->_error('At least one where parameter must be provided') unless scalar(@{$params{-where}});
+#   }else{
+# 	return $self->_error('Invalid -where parameter');
+#   }
 
-  return @fvalues;
-}
+#   my $where = $self->{sqlbuilder}->buildWhere($params{-where});
+#   return $self->_error("Failed to build where clause") unless defined($where);
+#   return $self->_error("Empty where clauses are not allowed") unless length($where);
+#   $sql .= $where;
+#   #print STDERR "sql: $sql\n";
+#   $self->_logDebug($sql);
+#   my $success = $self->{dbh}->do($sql);
+
+#   return 1 if $success;
+#   return undef;
+# }
 
 
-sub getserial{
-      my $self = shift;
-      my $name = shift;
-      my $table = shift  || 'serials';
-      my $field1 = shift || 'name';
-      my $field2 = shift || 'serial';
-      return $self->_error('name must be specified') unless $name;
 
-      $self->begin();
+# sub getserial{
+#       my $self = shift;
+#       my $name = shift;
+#       my $table = shift  || 'serials';
+#       my $field1 = shift || 'name';
+#       my $field2 = shift || 'serial';
+#       return $self->_error('name must be specified') unless $name;
 
-      my $row = $self->select(
-			      -table => $table,
-			      -field => $field2,
-			      -where => {$field1 => $name},
-			      -single => 1,
-			      -lock => 'update',
-			     );
+#       $self->begin();
 
-      return $self->_error('serial select failed') unless defined($row);
-      return $self->_error('serial is not primed') unless $row;
+#       my $row = $self->select(
+# 			      -table => $table,
+# 			      -field => $field2,
+# 			      -where => {$field1 => $name},
+# 			      -single => 1,
+# 			      -lock => 'update',
+# 			     );
 
-      my $id = $row->{$field2};
+#       return $self->_error('serial select failed') unless defined($row);
+#       return $self->_error('serial is not primed') unless $row;
 
-      return $self->_error('serial update failed') unless 
-	$self->update(
-		      -table => $table,
-		      -fields => {$field2 => ['d',$id + 1]},
-		      -where => {
-				 $field1 => $name
-				},
-		     );
+#       my $id = $row->{$field2};
 
-      $self->commit();
+#       return $self->_error('serial update failed') unless 
+# 	$self->update(
+# 		      -table => $table,
+# 		      -fields => {$field2 => ['d',$id + 1]},
+# 		      -where => {
+# 				 $field1 => $name
+# 				},
+# 		     );
 
-      return $id;
-}
+#       $self->commit();
+
+#       return $id;
+# }
 
 1;

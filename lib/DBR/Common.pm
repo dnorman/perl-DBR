@@ -1,6 +1,21 @@
 package DBR::Common;
 
 
+sub _split{
+      my $self = shift;
+      my $value = shift;
+
+      my $out;
+      if(ref($value)){
+	    $out = $value;
+      }else{
+	    $value =~ s/^\s*|\s*$//g;
+	    $out = [ split(/\s+/,$value) ];
+      }
+
+      return $out;
+}
+
 sub _error {
       my $self = shift;
       my $message = shift;

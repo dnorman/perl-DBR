@@ -16,17 +16,39 @@ sub new {
       my %params = @_;
 
       my $self = {
-		  dbh      => $params{dbh},
+		  dbrh     => $params{dbrh},
 		  logger   => $params{logger},
 		 };
 
-      return $self->_error('dbh object is required') unless $self->{dbh};
       bless( $self, $package );
+      return $self->_error('dbrh object is required') unless $self->{dbrh};
 
       return( $self );
 }
 
+sub select {
+      my $self   = shift;
+      my %params = @_;
 
+      my $tables = $self->_split( $params{-table} || $params{-tables} ) or
+	return $self->_error("No -table[s] parameter specified");
+
+      my $fields = $self->_split( $params{-fields} || $params{-field}) or
+	return $self->_error('No -field[s] parameter specified');
+
+      my $where = $self->_where($params{-where}) or return $self->_error('failed to prep where');
+
+      my $query = DBR::Query->new(
+				  dbrh   => $self->{dbrh},
+				  logger => $self->{logger},
+				  type   => 'select',
+				  tables => $tables,
+				  fields => $fields,
+				  where  => $where
+				 ) or return $self->_error('failed to create query object');
+
+      return $query;
+}
 
 sub _where {
       my $self = shift;
@@ -34,8 +56,11 @@ sub _where {
 
       $param = [%{$param}] if (ref($param) eq 'HASH');
       $param = [] unless (ref($param) eq 'ARRAY');
-      use Data::Dumper;
-      print Dumper ($param);
+
+
+      #use Data::Dumper;
+      #print Dumper ({v1request => $param});
+
       my $where;
 
       my @out;
@@ -60,7 +85,7 @@ sub _where {
 
 			      my $compat = DBR::Query::Compat::DBRv1->new(
 									  logger => $self->{logger},
-									  dbh    => $self->{dbh},
+									  dbrh    => $self->{dbrh},
 									 ) or return $self->_error('failed to create Query object');
 
 			      my $query = $compat->select(%{$value});
@@ -84,6 +109,7 @@ sub _where {
 			#}
 
 		  } else {
+
 			my $ret = $self->_processfield($key,$value) or return $self->_error('failed to process field object');
 
 			push @out, $ret
@@ -108,11 +134,11 @@ sub _processfield{
       my $flags;
 
       if (ref($value) eq 'ARRAY'){
-	    $flags = shift @{$value}; # yes, we are damaging the original ref, big whoop... why dontcha cry about it?
+	    $flags = $value->[0];
       }
 
       if ($flags =~ /j/) {	# join
-	    my $jointo = $value->[0];
+	    my $jointo = $value->[1];
 	    my @parts = split(/\./,$jointo);
 	    my ($field,$alias);
 
@@ -132,7 +158,12 @@ sub _processfield{
 	    }
 
       } else {
-	    my $outval =  DBR::Query::Value->direct( value  => $value ) or return $self->_error('failed to create value object');
+
+	    my $outval =  DBR::Query::Value->direct(
+						    value => $value,
+						    dbrh  => $self->{dbrh},
+						    logger => $self->{logger},
+						   ) or return $self->_error('failed to create value object');
 
 	    my $outfield = DBR::Query::Part::FIELD->new($field, $outval) or return $self->_error('failed to create field object');
 

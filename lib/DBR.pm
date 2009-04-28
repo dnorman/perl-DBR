@@ -6,7 +6,7 @@
 package DBR;
 
 use strict;
-use DBR::DBRH;
+use DBR::Handle;
 use DBR::Config;
 use base 'DBR::Common';
 
@@ -59,15 +59,15 @@ sub connect {
       } else {
 
 	    my $hclass = 'DBR::Handle::' . $instance->module;
-	    return $self->_error("Failed to Load $hclass ($@)") unless eval "require $hclass";
+	    #return $self->_error("Failed to Load $hclass ($@)") unless eval "require $hclass";
 
 	    return $self->_error("Failed to create $hclass object") unless
-	      my $dbrh = $hclass->new(
-				      dbh      => $dbh,
-				      dbr      => $self,
-				      logger   => $self->{logger},
-				      instance => $instance
-				     );
+	      my $dbrh = DBR::Handle->new(
+					  dbh      => $dbh,
+					  dbr      => $self,
+					  logger   => $self->{logger},
+					  instance => $instance
+					 );
 	    return $dbrh;
       }
 

@@ -24,6 +24,18 @@ sub new{
 
 sub children{ return @{$_[0]} }
 
+sub sql { # Used by AND/OR
+      my $self = shift;
+      my $nested = shift;
+
+      my $sql;
+      $sql .= '(' if $nested;
+      $sql .= join(' ' . $self->type . ' ', map { $_->sql(1) } $self->children );
+      $sql .= ')' if $nested;
+
+      return $sql;
+}
+
 1;
 
 ###########################################
@@ -37,6 +49,7 @@ sub type { return 'AND' };
 ###########################################
 package DBR::Query::Part::OR;
 use strict; our @ISA = ('DBR::Query::Part');
+
 sub type { return 'OR' };
 
 1;
@@ -60,6 +73,9 @@ sub new{
 
 sub type { return 'FIELD' };
 sub children { return undef };
+sub key   { return $_[0]->[0] }
+sub value { return $_[0]->[1] }
+sub sql { return $_[0]->key . ' ' . $_[0]->value->sql }
 
 1;
 
@@ -86,4 +102,5 @@ sub children { return undef };
 sub from { return $_[0]->[0] }
 sub to   { return $_[0]->[1] }
 
+sub sql { return $_[0]->from . ' = ' . $_[0]->to }
 1;

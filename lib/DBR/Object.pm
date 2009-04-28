@@ -59,14 +59,14 @@ sub where{
 
       $self->_logDebug($query->sql);
 
-      my $sth = $self->{dbh}->prepare($sql) or return $self->_error('failed to prepare statement');
+     ### my $sth = $self->{dbh}->prepare($sql) or return $self->_error('failed to prepare statement');
 
-      my $resultset = DBR::Query::ResultSet->new(
-						 logger => $self->{logger},
-						 #query  => $self,
-						 sth    => $sth
-						) or return $self->_error('failed to create resultset');
-      return $resultset;
+     # my $resultset = DBR::Query::ResultSet->new(
+#						 logger => $self->{logger},
+#						 #query  => $self,
+#						 sth    => $sth
+#						) or return $self->_error('failed to create resultset');
+ #     return $resultset;
 }
 
 #Fetch by Primary key

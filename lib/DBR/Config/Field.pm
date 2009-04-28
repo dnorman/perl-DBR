@@ -7,7 +7,7 @@ package DBR::Config::Field;
 
 use strict;
 use base 'DBR::Common';
-use DBR::Query::QPart;
+use DBR::Query::Value;
 use DBR::Config::Table;
 
 my %FIELDS_BY_ID;
@@ -63,9 +63,9 @@ sub load{
       foreach my $field (@$fields){
 
 	    DBR::Config::Table->_register_field(
-						table_id => $table->{table_id},
-						name     => $table->{name},
-						field_id => $table->{field_id},
+						table_id => $field->{table_id},
+						name     => $field->{name},
+						field_id => $field->{field_id},
 					       ) or return $self->_error('failed to register field');
 	    $FIELDS_BY_ID{ $field->{field_id} } = $field;
       }
