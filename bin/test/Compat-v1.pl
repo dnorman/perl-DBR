@@ -20,7 +20,11 @@ my $dbrh = $dbr->connect('esrp_main') || die "failed to connect";
 my $compat = DBR::Query::Compat::DBRv1->new(logger => $logger, dbrh => $dbrh);
 
 my $query = $compat->select(
-  			    -table => 'orders',
+  			    -table => {
+				       tableA => 'orders',
+				       tableB => 'items',
+				       tableC => 'product',
+				      },
   			    -fields => 'order_id total date_created',
 			    -where => [
 				       a => 'valueA',

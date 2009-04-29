@@ -136,6 +136,12 @@ sub _tables{
       return 1;
 }
 
+sub check_table{
+      my $self  = shift;
+      my $alias = shift;
+
+      return $self->{aliasmap}->{$alias} ? 1 : 0;
+}
 
 #Usage:
 #specify dbh handle and field => value pairs. use scalarrefs to values to prevent their being escaped.
@@ -146,7 +152,9 @@ sub _where{
 
       return $self->_error('param must be an AND/OR object') unless ref($param) =~ /^DBR::Query::Part::(AND|OR)$/;
 
-      my $where = $param->sql;
+      $param->validate($self) or return $self->_error('Where clause validation failed');
+
+      my $where = $param->sql or return $self->_error('Failed to retrieve sql');
 
   #     my $where;
 

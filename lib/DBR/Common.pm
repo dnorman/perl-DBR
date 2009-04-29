@@ -19,9 +19,10 @@ sub _split{
 sub _error {
       my $self = shift;
       my $message = shift;
+
       my ( $package, $filename, $line, $method) = caller(1);
-      if ($self->{logger}){
-	    $self->{logger}->logErr($message,$method);
+      if ($self->logger){
+	    $self->logger->logErr($message,$method);
       }else{
 	    print STDERR "DBR ERROR: $message ($method, line $line)\n";
       }
@@ -32,9 +33,9 @@ sub _logDebug{
       my $self = shift;
       my $message = shift;
       my ( $package, $filename, $line, $method) = caller(1);
-      if ($self->{logger}){
-	    $self->{logger}->logDebug($message,$method);
-      }elsif($self->{debug}){
+      if ($self->logger){
+	    $self->logger->logDebug($message,$method);
+      }elsif($self->is_debug){
 	    print STDERR "DBR DEBUG: $message\n";
       }
 }
@@ -42,9 +43,9 @@ sub _logDebug2{
       my $self = shift;
       my $message = shift;
       my ( $package, $filename, $line, $method) = caller(1);
-      if ($self->{logger}){
-	    $self->{logger}->logDebug2($message,$method);
-      }elsif($self->{debug}){
+      if ($self->logger){
+	    $self->logger->logDebug2($message,$method);
+      }elsif($self->is_debug){
 	    print STDERR "DBR DEBUG2: $message\n";
       }
 }
@@ -52,12 +53,15 @@ sub _log{
       my $self = shift;
       my $message = shift;
       my ( $package, $filename, $line, $method) = caller(1);
-      if ($self->{logger}){
-	    $self->{logger}->log($message,$method);
+      if ($self->logger){
+	    $self->logger->log($message,$method);
       }else{
 	    print STDERR "DBR: $message\n";
       }
       return 1;
 }
+
+sub logger   { $_[0]->{logger} }
+sub is_debug { $_[0]->{debug}  }
 
 1;

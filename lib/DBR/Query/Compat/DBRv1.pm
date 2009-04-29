@@ -81,7 +81,7 @@ sub _where {
 		  my $value = shift @{$param};
 
 		  if (ref($value) eq 'HASH') {
-			if($value->{-table} && ($value->{-field} || $value->{-fields})){ #is it a subquery?
+			if($value->{-table} && ($value->{-field} || $value->{-fields})){ #does it smell like a subquery?
 
 			      my $compat = DBR::Query::Compat::DBRv1->new(
 									  logger => $self->{logger},
@@ -99,6 +99,7 @@ sub _where {
 
 			      if(%{$value}){
 				    foreach my $k (keys %{$value}) {
+					  print STDERR "FOO: '$alias.$k'\n";
 					  my $ret = $self->_processfield("$alias.$k", $value->{$k}) or return $self->_error('failed to process field object');
 					  push @out, $ret
 				    }
@@ -140,17 +141,17 @@ sub _processfield{
       if ($flags =~ /j/) {	# join
 	    my $jointo = $value->[1];
 	    my @parts = split(/\./,$jointo);
-	    my ($field,$alias);
+	    my ($tofield,$alias);
 
 	    if (@parts == 1) {
-		  ($field) = @parts;
-		  return $self->_error("field $field cannot be referenced without a table alias");
+		  ($tofield) = @parts;
+		  return $self->_error("field $tofield cannot be referenced without a table alias");
 	    } elsif (@parts == 2) {
-		  ($alias,$field) = @parts;
+		  ($alias,$tofield) = @parts;
 		  #return $self->_error("table alias '$jointo' is invalid without a join") unless $aliasmap;
 		  #return $self->_error("invalid table alias '$jointo' in -fields") unless $aliasmap->{$alias};
 
-		  return $self->_error("invalid fieldname '$jointo' in -fields") unless $field =~ /^[A-Za-z][A-Za-z0-9_-]*$/;
+		  return $self->_error("invalid fieldname '$jointo' in -fields") unless $tofield =~ /^[A-Za-z][A-Za-z0-9_-]*$/;
 
 		  my $join = DBR::Query::Part::JOIN->new($field,$jointo) or return $self->_error('failed to create join object');
 

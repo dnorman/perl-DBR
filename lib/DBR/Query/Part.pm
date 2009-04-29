@@ -11,9 +11,11 @@ use strict; use base 'DBR::Common';
 sub new{
       my( $package ) = shift;
 
-      map {
-	    /^DBR::Query::Part/ || return $package->_error('arguments must be logic objects')
-      } @_;
+      return $package->_error('cannot call new on DBR::Query::Part') if $package eq 'DBR::Query::Part';
+
+      for (@_){
+	    ref($_) =~ /^DBR::Query::Part::/ || return $package->_error('arguments must be logic objects')
+      };
 
       my $self = [@_];
 
@@ -24,17 +26,38 @@ sub new{
 
 sub children{ return @{$_[0]} }
 
+sub validate{
+      my $self = shift;
+      my $query = shift;
+      return $self->_error('Query object is required') unless ref($query) =~/^DBR::Query$/;
+      $self->_validate_self($query) or return $self->_error('Failed to validate ' . ref($self) );
+
+      for ($self->children){;
+	    return undef unless $_->validate($query)
+      }
+
+      return 1;
+}
+
+sub _validate_self{ return scalar($_[0]->children)?1:$_[0]->_error('Invalid object')  }
+
 sub sql { # Used by AND/OR
       my $self = shift;
       my $nested = shift;
 
+
+      my $type = $self->type;
+      $type =~ /^(AND|OR)$/ or return $self->_error('this sql function is only used for AND/OR');
+
       my $sql;
       $sql .= '(' if $nested;
-      $sql .= join(' ' . $self->type . ' ', map { $_->sql(1) } $self->children );
+      $sql .= join(' ' . $type . ' ', map { $_->sql(1) } $self->children );
       $sql .= ')' if $nested;
 
       return $sql;
 }
+
+sub logger { undef }
 
 1;
 
@@ -72,10 +95,11 @@ sub new{
 }
 
 sub type { return 'FIELD' };
-sub children { return undef };
+sub children { return () };
 sub key   { return $_[0]->[0] }
 sub value { return $_[0]->[1] }
-sub sql { return $_[0]->key . ' ' . $_[0]->value->sql }
+sub sql   { return $_[0]->key . ' ' . $_[0]->value->sql }
+sub _validate_self{ 1 }
 
 1;
 
@@ -91,16 +115,41 @@ sub new{
       return $package->_error('from must be specified') unless $from;
       return $package->_error( 'to must be specified' ) unless  $to;
 
-      my $self = [ $from, $to ];
+      my @fromparts = split(/\./,$from);
+      my @toparts   = split(/\./,$to);
+
+      scalar(@fromparts) == 2 or return $package->_error("From field must be in the format table.field");
+      scalar(@toparts)   == 2 or return $package->_error( "To field must be in the format table.field" );
+
+      my $self = [ @fromparts, @toparts ];
 
       bless( $self, $package );
       return $self;
 }
 
-sub type { return 'JOIN' };
-sub children { return undef };
-sub from { return $_[0]->[0] }
-sub to   { return $_[0]->[1] }
+sub from_table { return $_[0]->[0] }
+sub from_field { return $_[0]->[1] }
+sub to_table   { return $_[0]->[2] }
+sub to_field   { return $_[0]->[3] }
 
-sub sql { return $_[0]->from . ' = ' . $_[0]->to }
+sub type { return 'JOIN' };
+sub children { return () };
+
+
+sub sql {
+      my $self = shift;
+      return $self->from_table . '.' . $self->from_field .
+	' = ' . $self->to_table .'.' . $self->to_field;
+}
+sub _validate_self{
+      my $self = shift;
+      my $query = shift;
+
+      $query->check_table( $self->from_table ) or return $self->_error('Invalid join-from table ' . $self->from_table);
+      $query->check_table(  $self->to_table  ) or return $self->_error('Invalid join-to table '   . $self->to_table);
+
+      return 1;
+}
+
+
 1;
