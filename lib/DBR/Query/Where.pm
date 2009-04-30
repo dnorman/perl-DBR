@@ -4,17 +4,17 @@
 # published by the Free Software Foundation.
 
 ###########################################
-package DBR::Query::Part;
+package DBR::Query::Where;
 
 use strict; use base 'DBR::Common';
 
 sub new{
       my( $package ) = shift;
 
-      return $package->_error('cannot call new on DBR::Query::Part') if $package eq 'DBR::Query::Part';
+      return $package->_error('cannot call new on DBR::Query::Where') if $package eq 'DBR::Query::Where';
 
       for (@_){
-	    ref($_) =~ /^DBR::Query::Part::/ || return $package->_error('arguments must be logic objects')
+	    ref($_) =~ /^DBR::Query::Where::/ || return $package->_error('arguments must be logic objects')
       };
 
       my $self = [@_];
@@ -39,7 +39,7 @@ sub validate{
       return 1;
 }
 
-sub _validate_self{ return scalar($_[0]->children)?1:$_[0]->_error('Invalid object')  }
+sub _validate_self{ return scalar($_[0]->children)?1:$_[0]->_error('Invalid object')  } # AND/OR are only valid if they have at least one child
 
 sub sql { # Used by AND/OR
       my $self = shift;
@@ -62,24 +62,24 @@ sub logger { undef }
 1;
 
 ###########################################
-package DBR::Query::Part::AND;
-use strict; our @ISA = ('DBR::Query::Part');
+package DBR::Query::Where::AND;
+use strict; our @ISA = ('DBR::Query::Where');
 
 sub type { return 'AND' };
 
 1;
 
 ###########################################
-package DBR::Query::Part::OR;
-use strict; our @ISA = ('DBR::Query::Part');
+package DBR::Query::Where::OR;
+use strict; our @ISA = ('DBR::Query::Where');
 
 sub type { return 'OR' };
 
 1;
 
 ###########################################
-package DBR::Query::Part::FIELD;
-use strict; our @ISA = ('DBR::Query::Part');
+package DBR::Query::Where::FIELD;
+use strict; our @ISA = ('DBR::Query::Where');
 
 sub new{
       my( $package ) = shift;
@@ -101,12 +101,37 @@ sub value { return $_[0]->[1] }
 sub sql   { return $_[0]->key . ' ' . $_[0]->value->sql }
 sub _validate_self{ 1 }
 
+
+###########################################
+package DBR::Query::Where::SUBQUERY;
+use strict; our @ISA = ('DBR::Query::Where');
+
+sub new{
+      my( $package ) = shift;
+      my ($field,$query) = @_;
+
+      return $package->_error('key must be specified') unless $field;
+      return $package->_error('value must be a Value object') unless ref($query) eq 'DBR::Query';
+
+      my $self = [ $field, $query ];
+
+      bless( $self, $package );
+      return $self;
+}
+
+sub type { return 'SUBQUERY' };
+sub children { return ( ) };
+sub field   { return $_[0]->[0] }
+sub query { return $_[0]->[1] }
+sub sql   { return $_[0]->field . ' IN (' . $_[0]->query->sql . ')'}
+sub _validate_self{ 1 }
+
 1;
 
 ###########################################
 
-package DBR::Query::Part::JOIN;
-use strict; our @ISA = ('DBR::Query::Part');
+package DBR::Query::Where::JOIN;
+use strict; our @ISA = ('DBR::Query::Where');
 
 sub new{
       my( $package ) = shift;

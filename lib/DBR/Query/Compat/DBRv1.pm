@@ -37,17 +37,47 @@ sub select {
 	return $self->_error('No -field[s] parameter specified');
 
       my $where = $self->_where($params{-where}) or return $self->_error('failed to prep where');
+      #use Data::Dumper;
+      #print STDERR Dumper($where);
 
       my $query = DBR::Query->new(
 				  dbrh   => $self->{dbrh},
 				  logger => $self->{logger},
-				  type   => 'select',
 				  tables => $tables,
-				  fields => $fields,
 				  where  => $where
 				 ) or return $self->_error('failed to create query object');
 
-      return $query;
+
+      $query->select(
+		     count  => $params{'-count'}?1:0, # takes precedence
+		     fields => $fields
+		    ) or return $self->_error('Failed to set up select');
+
+
+      # return $query->sql;
+      if ($params{-rawsth}) {
+
+	    my $sth = $query->execute( sth_only => 1) or return $self->_error('failed to execute');
+	    return $sth;
+
+      } else {
+	    my $resultset = $query->execute() or return $self->_error('failed to execute');
+
+	    if ($params{-object}) { # new way - hybrid
+		  return $resultset;
+	    } elsif ($params{-count}) {
+		  return $resultset->count();
+	    } elsif ($params{-arrayref}) {
+		  return $resultset->arrays;
+	    } elsif ($params{-keycol}) {
+		  return $resultset->map($params{-keycol})
+	    } elsif ($params{-single}) {
+		  return $resultset->hashes(0);
+	    } else {
+		  return $resultset->hashes;
+	    }
+      }
+
 }
 
 sub _where {
@@ -74,7 +104,7 @@ sub _where {
 			push @or, $self->_where($element) or $self->_error('convertvals failed');
 		  }
 
-		  push @out, DBR::Query::Part::OR->new( @or );
+		  push @out, DBR::Query::Where::OR->new( @or );
 
 	    } else {
 		  my $key   = $val1;
@@ -88,10 +118,10 @@ sub _where {
 									  dbrh    => $self->{dbrh},
 									 ) or return $self->_error('failed to create Query object');
 
-			      my $query = $compat->select(%{$value});
+			      my $query = $compat->select(%{$value}) or return $self->_error('failed to create query object');
 			      return $self->_error('invalid subquery') unless $query->can_be_subquery;
 
-			      push @out, DBR::Query::Part::FIELD->new($key, $query);
+			      push @out, DBR::Query::Where::SUBQUERY->new($key, $query);
 
 			}else{ #if( $self->{aliasmap} ){ #not a subquery... are we doing a join?
 			      my $alias = $key;
@@ -120,7 +150,7 @@ sub _where {
       }
 
       if(@out > 1){
-	    return DBR::Query::Part::AND->new(@out);
+	    return DBR::Query::Where::AND->new(@out);
       }else{
 	    return $out[0];
       }
@@ -153,24 +183,75 @@ sub _processfield{
 
 		  return $self->_error("invalid fieldname '$jointo' in -fields") unless $tofield =~ /^[A-Za-z][A-Za-z0-9_-]*$/;
 
-		  my $join = DBR::Query::Part::JOIN->new($field,$jointo) or return $self->_error('failed to create join object');
+		  my $join = DBR::Query::Where::JOIN->new($field,$jointo) or return $self->_error('failed to create join object');
 
 		  return $join;
 	    }
 
       } else {
 
-	    my $outval =  DBR::Query::Value->direct(
-						    value => $value,
-						    dbrh  => $self->{dbrh},
-						    logger => $self->{logger},
-						   ) or return $self->_error('failed to create value object');
+	    my $outval =  $self->_value( $value) or return $self->_error('failed to create value object');
 
-	    my $outfield = DBR::Query::Part::FIELD->new($field, $outval) or return $self->_error('failed to create field object');
+	    my $outfield = DBR::Query::Where::FIELD->new($field, $outval) or return $self->_error('failed to create field object');
 
 	    return $outfield;
       }
 
 }
+
+sub _value {
+      my( $self ) = shift;
+      my $value = shift or return $self->_error('value must be specified');
+
+      my $is_number = 0;
+      my $operator;
+
+      if(ref($value) eq 'ARRAY'){
+	    my $flags = shift @{$value}; # Yes, we are altering the input array... deal with it.
+
+	    if ($flags =~ /like/) { # like
+		  #return $self->_error('LIKE flag disabled without the allowquery flag') unless $self->{config}->{allowquery};
+		  $operator = 'like';
+
+	    } elsif ($flags =~ /!/) { # Not
+		  $operator = 'ne';
+
+	    } elsif ($flags =~ /\<\>/) { # greater than less than
+		  $operator = 'ne'; $is_number = 1;
+
+	    } elsif ($flags =~ /\>=/) { # greater than eq
+		  $operator = 'ge'; $is_number = 1;
+
+	    } elsif ($flags =~ /\<=/) { # less than eq
+		  $operator = 'le'; $is_number = 1;
+
+	    } elsif ($flags =~ /\>/) { # greater than
+		  $operator = 'gt'; $is_number = 1;
+
+	    } elsif ($flags =~ /\</) { # less than
+		  $operator = 'lt'; $is_number = 1;
+
+	    }
+
+	    if($flags =~ /d/){
+		  $is_number = 1;
+	    }
+
+      }
+
+      $operator ||= 'eq';
+
+      my $valobj = DBR::Query::Value->new(
+					  is_number => $is_number,
+					  operator  => $operator,
+					  value     => $value,
+					  dbrh      => $self->{dbrh},
+					  logger    => $self->{logger}
+					 ) or return $self->_error('failed to create value object');
+
+
+      return $valobj;
+}
+
 
 1;

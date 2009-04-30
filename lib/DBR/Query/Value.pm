@@ -27,6 +27,9 @@ my %sql_ops = (
 my %str_operators = map {$_ => 1} qw'eq ne like notlike';
 my %num_operators = map {$_ => 1} qw'eq ne ge le gt lt';
 
+
+#### Constructors ###############################################
+
 sub new{
       my( $package ) = shift;
       my %params = @_;
@@ -68,7 +71,7 @@ sub new{
       }
 
       if( $self->{is_number} ){
-	    foreach my $val ( @{$value}){
+	    foreach my $val ( @{$value}) {
 		  if ($val !~ /^-?\d*\.?\d+$/) {
 			return $self->_error("value $val is not a legal number");
 		  }
@@ -99,6 +102,10 @@ sub new{
 
 }
 
+
+1;
+
+## Methods #################################################
 sub is_number{ return $_[0]->{is_number}             }
 sub count    { return scalar(  @{ $_[0]->{value} } ) }
 
@@ -136,58 +143,4 @@ sub quoted{
 
 
 
-sub direct {
-      my( $package ) = shift;
-      my %params = @_;
 
-      my $dbrh  = $params{dbrh}  or return $package->_error('dbrh must be specified');
-      my $value = $params{value} or return $package->_error('value must be specified');
-
-      my $is_number = 0;
-      my $operator;
-
-      if(ref($value) eq 'ARRAY'){
-	    my $flags = shift @{$value}; # Yes, we are altering the input array... deal with it.
-
-	    if ($flags =~ /like/) { # like
-		  #return $self->_error('LIKE flag disabled without the allowquery flag') unless $self->{config}->{allowquery};
-		  $operator = 'like';
-
-	    } elsif ($flags =~ /!/) { # Not
-		  $operator = 'ne';
-
-	    } elsif ($flags =~ /\<\>/) { # greater than less than
-		  $operator = 'ne'; $is_number = 1;
-
-	    } elsif ($flags =~ /\>=/) { # greater than eq
-		  $operator = 'ge'; $is_number = 1;
-
-	    } elsif ($flags =~ /\<=/) { # less than eq
-		  $operator = 'le'; $is_number = 1;
-
-	    } elsif ($flags =~ /\>/) { # greater than
-		  $operator = 'gt'; $is_number = 1;
-
-	    } elsif ($flags =~ /\</) { # less than
-		  $operator = 'lt'; $is_number = 1;
-
-	    }
-
-	    if($flags =~ /d/){
-		  $is_number = 1;
-	    }
-
-      }
-
-      $operator ||= 'eq';
-
-      return $package->new(
-			   is_number => $is_number,
-			   operator  => $operator,
-			   value     => $value,
-			   dbrh      => $dbrh,
-			   logger    => $params{logger}
-			  );
-}
-
-1;

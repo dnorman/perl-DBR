@@ -32,7 +32,12 @@ my $query = $compat->select(
 				       [ {fieldC => 1}, {fieldC => 2} ],
 				       c => ['>','37'],
 				       'tableB.field2' => ['j','tableC.field2'],
-				       'tableB.field3' => ['d',27,21,22]
+				       'tableB.field3' => ['d',27,21,22],
+				       d => {
+					     -table => 'foo',
+					     -field => 'fieldD',
+					     -where => {a => 1}
+					    }
 				      ],
 			   ) or die 'failed to select';
 

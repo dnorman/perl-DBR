@@ -42,76 +42,20 @@ sub select{
     my $self = shift;
     my @params = @_;
     my %params;
+
     if(scalar(@params) == 1){
       $params{-sql} = $params[0];
     }else{
       %params = @params;
     }
 
-
-
     my $compat = DBR::Query::Compat::DBRv1->new(
 						logger  => $self->{logger},
 						dbrh    => $self->{dbrh},
 					       ) or return $self->_error('failed to create Query object');
 
-    my $query = $compat->select(%params) or return $self->_error('failed to prepare select');
+    return $compat->select(%params) or return $self->_error('failed to prepare select');
 
-    return $query->sql;
-
-    die 'FAIL';
-
-#     my $sql;
-#     if($params{-sql}){
-# 	  $sql = $params{-sql};
-#     }else{
-# 	  return $self->_error('failed to build select sql') unless
-# 	    $sql = $self->{sqlbuilder}->buildSelect(%params);
-#     }
-
-#     #print STDERR "sql: $sql\n";
-#     $self->_logDebug($sql);
-#     return $self->_error('failed to prepare statement') unless
-#       my $sth = $self->{dbh}->prepare($sql);
-#       my $rowct = $sth->execute();
-
-#     return $self->_error('failed to execute statement') unless defined($rowct);
-
-
-#     my $count = 0;
-#     my $rows = [];
-#     if ($rows) {
-# 	  if ($params{-rawsth}) {
-# 		return $sth;
-# 	  }elsif ($params{-count}) {
-# 		($count) = $sth->fetchrow_array();
-# 	  }elsif($params{-arrayref}){
-# 		$rows = $sth->fetchall_arrayref();
-# 	  }elsif ($params{-keycol}) {
-# 		return $sth->fetchall_hashref($params{-keycol});
-# 	  } else {
-# 		while (my $row = $sth->fetchrow_hashref()) {
-# 		      $count++;
-# 		      push @{$rows}, $row;
-# 		}
-# 	  }
-#     }
-
-#     $sth->finish();
-
-#     if($rows){
-# 	if($params{-count}){
-# 	    return $count;
-# 	}elsif($params{-single}){
-# 	      return 0 unless @{$rows};
-# 	      my $row = $rows->[0];
-# 	      return $row;
-# 	}else{
-# 	      return $rows;
-# 	}
-#     }
-
-#     return undef;
 
 }
 
