@@ -9,7 +9,7 @@ use strict;
 use base 'DBR::Common';
 use DBR::Query;
 use DBR::Query::Value;
-use DBR::Query::Part;
+use DBR::Query::Where;
 
 sub new {
       my( $package ) = shift;
@@ -54,16 +54,21 @@ sub select {
 		    ) or return $self->_error('Failed to set up select');
 
 
-      # return $query->sql;
-      if ($params{-rawsth}) {
+
+
+      if ($params{-query}){
+	    return $query;
+
+      }elsif ($params{-rawsth}) {
 
 	    my $sth = $query->execute( sth_only => 1) or return $self->_error('failed to execute');
 	    return $sth;
 
       } else {
 	    my $resultset = $query->execute() or return $self->_error('failed to execute');
-
-	    if ($params{-object}) { # new way - hybrid
+	    use Data::Dumper;
+	    print Dumper(\%params);
+	    if ($params{'-object'}) { # new way - hybrid
 		  return $resultset;
 	    } elsif ($params{-count}) {
 		  return $resultset->count();
@@ -118,7 +123,7 @@ sub _where {
 									  dbrh    => $self->{dbrh},
 									 ) or return $self->_error('failed to create Query object');
 
-			      my $query = $compat->select(%{$value}) or return $self->_error('failed to create query object');
+			      my $query = $compat->select(%{$value}, -query => 1) or return $self->_error('failed to create query object');
 			      return $self->_error('invalid subquery') unless $query->can_be_subquery;
 
 			      push @out, DBR::Query::Where::SUBQUERY->new($key, $query);

@@ -51,7 +51,7 @@ sub select{
 
     my $compat = DBR::Query::Compat::DBRv1->new(
 						logger  => $self->{logger},
-						dbrh    => $self->{dbrh},
+						dbrh    => $self,
 					       ) or return $self->_error('failed to create Query object');
 
     return $compat->select(%params) or return $self->_error('failed to prepare select');

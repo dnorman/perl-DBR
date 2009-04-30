@@ -25,8 +25,6 @@ sub new {
 
       return $self->_error('dbrh object is required') unless $self->{dbrh};
 
-      my $type = $params{type} || return $self->_error('type is required');
-
       $self->{flags} = {
 			alias   => $params{alias}   ? 1:0,
 			dealias => $params{dealias} ? 1:0,
@@ -218,18 +216,22 @@ sub execute{
       $self->_logDebug($self->sql);
 
       my $dbh = $self->{dbrh}->dbh or return $self->_error('failed to fetch dbh');
+
       return $self->_error('failed to prepare statement') unless
-	my $sth = $self->{dbh}->prepare($self->sql);
+	my $sth = $dbh->prepare($self->sql);
 
       if($params{sth_only}){
 
 	    return $sth;
+
       }else{
 	    my $resultset = DBR::Query::ResultSet->new(
 						       logger => $self->{logger},
 						       sth    => $sth,
 						       query  => $self,
-						      ) or return $self->_eror('Failed to erateesultsett);
+						      ) or return $self->_eror('Failed to create resultset');
+
+	    return $resultset;
       }
 
 }

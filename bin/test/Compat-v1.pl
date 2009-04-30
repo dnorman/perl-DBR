@@ -17,28 +17,31 @@ my $dbr = new DBR(
 
 my $dbrh = $dbr->connect('esrp_main') || die "failed to connect";
 
-my $compat = DBR::Query::Compat::DBRv1->new(logger => $logger, dbrh => $dbrh);
+#my $compat = DBR::Query::Compat::DBRv1->new(logger => $logger, dbrh => $dbrh);
 
-my $query = $compat->select(
-  			    -table => {
-				       tableA => 'orders',
-				       tableB => 'items',
-				       tableC => 'product',
-				      },
-  			    -fields => 'order_id total date_created',
-			    -where => [
-				       a => 'valueA',
-				       tableA => {field1 => ['j','tableB.field1']},
-				       [ {fieldC => 1}, {fieldC => 2} ],
-				       c => ['>','37'],
-				       'tableB.field2' => ['j','tableC.field2'],
-				       'tableB.field3' => ['d',27,21,22],
-				       d => {
-					     -table => 'foo',
-					     -field => 'fieldD',
-					     -where => {a => 1}
-					    }
-				      ],
-			   ) or die 'failed to select';
+my $resultset = $dbrh->select(
+			      -object => 1,
+			      -table => 'orders',
+			      -fields => 'order_id total date_created',
+			      -where => { cust_id => 902349 }
+# 				-table => {
+# 					   tableA => 'orders',
+# 					   tableB => 'items',
+# 					   tableC => 'product',
+# 					  },
+# 				-where => [
+# 					   a => 'valueA',
+# 					   tableA => {field1 => ['j','tableB.field1']},
+# 					   [ {fieldC => 1}, {fieldC => 2} ],
+# 					   c => ['>','37'],
+# 					   'tableB.field2' => ['j','tableC.field2'],
+# 					   'tableB.field3' => ['d',27,21,22],
+# 					   d => {
+# 						 -table => 'foo',
+# 						 -field => 'fieldD',
+# 						 -where => {a => 1}
+# 						}
+# 					  ],
+			       ) or die 'failed to select';
 
-print Dumper({response => $query->sql});
+print Dumper({response => $resultset->next});
