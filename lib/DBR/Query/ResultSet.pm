@@ -17,6 +17,10 @@ sub new {
 
       return $self->_error('sth object must be specified') unless $self->{sth};
 
+      DBR::Query::RecordMaker->new(
+				   
+				  );
+
       #prime the pump
       $self->{next} = *_first;
 
