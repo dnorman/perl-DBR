@@ -2,6 +2,7 @@ package DBR::Query::RecordMaker;
 
 use strict;
 use base 'DBR::Common';
+use Symbol qw( qualify_to_ref );
 
 my $BASECLASS = 'DBR::Query::Record';
 my $classidx = 0;
@@ -18,20 +19,24 @@ sub new {
       return( $self );
 }
 
+
 sub _mk_class{
       my $self = shift;
 
       my $class = $BASECLASS . 'C' . ++$classidx;
 
-      no strict refs;
-      @{"$class::ISA"} = 'TestMe';
+      #no strict refs;
+      my $isa = qualify_to_ref( "$class::ISA" );
+      @{$isa} = ($BASECLASS);
 
       foreach my $method (@methods){
-	    my $subref = $self->_mk_method(
-					   mode  => 'rw',
-					   index => $field->index,
-					  );
-	    *{"$class::$method"} = $subref
+	    my $sub = $self->_mk_method(
+					mode  => 'rw',
+					index => $field->index,
+				       ) or return $self->_error('Failed to create method')
+
+	    my $symbol = qualify_to_ref( "$class::$method" );
+	    *$symbol = $sub;
       }
 }
 

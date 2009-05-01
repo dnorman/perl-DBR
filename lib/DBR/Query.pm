@@ -121,7 +121,7 @@ sub select{
 
       if( $params{count} ){
 	  $sql .= 'count(*) ';
-	  $self->{flags}->{count} = 1;
+	  $self->{flags}->{is_count} = 1;
 
       }elsif($params{fields}){
 	    my $fields = $params{fields};
@@ -230,6 +230,7 @@ sub execute{
 						       logger => $self->{logger},
 						       sth    => $sth,
 						       query  => $self,
+						       is_count => $self->{flags}->{is_count} || 0,
 						      ) or return $self->_eror('Failed to create resultset');
 
 	    return $resultset;

@@ -17,9 +17,11 @@ sub new {
 
       return $self->_error('sth object must be specified') unless $self->{sth};
 
-      DBR::Query::RecordMaker->new(
-				   
-				  );
+      my $fields = $self->{query}->fields or return $self->_error('Failed to get query fields');
+
+      DBR::Query::RecordMaker->create(
+				      fields => $fields
+				     );
 
       #prime the pump
       $self->{next} = *_first;
