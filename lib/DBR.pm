@@ -48,8 +48,11 @@ sub connect {
 	    $class = undef;
       }
 
-      my $instance = DBR::Config::Instance->lookup( handle => $name, class => $class) or
-	return $self->_error("No config found for db '$name' class '$class'");
+      my $instance = DBR::Config::Instance->lookup(
+						   logger => $self->{logger},
+						   handle => $name,
+						   class => $class
+						  ) or return $self->_error("No config found for db '$name' class '$class'");
 
       return $self->_error('failed to get database handle') unless
 	my $dbh = $self->_gethandle($instance);

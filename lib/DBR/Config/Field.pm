@@ -8,6 +8,7 @@ package DBR::Config::Field;
 use strict;
 use base 'DBR::Common';
 use DBR::Query::Value;
+use DBR::Query::Field;
 use DBR::Config::Table;
 
 my %FIELDS_BY_ID;
@@ -94,6 +95,18 @@ sub new {
   return $self->_error('dbrh object must be specified')   unless $self->{dbrh};
 
   return( $self );
+}
+
+sub query_field{
+      my $self = shift;
+
+      my $Qfield = DBR::Query::Field->new(
+					  logger => $self->{logger},
+					  name   => $self->name
+					 ) or return $self->_error('Failed to create query field object');
+
+      return $Qfield;
+
 }
 
 sub makevalue{ # shortcut function?

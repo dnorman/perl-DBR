@@ -14,8 +14,14 @@ sub new{
 
       my $field;
 
+      my $self = {
+		  logger => $params{logger},
+		 };
+
+      bless( $self, $package );
+
       my $table = $params{table};
-      my $name = $params{field} or return $self->_error('field is required');
+      my $name = $params{name} or return $self->_error('field is required');
 
       my @parts = split(/\./,$name);
       if(scalar(@parts) == 1){
@@ -27,6 +33,15 @@ sub new{
 	    return $self->_error('Invalid name');
       }
 
+      return $self->_error("invalid field name '$field'") unless $field =~ /^[A-Z][A-Z0-9_-]*$/i;
+
+      if($table){
+	    return $self->_error("invalid table name '$table'") unless $table =~ /^[A-Z][A-Z0-9_-]*$/i;
+      }
+
+      $self->{table} = $table;
+      $self->{field} = $field;
+
       my $translate = $params{translate};
       if(defined($translate)){
 	    return $self->_error('translate flag must be a coderef') unless ref($translate) eq 'CODE';
@@ -36,16 +51,22 @@ sub new{
       $sql .= '.' if $sql;
       $sql .= $field;
 
+      if ( $params{dealias} ) {
+	    $sql .= " AS $field";
+      } elsif ( $params{alias} ) {
+	    $sql .= " AS '$table.$field'";
+      }
+      $self->{sql} = $sql;
 
-      my $self = [$table,$field,$sql,$translate];
-
-      bless( $self, $package );
 
       return $self;
 }
 
-sub table{ $_[0]->[0] }
-sub field{ $_[0]->[1] }
-sub sql  { $_[0]->[2] }
-
+sub table{ $_[0]->{table} }
+sub name{ $_[0]->{field} }
+sub sql  { $_[0]->{sql} }
+sub index{ $_[0]->{index} }
+sub set_index{ $_[0]->{index} = $_[1] }
 sub validate { 1 }
+
+1;

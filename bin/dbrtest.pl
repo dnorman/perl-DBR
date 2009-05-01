@@ -52,8 +52,10 @@ while (my $row = $ret->next){
 
      ### $row->status('cancelled');
 
-      print STDERR Dumper($row);
+      print STDERR Dumper($row->ship_method_id);
 }
+
+#undef $ret;
 
 #$container->values('order_id');
 

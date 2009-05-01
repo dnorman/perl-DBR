@@ -3,12 +3,13 @@
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation.
 
-package DBR::Query::Compat::DBRv1;
+package DBR::Compat::DBRv1;
 
 use strict;
 use base 'DBR::Common';
 use DBR::Query;
 use DBR::Query::Value;
+use DBR::Query::Field;
 use DBR::Query::Where;
 
 sub new {
@@ -36,6 +37,16 @@ sub select {
       my $fields = $self->_split( $params{-fields} || $params{-field}) or
 	return $self->_error('No -field[s] parameter specified');
 
+
+      my @Qfields;
+      foreach my $field (@$fields){
+	    my $Qfield = DBR::Query::Field->new(
+						logger => $self->{logger},
+						name => $field
+					       ) or return $self->_error('Failed to create query field object');
+	    push @Qfields, $Qfield;
+      }
+
       my $where;
       if($params{-where}){
 	    $where = $self->_where($params{-where}) or return $self->_error('failed to prep where');
@@ -54,7 +65,7 @@ sub select {
 
       $query->select(
 		     count  => $params{'-count'}?1:0, # takes precedence
-		     fields => $fields
+		     fields => \@Qfields
 		    ) or return $self->_error('Failed to set up select');
 
 

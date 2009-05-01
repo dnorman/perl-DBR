@@ -26,8 +26,6 @@ sub new {
       return $self->_error('dbrh object is required') unless $self->{dbrh};
 
       $self->{flags} = {
-			alias   => $params{alias}   ? 1:0,
-			dealias => $params{dealias} ? 1:0,
 			lock    => $params{lock} ? 1:0,
 		       };
 
@@ -126,49 +124,33 @@ sub select{
       }elsif($params{fields}){
 	    my $fields = $params{fields};
 
+	    my $idx = -1;
 	    if (ref($fields) eq 'ARRAY') {
-		  my @fields;
-		  foreach my $str (@{$fields}) {
-			my @parts = split(/\./,$str);
-			my ($field,$alias);
+		  my @fieldsql;
+		  foreach my $field (@{$fields}) {
 
-			my $outf;
-			if (@parts == 1) {
-			      ($field) = @parts;
-			      $outf = $field;
-			} elsif (@parts == 2) {
-			      ($alias,$field) = @parts;
-			      return $self->_error("table alias '$str' is invalid without a join") unless $self->{aliasmap};
-			      return $self->_error("invalid table alias '$str' in -fields")        unless $self->{aliasmap}->{$alias};
+			return $self->_error('must specify field as a DBR::Query::Field object') unless ref($field) eq 'DBR::Query::Field';
 
-			      if ( $self->{flags}->{dealias} ) { # HERE
-				    $outf = "$alias.$field AS $field";
-			      } elsif ( $self->{flags}->{alias} ) { #HERE
-				    $outf = "$alias.$field AS '$alias.$field'";
-			      } else {
-				    $outf = "$alias.$field"; # HERE - might result in different behavior on different databases
-			      }
-			} else {
-			      $self->_error("invalid fieldname '$str' in -fields");
-			      next;
+			if ($field->table) {
+			      return $self->_error("table alias is invalid without a join") unless $self->{aliasmap};
+			      return $self->_error('invalid table alias "' . $field->table . '" in -fields')        unless $self->{aliasmap}->{ $field->table };
 			}
 
-			next unless $field =~ /^[A-Za-z][A-Za-z0-9_-]*$/; # should bomb out, but leave this cus of legacy code
-			push @fields, $outf;
+			push @fieldsql, $field->sql;
+			$field->set_index(++$idx);
 
-			$self->{flags}->{can_be_subquery} = 1 if scalar(@fields) == 1;
+			$self->{flags}->{can_be_subquery} = 1 if scalar(@fieldsql) == 1;
 
 		  }
-		  return $self->_error('No valid fields specified') unless @fields;
-		  $sql .= join(',',@fields);
+		  return $self->_error('No valid fields specified') unless @fieldsql;
+		  $sql .= join(', ',@fieldsql);
 
-	    } elsif ($fields eq '*') {
-		  $sql .= '*';
 	    } else {
 		  return $self->_error('No valid fields specified');
 	    }
       }
 
+      $self->{fields} = $params{fields};
       $self->{main_sql} = $sql;
       $self->{type} = 'select';
 
@@ -210,6 +192,8 @@ sub can_be_subquery {
       return $self->{flags}->{can_be_subquery} ? 1:0;
 }
 
+sub fields{ $_[0]->{fields} }
+
 sub execute{
       my $self = shift;
       my %params = @_;
@@ -231,7 +215,7 @@ sub execute{
 						       sth    => $sth,
 						       query  => $self,
 						       is_count => $self->{flags}->{is_count} || 0,
-						      ) or return $self->_eror('Failed to create resultset');
+						      ) or return $self->_error('Failed to create resultset');
 
 	    return $resultset;
       }

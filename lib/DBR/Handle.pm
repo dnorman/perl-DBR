@@ -9,7 +9,7 @@ use strict;
 use base 'DBR::Common';
 use DBR::Query;
 use DBR::Object;
-use DBR::Query::Compat::DBRv1;
+use DBR::Compat::DBRv1;
 our $AUTOLOAD;
 
 sub new {
@@ -52,10 +52,10 @@ sub select{
       %params = @params;
     }
 
-    my $compat = DBR::Query::Compat::DBRv1->new(
-						logger  => $self->{logger},
-						dbrh    => $self,
-					       ) or return $self->_error('failed to create Query object');
+    my $compat = DBR::Compat::DBRv1->new(
+					 logger  => $self->{logger},
+					 dbrh    => $self,
+					) or return $self->_error('failed to create Query object');
 
     return $compat->select(%params) or return $self->_error('failed to prepare select');
 

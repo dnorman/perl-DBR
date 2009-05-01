@@ -2,6 +2,7 @@ package DBR::Query::ResultSet;
 
 use strict;
 use base 'DBR::Common';
+use DBR::Query::Record;
 
 sub new {
       my( $package ) = shift;
@@ -19,10 +20,16 @@ sub new {
 
       my $fields = $self->{query}->fields or return $self->_error('Failed to get query fields');
 
-      DBR::Query::RecordMaker->create(
-				      fields => $fields
-				     );
+      my $record = DBR::Query::Record->new(
+					  dbrh   => $self->{dbrh},
+					  logger => $self->{logger},
+					  fields => $fields,
+					 ) or return $self->_error('failed to create record class');
 
+      # need to keep this in scope, because it removes the dynamic class when DESTROY is called
+      $self->{record} = $record;
+
+      $self->{rc} = $record->class;
       #prime the pump
       $self->{next} = *_first;
 
@@ -139,7 +146,7 @@ sub _nextmem{
 	    $self->{next} = *reset;
       }
 
-      return $row;
+      return bless($row,$self->{rc});
 }
 
 
@@ -156,7 +163,7 @@ sub _fetch{
 	    $self->reset;
       }
 
-      return $row;
+      return bless($row,$self->{rc});
 }
 
 sub reset{
