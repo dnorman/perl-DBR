@@ -17,7 +17,7 @@ sub new {
       my %params = @_;
 
       my $self = {
-		  dbrh      => $params{dbrh},
+		  dbrh     => $params{dbrh},
 		  logger   => $params{logger},
 		 };
 
@@ -33,8 +33,9 @@ sub new {
 
       $self->_tables( $params{tables} ) or return $self->_error('failed to prepare tables');
 
-      $self->{where_sql} = $self->_where ( $params{where} ) or return $self->_error('failed to prepare where');
-
+      if($params{where}){
+	    $self->{where_sql} = $self->_where ( $params{where} ) or return $self->_error('failed to prepare where');
+      }
 
       if ($params{limit}){
  	    return $self->_error('invalid limit') unless $params{limit} =~ /^\d+$/;
@@ -102,7 +103,7 @@ sub _where{
       my $self = shift;
       my $param = shift;
 
-      return $self->_error('param must be an AND/OR/FIELD object') unless ref($param) =~ /^DBR::Query::Where::(AND|OR|FIELD)$/;
+      return $self->_error('param must be an AND/OR/COMPARE object') unless ref($param) =~ /^DBR::Query::Where::(AND|OR|COMPARE)$/;
 
       $param->validate($self) or return $self->_error('Where clause validation failed');
 
@@ -186,15 +187,15 @@ sub sql{
 
       if ($type eq 'select'){
 	    $sql .= "SELECT $self->{main_sql} FROM $tables";
+	    $sql .= " WHERE $self->{where_sql}" if $self->{where_sql};
       }elsif($type eq 'insert'){
 	    $sql .= "INSERT INTO $tables $self->{main_sql}";
       }elsif($type eq 'update'){
-	    $sql .= "UPDATE $tables SET $self->{main_sql}";
+	    $sql .= "UPDATE $tables SET $self->{main_sql} WHERE $self->{where_sql}";
       }elsif($type eq 'delete'){
-	    $sql .= "DELETE FROM $tables";
+	    $sql .= "DELETE FROM $tables WHERE $self->{where_sql}";
       }
-
-      $sql .= " WHERE $self->{where_sql}";
+      
       $sql .= ' FOR UPDATE'           if $self->{flags}->{lock};
       $sql .= " LIMIT $self->{limit}" if $self->{limit};
 

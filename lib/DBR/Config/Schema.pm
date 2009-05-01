@@ -75,28 +75,31 @@ sub new {
   my( $package ) = shift;
   my %params = @_;
   my $self = {
+	      dbrh      => $params{dbrh},
 	      logger    => $params{logger},
 	      schema_id => $params{schema_id}
 	     };
 
   bless( $self, $package );
 
+  return $self->_error('dbrh object must be specified')   unless $self->{dbrh};
   return $self->_error('schema_id is required') unless $self->{schema_id};
   return $self->_error("schema_id $self->{schema_id} is not defined") unless $SCHEMAS_BY_ID{ $self->{schema_id} };
 
   return( $self );
 }
 
-sub fetch_table{
+sub get_table{
       my $self  = shift;
       my $tname = shift or return $self->_error('name is required');
 
       my $table_id = $TABLES_BY_NAME{ $self->{schema_id} } -> { $tname } || return $self->_error("table $tname does not exist");
 
       my $table = DBR::Config::Table->new(
-						       logger   => $self->{logger},
-						       table_id => $table_id,
-						      ) or return $self->_error('failed to create table object');
+					  dbrh     => $self->{dbrh},
+					  logger   => $self->{logger},
+					  table_id => $table_id,
+					 ) or return $self->_error('failed to create table object');
       return $table;
 }
 

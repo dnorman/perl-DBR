@@ -147,13 +147,17 @@ sub schema_id { $_[0]->{_conf}->{schema_id} }
 #shortcut to fetch the schema object that corresponds to this instance
 sub schema{
       my $self = shift;
+      my %params = @_;
 
-      my $schema_id = $self->schema_id || return '';
+      return $self->_error('dbrh object must be specified')   unless $params{dbrh};
+
+      my $schema_id = $self->schema_id || return ''; # No schemas here
 
       my $schema = DBR::Config::Schema->new(
-							 logger    => $self->{logger},
-							 schema_id => $schema_id,
-							) || return $self->_error("failed to fetch schema object for schema_id $schema_id");
+					    logger    => $self->{logger},
+					    schema_id => $schema_id,
+					    dbrh      => $params{dbrh}
+					   ) || return $self->_error("failed to fetch schema object for schema_id $schema_id");
 
       return $schema;
 }

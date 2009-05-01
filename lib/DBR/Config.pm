@@ -68,9 +68,9 @@ sub load_file{
 	    $count++;
 
 	    my $instance = DBR::Config::Instance->register(
-									logger => $self->{logger},
-									spec   => $instspec
-								       ) || $self->_error("failed to load DBR conf file '$file' (stanza #$count)") && next;
+							   logger => $self->{logger},
+							   spec   => $instspec
+							  ) || $self->_error("failed to load DBR conf file '$file' (stanza #$count)") && next;
 	    if($instance->dbr_bootstrap){
 		  #don't bail out here on error
 		  $self->load_dbconf(
@@ -95,11 +95,11 @@ sub load_dbconf{
 
       $self->_error("failed to create instance handles") unless
 	my $instances = DBR::Config::Instance->load_from_db(
-									 logger   => $self->{logger},
-									 dbr      => $dbr,
-									 handle   => $handle,
-									 class    => $class,
-									);
+							    logger   => $self->{logger},
+							    dbr      => $dbr,
+							    handle   => $handle,
+							    class    => $class,
+							   );
       my %schema_ids;
       map {$schema_ids{ $_->schema_id } = 1 } @$instances;
 

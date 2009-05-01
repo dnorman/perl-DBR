@@ -9,6 +9,7 @@ use strict;
 use base 'DBR::Common';
 use DBR::Query;
 use DBR::Object;
+use DBR::Query::Compat::DBRv1;
 our $AUTOLOAD;
 
 sub new {
@@ -28,7 +29,9 @@ sub new {
       return $self->_error( 'dbr parameter is required'      ) unless $self->{dbr};
       return $self->_error( 'instance parameter is required' ) unless $self->{instance};
 
-      $self->{schema} = $self->{instance}->schema;
+      $self->{schema} = $self->{instance}->schema(
+						  dbrh => $self
+						 );
       return $self->_error( 'failed to retrieve schema' ) unless defined($self->{schema});
 
 
@@ -108,16 +111,15 @@ sub AUTOLOAD {
       return unless $method =~ /[^A-Z]/; # skip DESTROY and all-cap methods
       return $self->_error('Cannot autoload query object when no schema is defined') unless $self->{schema};
 
-      my $table = $self->{schema}->fetch_table($method) or return $self->_error("no such table '$method' exists in this schema");
+      my $table = $self->{schema}->get_table( $method ) or return $self->_error("no such table '$method' exists in this schema");
 
-      my $query = DBR::Query->new(
-				  logger => $self->{logger},
-				  dbh    => $self->{dbh},
-				  table  => $table,
-				  sqlbuilder => $self->{sqlbuilder},
-				 ) or return $self->_error('failed to create query object');
+      my $object = DBR::Object->new(
+				    logger => $self->{logger},
+				    dbrh   => $self,
+				    table  => $table,
+				   ) or return $self->_error('failed to create query object');
 
-      return $query;
+      return $object;
 }
 
 sub begin{

@@ -78,7 +78,7 @@ sub type { return 'OR' };
 1;
 
 ###########################################
-package DBR::Query::Where::FIELD;
+package DBR::Query::Where::COMPARE;
 use strict; our @ISA = ('DBR::Query::Where');
 
 sub new{
@@ -94,7 +94,7 @@ sub new{
       return $self;
 }
 
-sub type { return 'FIELD' };
+sub type { return 'COMPARE' };
 sub children { return () };
 sub key   { return $_[0]->[0] }
 sub value { return $_[0]->[1] }

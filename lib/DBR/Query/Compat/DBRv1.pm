@@ -36,7 +36,11 @@ sub select {
       my $fields = $self->_split( $params{-fields} || $params{-field}) or
 	return $self->_error('No -field[s] parameter specified');
 
-      my $where = $self->_where($params{-where}) or return $self->_error('failed to prep where');
+      my $where;
+      if($params{-where}){
+	    $where = $self->_where($params{-where}) or return $self->_error('failed to prep where');
+      }
+
       #use Data::Dumper;
       #print STDERR Dumper($where);
 
@@ -57,6 +61,7 @@ sub select {
 
 
       if ($params{-query}){
+
 	    return $query;
 
       }elsif ($params{-rawsth}) {
@@ -66,20 +71,20 @@ sub select {
 
       } else {
 	    my $resultset = $query->execute() or return $self->_error('failed to execute');
-	    use Data::Dumper;
-	    print Dumper(\%params);
+
 	    if ($params{'-object'}) { # new way - hybrid
 		  return $resultset;
 	    } elsif ($params{-count}) {
 		  return $resultset->count();
 	    } elsif ($params{-arrayref}) {
-		  return $resultset->arrays;
+		  return $resultset->arrayrefs;
 	    } elsif ($params{-keycol}) {
 		  return $resultset->map($params{-keycol})
 	    } elsif ($params{-single}) {
-		  return $resultset->hashes(0);
+		  my $ret = $resultset->hashrefs() or return undef;
+		  return $ret->[0];
 	    } else {
-		  return $resultset->hashes;
+		  return $resultset->hashrefs;
 	    }
       }
 
@@ -197,7 +202,7 @@ sub _processfield{
 
 	    my $outval =  $self->_value( $value) or return $self->_error('failed to create value object');
 
-	    my $outfield = DBR::Query::Where::FIELD->new($field, $outval) or return $self->_error('failed to create field object');
+	    my $outfield = DBR::Query::Where::COMPARE->new($field, $outval) or return $self->_error('failed to create compare object');
 
 	    return $outfield;
       }

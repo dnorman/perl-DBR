@@ -36,12 +36,19 @@ sub new{
 
       my $field = $params{field}; # optional
 
+
       my $self = {
 		  dbrh   => $params{dbrh},
-		  logger => $params{logger}
+		  logger => $params{logger},
+		  field  => $field
 		 };
 
       bless( $self, $package );
+
+
+      if (defined $field){ #field object is optional
+	    return $self->_error('invalid field object') unless ref($field) eq 'DBR::Config::Field';
+      }
 
       $self->{dbrh} or return $self->_error('dbrh must be specified');
       $self->{dbh} = $self->{dbrh}->dbh or return $self->_error('failed to fetch dbh');
@@ -96,6 +103,7 @@ sub new{
 
       # #Translation plugins go here
       if($field){
+	    
       }
 
       return $self;

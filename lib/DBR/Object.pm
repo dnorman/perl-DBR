@@ -15,16 +15,14 @@ sub new {
       my %params = @_;
       my $self = {
 		  logger => $params{logger},
+		  dbrh    => $params{dbrh},
 		  table  => $params{table},
-		  dbh    => $params{dbh},
-		  sqlbuilder => $params{sqlbuilder},
 		 };
 
       bless( $self, $package );
 
-      return $self->_error('table object must be specified') unless $self->{table};
-      return $self->_error('dbh object must be specified')   unless $self->{dbh};
-      return $self->_error('sqlbuilder must be specified')   unless $self->{sqlbuilder};
+      return $self->_error('table object must be specified') unless ref($self->{table}) eq 'DBR::Config::Table';
+      return $self->_error('dbrh object must be specified')   unless $self->{dbrh};
 
       return( $self );
 }
@@ -32,41 +30,42 @@ sub new {
 
 sub where{
       my $self = shift;
-      my %where = @_;
+      my %inwhere = @_;
 
       # Use caller information to determine selected fields
       my ( $package, $filename, $line, $method) = caller(1);
 
+      # LOOKUP FIELDS HERE
+
+
       my $table = $self->{table};
-      my %outwhere;
-      foreach my $fieldname (keys %where){
+      my @and;
+      foreach my $fieldname (keys %inwhere){
 
  	    my $field = $table->get_field( $fieldname ) or return $self->_error("invalid field $fieldname");
 
- 	    $outwhere{ $field->name } = $field->makevalue( $where{ $fieldname } ) or return $self->_error("failed to build value object for $fieldname");
+ 	    my $value = $field->makevalue( $inwhere{ $fieldname } ) or return $self->_error("failed to build value object for $fieldname");
 
+	    my $outfield = DBR::Query::Where::COMPARE->new($field->name, $value) or return $self->_error('failed to create compare object');
+
+	    push @and, $outfield;
       }
+
+      my $outwhere = DBR::Query::Where::AND->new(@and);
 
       my $query = DBR::Query->new(
 				  logger => $self->{logger},
-				  dbh    => $self->{dbh},
-				  type   => 'select',
-				  params => {
-					     -table => $table->name,
-					     -where => \%outwhere
-					    }, # ugly
+				  dbrh    => $self->{dbrh},
+				  tables => $table->name,
+				  where  => $outwhere,
 				 ) or return $self->_error('failed to create Query object');
+      $query->select(
+		     fields => [ map {$_->name} @{$table->fields || []} ]
+		    ) or return $self->_error('Failed to set up select');
 
-      $self->_logDebug($query->sql);
+      my $resultset = $query->execute() or return $self->_error('failed to execute');
 
-     ### my $sth = $self->{dbh}->prepare($sql) or return $self->_error('failed to prepare statement');
-
-     # my $resultset = DBR::Query::ResultSet->new(
-#						 logger => $self->{logger},
-#						 #query  => $self,
-#						 sth    => $sth
-#						) or return $self->_error('failed to create resultset');
- #     return $resultset;
+      return $resultset;
 }
 
 #Fetch by Primary key

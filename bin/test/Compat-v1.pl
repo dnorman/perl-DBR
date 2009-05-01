@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-
+use strict;
 use lib '/dj/tools/apollo-utils/lib';
 use lib '/dj/tools/perl-dbr/lib';
 use Data::Dumper;
@@ -19,8 +19,8 @@ my $dbrh = $dbr->connect('esrp_main') || die "failed to connect";
 
 #my $compat = DBR::Query::Compat::DBRv1->new(logger => $logger, dbrh => $dbrh);
 
-my $resultset = $dbrh->select(
-			      -object => 1,
+my $ret = $dbrh->select(
+			      #-object => 1,
 			      -table => 'orders',
 			      -fields => 'order_id total date_created',
 			      -where => { cust_id => 902349 }
@@ -44,4 +44,4 @@ my $resultset = $dbrh->select(
 # 					  ],
 			       ) or die 'failed to select';
 
-print Dumper({response => $resultset->next});
+print Dumper($ret);
