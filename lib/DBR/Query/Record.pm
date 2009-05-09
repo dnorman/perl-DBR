@@ -96,7 +96,7 @@ sub _mk_method{
 
       my $code;
       if($mode eq 'rw' && $field){
-	    $code = "   $set ? \$parent->_set( $record, \$field, $setvalue ) : $value   ";
+	    $code = "   $setvalue ? \$parent->_set( $record, \$field, $setvalue ) : $value   ";
       }elsif($mode eq 'ro'){
 	    $code = "   $value   ";
       }
