@@ -6,9 +6,8 @@
 package DBR::Config::Field;
 
 use strict;
-use base 'DBR::Common';
+use base 'DBR::Config::Field::Common';
 use DBR::Query::Value;
-use DBR::Query::Field;
 use DBR::Config::Table;
 
 my %FIELDS_BY_ID;
@@ -57,7 +56,7 @@ sub load{
       return $self->_error('Failed to select instances') unless
 	my $fields = $dbh->select(
 				  -table => 'dbr_fields',
-				  -fields => 'field_id table_id name field_type default_select is_nullable is_signed is_enum enum_param max_value',
+				  -fields => 'field_id table_id name field_type default_select is_nullable is_signed is_pkey is_enum enum_param max_value',
 				  -where  => { table_id => ['d in',@$table_ids] },
 				 );
 
@@ -74,39 +73,22 @@ sub load{
       return 1;
 }
 
-sub _fetch_by_table_id{
-      my $package = shift;
-      my $table_id = shift;
-
-}
 
 sub new {
-  my $package = shift;
-  my %params = @_;
-  my $self = {
-	      dbrh     => $params{dbrh},
-	      logger   => $params{logger},
-	      field_id => $params{field_id}
-	     };
+      my $package = shift;
+      my %params = @_;
+      my $self = {
+		  dbrh     => $params{dbrh},
+		  logger   => $params{logger},
+		  field_id => $params{field_id},
+		 };
 
-  bless( $self, $package );
+      bless( $self, $package );
 
-  return $self->_error('field_id is required') unless $self->{field_id};
-  return $self->_error('dbrh object must be specified')   unless $self->{dbrh};
+      return $self->_error('field_id is required') unless $self->{field_id};
+      return $self->_error('dbrh object must be specified')   unless $self->{dbrh};
 
-  return( $self );
-}
-
-sub query_field{
-      my $self = shift;
-
-      my $Qfield = DBR::Query::Field->new(
-					  logger => $self->{logger},
-					  name   => $self->name
-					 ) or return $self->_error('Failed to create query field object');
-
-      return $Qfield;
-
+      return( $self );
 }
 
 sub makevalue{ # shortcut function?
@@ -122,7 +104,18 @@ sub makevalue{ # shortcut function?
 
 }
 
-sub name { $FIELDS_BY_ID{  $_[0]->{field_id} }->{name} };
+sub table_id { $FIELDS_BY_ID{  $_[0]->{field_id} }->{table_id}    };
+sub name     { $FIELDS_BY_ID{  $_[0]->{field_id} }->{name}    };
+sub is_pkey  { $FIELDS_BY_ID{  $_[0]->{field_id} }->{is_pkey} }
+sub table    {
+      my $self = shift;
+
+      return DBR::Config::Table->new(
+				     dbrh     => $self->{dbrh},
+				     logger   => $self->{logger},
+				     table_id => $FIELDS_BY_ID{  $_[0]->{field_id} }->{table_id}
+				    );
+}
 
 sub is_numeric{
       my $field = $FIELDS_BY_ID{ $_[0]->{field_id} };

@@ -125,7 +125,17 @@ sub fields{
 	    push @fields, $field;
       }
 
-      return \@fields;
+
+      return wantarray?@fields:\@fields;
+}
+
+sub primary_key{ #HERE - Optimize this
+      my $self = shift;
+
+      # cache ||= figure it out
+      my $pk = $self->{pkey} ||= [ grep { $_->is_pkey } @{$self->fields || [] } ];
+
+      return wantarray?@{$pk}:$pk;
 }
 
 sub name { $TABLES_BY_ID{  $_[0]->{table_id} }->{name} };

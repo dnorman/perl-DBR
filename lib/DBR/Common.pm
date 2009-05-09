@@ -1,6 +1,14 @@
 package DBR::Common;
 
 
+sub _uniq{
+    my $self = shift;
+
+    my %uniq;
+    return grep{!$uniq{$_}++} @_;
+
+}
+
 sub _split{
       my $self = shift;
       my $value = shift;

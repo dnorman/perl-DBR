@@ -129,15 +129,15 @@ sub select{
 		  my @fieldsql;
 		  foreach my $field (@{$fields}) {
 
-			return $self->_error('must specify field as a DBR::Query::Field object') unless ref($field) eq 'DBR::Query::Field';
+			return $self->_error('must specify field as a DBR::Config::Field object') unless ref($field) =~ /^DBR::Config::Field/; # Could also be ::Anon
 
-			if ($field->table) {
+			if ($field->table_alias) {
 			      return $self->_error("table alias is invalid without a join") unless $self->{aliasmap};
-			      return $self->_error('invalid table alias "' . $field->table . '" in -fields')        unless $self->{aliasmap}->{ $field->table };
+			      return $self->_error('invalid table alias "' . $field->table_alias . '" in -fields')        unless $self->{aliasmap}->{ $field->table_alias };
 			}
 
 			push @fieldsql, $field->sql;
-			$field->set_index(++$idx);
+			$field->index(++$idx);
 
 			$self->{flags}->{can_be_subquery} = 1 if scalar(@fieldsql) == 1;
 
@@ -148,9 +148,10 @@ sub select{
 	    } else {
 		  return $self->_error('No valid fields specified');
 	    }
+
+	    $self->{fields} = $fields;
       }
 
-      $self->{fields} = $params{fields};
       $self->{main_sql} = $sql;
       $self->{type} = 'select';
 

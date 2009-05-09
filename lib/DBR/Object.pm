@@ -60,7 +60,7 @@ sub where{
 				  where  => $outwhere,
 				 ) or return $self->_error('failed to create Query object');
       $query->select(
-		     fields => [ map {$_->query_field} @{$table->fields || []} ]
+		     fields => scalar($table->fields)
 		    ) or return $self->_error('Failed to set up select');
 
       my $resultset = $query->execute() or return $self->_error('failed to execute');

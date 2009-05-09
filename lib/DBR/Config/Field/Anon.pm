@@ -3,10 +3,10 @@
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation.
 
-package DBR::Query::Field;
+package DBR::Config::Field::Anon;
 
 use strict;
-use base 'DBR::Common';
+use base 'DBR::Config::Field::Common';
 
 sub new{
       my( $package ) = shift;
@@ -15,13 +15,17 @@ sub new{
       my $field;
 
       my $self = {
+		  dbrh   => $params{dbrh},
 		  logger => $params{logger},
 		 };
 
       bless( $self, $package );
 
       my $table = $params{table};
-      my $name = $params{name} or return $self->_error('field is required');
+
+      my $name = $params{name} or return $self->_error('name is required');
+
+      return $self->_error('dbrh object must be specified')   unless $self->{dbrh};
 
       my @parts = split(/\./,$name);
       if(scalar(@parts) == 1){
@@ -39,34 +43,19 @@ sub new{
 	    return $self->_error("invalid table name '$table'") unless $table =~ /^[A-Z][A-Z0-9_-]*$/i;
       }
 
-      $self->{table} = $table;
+      $self->{table_alias} = $table;
       $self->{field} = $field;
-
-      my $translate = $params{translate};
-      if(defined($translate)){
-	    return $self->_error('translate flag must be a coderef') unless ref($translate) eq 'CODE';
-      }
 
       my $sql = $table;
       $sql .= '.' if $sql;
       $sql .= $field;
 
-      if ( $params{dealias} ) {
-	    $sql .= " AS $field";
-      } elsif ( $params{alias} ) {
-	    $sql .= " AS '$table.$field'";
-      }
       $self->{sql} = $sql;
 
 
       return $self;
 }
 
-sub table{ $_[0]->{table} }
-sub name{ $_[0]->{field} }
-sub sql  { $_[0]->{sql} }
-sub index{ $_[0]->{index} }
-sub set_index{ $_[0]->{index} = $_[1] }
-sub validate { 1 }
+sub name { $_[0]->{field} }
 
 1;

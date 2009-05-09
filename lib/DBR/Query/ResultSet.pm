@@ -8,15 +8,17 @@ sub new {
       my( $package ) = shift;
       my %params = @_;
       my $self = {
-		  logger => $params{logger},
-		  sth    => $params{sth},
-		  query  => $params{query},
+		  logger   => $params{logger},
+		  sth      => $params{sth},
+		  query    => $params{query},
 		  is_count => $params{is_count},
 		 };
 
       bless( $self, $package );
 
-      return $self->_error('sth object must be specified') unless $self->{sth};
+      return $self->_error('sth object must be specified'   ) unless $self->{sth};
+      return $self->_error('query object must be specified' ) unless $self->{query};
+      return $self->_error('logger object must be specified') unless $self->{logger};
 
       my $fields = $self->{query}->fields or return $self->_error('Failed to get query fields');
 
@@ -41,7 +43,7 @@ sub count{
 
       $self->_execute or return $self->_error('failed to execute');
 
-      my $count;
+       my $count;
       if ($self->{is_count}){
 	    ($count) = $self->{sth}->fetchrow_array();
 	    $self->reset();
@@ -139,7 +141,7 @@ sub _nextmem{
 
       my $row = $self->{rows}->[ $self->{record_idx}++ ];
 
-      $self->_logDebug('DID NEXTMEM');
+      #$self->_logDebug('DID NEXTMEM');
 
       if ($self->{record_idx} >= $self->{rowcount}){
 	    $self->{finished} = 1;
@@ -157,7 +159,7 @@ sub _fetch{
 
       $self->{record_idx}++;
 
-      $self->_logDebug('DID FETCH');
+      #$self->_logDebug('DID FETCH');
       if (!$row){
 	    $self->{finished} = 1;
 	    $self->reset;
