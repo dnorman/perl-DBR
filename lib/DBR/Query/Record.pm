@@ -141,11 +141,12 @@ sub _set{
 
        my $query = DBR::Query->new(
 				   logger => $self->{logger},
-				   dbrh    => $self->{dbrh},
+				   dbrh   => $self->{dbrh},
 				   tables => $table->name,
 				   where  => $outwhere,
-				   update => 1,
-				   fields => [ $field => $value] # WORKING HERE
+				   update => {
+					      fields => [ $field => $value] # WORKING HERE
+					     }
  				 ) or return $self->_error('failed to create Query object');
 
        my $resultset = $query->execute() or return $self->_error('failed to execute');

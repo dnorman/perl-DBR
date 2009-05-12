@@ -40,10 +40,10 @@ sub select {
 
       my @Qfields;
       foreach my $field (@$fields){
-	    my $Qfield = DBR::Query::Field->new(
-						logger => $self->{logger},
-						name => $field
-					       ) or return $self->_error('Failed to create query field object');
+	    my $Qfield = DBR::Config::Field::Anon->new(
+						       logger => $self->{logger},
+						       name => $field
+						      ) or return $self->_error('Failed to create field object');
 	    push @Qfields, $Qfield;
       }
 
@@ -58,17 +58,13 @@ sub select {
       my $query = DBR::Query->new(
 				  dbrh   => $self->{dbrh},
 				  logger => $self->{logger},
+				  select => {
+					     count  => $params{'-count'}?1:0, # takes precedence
+					     fields => \@Qfields
+					    },
 				  tables => $tables,
 				  where  => $where
 				 ) or return $self->_error('failed to create query object');
-
-
-      $query->select(
-		     count  => $params{'-count'}?1:0, # takes precedence
-		     fields => \@Qfields
-		    ) or return $self->_error('Failed to set up select');
-
-
 
 
       if ($params{-query}){
@@ -77,7 +73,9 @@ sub select {
 
       }elsif ($params{-rawsth}) {
 
-	    my $sth = $query->execute( sth_only => 1) or return $self->_error('failed to execute');
+	    my $sth = $query->execute( sth_only => 1 ) or return $self->_error('failed to execute');
+	    $sth->execute() or return $self->_error('failed to execute sth');
+
 	    return $sth;
 
       } else {
@@ -100,6 +98,54 @@ sub select {
       }
 
 }
+
+
+sub update {
+      my $self = shift;
+      my %params = @_;
+
+      my $table = $params{-table} || $params{-update};
+
+      my $where;
+      if($params{-where}){
+	    $where = $self->_where($params{-where}) or return $self->_error('failed to prep where');
+      }else{
+	    return $self->_error('-where hashref/arrayref must be specified');
+      }
+
+
+      my @Qfields;
+      foreach my $field (@$fields){
+	    my $fieldobj = DBR::Config::Field::Anon->new(
+							 logger => $self->{logger},
+							 name   => $field
+							) or return $self->_error('Failed to create field object');
+
+	    my $valobj = $self->_value($value) or return $self->_error('_value failed');
+
+	    my $set = DBR::Query::Parts::Set->new(
+						  logger => $self->{logger},
+						  field  => $fieldobj,
+						  value  => $valobj
+						 );
+	    push @Qfields, $Qfield;
+      }
+
+      #use Data::Dumper;
+      #print STDERR Dumper($where);
+
+      my $query = DBR::Query->new(
+				  dbrh   => $self->{dbrh},
+				  logger => $self->{logger},
+				  update => {
+					     fields => \@Qfields
+					    },
+				  tables => $table,
+				  where  => $where
+				 ) or return $self->_error('failed to create query object');
+
+}
+
 
 sub _where {
       my $self = shift;
@@ -179,10 +225,14 @@ sub _where {
 }
 
 sub _processfield{
-      my $self  = shift;
+      my $self    = shift;
       my $field   = shift;
       my $value   = shift;
 
+      my $fromfield = DBR::Config::Field::Anon->new(
+						    logger => $self->{logger},
+						    name   => $field
+						   ) or return $self->_error('Failed to create fromfield object');
       my $flags;
 
       if (ref($value) eq 'ARRAY'){
@@ -190,89 +240,66 @@ sub _processfield{
       }
 
       if ($flags =~ /j/) {	# join
-	    my $jointo = $value->[1];
-	    my @parts = split(/\./,$jointo);
-	    my ($tofield,$alias);
 
-	    if (@parts == 1) {
-		  ($tofield) = @parts;
-		  return $self->_error("field $tofield cannot be referenced without a table alias");
-	    } elsif (@parts == 2) {
-		  ($alias,$tofield) = @parts;
-		  #return $self->_error("table alias '$jointo' is invalid without a join") unless $aliasmap;
-		  #return $self->_error("invalid table alias '$jointo' in -fields") unless $aliasmap->{$alias};
+	    my $tofield = DBR::Config::Field::Anon->new(
+							logger => $self->{logger},
+							name   => $value->[1]
+						       ) or return $self->_error('Failed to create tofield object');
 
-		  return $self->_error("invalid fieldname '$jointo' in -fields") unless $tofield =~ /^[A-Za-z][A-Za-z0-9_-]*$/;
+	    my $join = DBR::Query::Where::JOIN->new($field,$jointo)
+	      or return $self->_error('failed to create join object');
 
-		  my $join = DBR::Query::Where::JOIN->new($field,$jointo) or return $self->_error('failed to create join object');
-
-		  return $join;
-	    }
+	    return $join;
 
       } else {
+	    my $is_number = 0;
+	    my $operator;
 
-	    my $outval =  $self->_value( $value) or return $self->_error('failed to create value object');
+	    if ( $flags =~ /like/ ) {
+		  $operator = 'like';# like
+		  #return $self->_error('LIKE flag disabled without the allowquery flag') unless $self->{config}->{allowquery};
+	    } elsif ( $flags =~ /!/    ) { $operator = 'ne'; # Not
+	    } elsif ( $flags =~ /\<\>/ ) { $operator = 'ne'; $is_number = 1; # greater than less than
+	    } elsif ( $flags =~ /\>=/  ) { $operator = 'ge'; $is_number = 1; # greater than eq
+	    } elsif ( $flags =~ /\<=/  ) { $operator = 'le'; $is_number = 1; # less than eq
+	    } elsif ( $flags =~ /\>/   ) { $operator = 'gt'; $is_number = 1; # greater than
+	    } elsif ( $flags =~ /\</   ) { $operator = 'lt'; $is_number = 1; # less than
+	    }
 
-	    my $outfield = DBR::Query::Where::COMPARE->new($field, $outval) or return $self->_error('failed to create compare object');
+	    $operator ||= 'eq';
 
-	    return $outfield;
+	    my $valobj = $self->_value($value) or return $self->_error('_value failed');
+
+	    my $compobj = DBR::Query::Where::COMPARE->new(
+							  field    => $field,
+							  operator => $operator,
+							  value    => $valobj
+							 ) or return $self->_error('failed to create compare object');
+
+	    return $compobj;
+
       }
 
 }
 
 sub _value {
-      my( $self ) = shift;
-      my $value = shift or return $self->_error('value must be specified');
+      my $self = shift;
+      my $value = shift;
 
-      my $is_number = 0;
-      my $operator;
-
-      if(ref($value) eq 'ARRAY'){
-	    my $flags = shift @{$value}; # Yes, we are altering the input array... deal with it.
-
-	    if ($flags =~ /like/) { # like
-		  #return $self->_error('LIKE flag disabled without the allowquery flag') unless $self->{config}->{allowquery};
-		  $operator = 'like';
-
-	    } elsif ($flags =~ /!/) { # Not
-		  $operator = 'ne';
-
-	    } elsif ($flags =~ /\<\>/) { # greater than less than
-		  $operator = 'ne'; $is_number = 1;
-
-	    } elsif ($flags =~ /\>=/) { # greater than eq
-		  $operator = 'ge'; $is_number = 1;
-
-	    } elsif ($flags =~ /\<=/) { # less than eq
-		  $operator = 'le'; $is_number = 1;
-
-	    } elsif ($flags =~ /\>/) { # greater than
-		  $operator = 'gt'; $is_number = 1;
-
-	    } elsif ($flags =~ /\</) { # less than
-		  $operator = 'lt'; $is_number = 1;
-
-	    }
-
-	    if($flags =~ /d/){
-		  $is_number = 1;
-	    }
-
+      if (ref($value) eq 'ARRAY'){
+	    $flags = shift @$value;
       }
 
-      $operator ||= 'eq';
+      if($flags =~ /d/){  $is_number = 1 }
 
       my $valobj = DBR::Query::Value->new(
 					  is_number => $is_number,
-					  operator  => $operator,
 					  value     => $value,
 					  dbrh      => $self->{dbrh},
 					  logger    => $self->{logger}
 					 ) or return $self->_error('failed to create value object');
-
-
       return $valobj;
-}
 
+}
 
 1;

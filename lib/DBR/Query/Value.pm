@@ -8,25 +8,6 @@ package DBR::Query::Value;
 use strict;
 use base 'DBR::Common';
 
-my %sql_ops = (
-	       eq      => '=',
-	       ne      => '!=',
-	       ge      => '>=',
-	       le      => '<=',
-	       gt      => '>',
-	       lt      => '<',
-	       like    => 'LIKE',
-	       notlike => 'NOT LIKE',
-
-	       in      => 'IN',     # \
-	       notin   => 'NOT IN', #  |  not directly accessable
-	       is      => 'IS',     #  |
-	       isnot   => 'IS NOT'  # /
-	      );
-
-my %str_operators = map {$_ => 1} qw'eq ne like notlike';
-my %num_operators = map {$_ => 1} qw'eq ne ge le gt lt';
-
 
 #### Constructors ###############################################
 
@@ -57,17 +38,15 @@ sub new{
       return $self->_error('value must be specified') unless $value;
 
       $self->{is_number}  = $params{is_number}? 1 : 0;
-      my $operator;
-      my $ref = ref($value);
+      my $op_hint;
 
-      if ( $ref eq 'DBR::Operator' ) {
+      if ( ref($value) eq 'DBR::Operator' ) {
 	    my $wrapper = $value;
 
-	    $value    = $wrapper->value;
-	    $operator = $wrapper->operator;
-      } else {
-	    $operator = $params{operator} || 'eq';
+	    $value   = $wrapper->value;
+	    $op_hint = $wrapper->operator;
       }
+      $self->{op_hint} = $op_hint;
 
       my $ref = ref($value);
 
@@ -85,25 +64,11 @@ sub new{
 	    }
       }
 
-      if ($self->{is_number}){
-	    return $self->_error("invalid operator '$operator'") unless $num_operators{ $operator };
-	    # check numeric range HERE
-      }else{
-	    return $self->_error("invalid operator '$operator'") unless $str_operators{ $operator };
-      }
-
-      if (scalar(@{$value}) > 1 ){
-	    #grep {!$uniq{$_}++} @{ $self->{value} }
-	    $operator = 'in'    if $operator eq 'eq';
-	    $operator = 'notin' if $operator eq 'ne';
-      }
-
       $self->{value}    = $value;
-      $self->{operator} = $operator;
 
       # #Translation plugins go here
       if($field){
-	    
+	    #
       }
 
       return $self;
@@ -114,8 +79,10 @@ sub new{
 1;
 
 ## Methods #################################################
+sub op_hint  { return $_[0]->{op_hint}               }
 sub is_number{ return $_[0]->{is_number}             }
 sub count    { return scalar(  @{ $_[0]->{value} } ) }
+
 
 sub sql {
       my $self = shift;
@@ -124,18 +91,22 @@ sub sql {
 
       my $values = $self->quoted;
 
-      my $op = $self->{operator};
-
       if (@$values > 1) {
 	    $sql .= '(' . join(',',@{$values}) . ')';
       } else {
 	    $sql = $values->[0];
-	    $op = 'is'    if ($sql eq 'NULL' && $op eq 'eq');
-	    $op = 'isnot' if ($sql eq 'NULL' && $op eq 'ne');
       }
 
-      return $sql_ops{ $op } . ' ' . $sql;
+      return $sql;
 
+}
+
+sub is_null{
+      my $self = shift;
+
+      return 0 if $self->count > 1;
+      return 1 if !defined( $self->{value}->[0] );
+      return 0;
 }
 
 sub quoted{

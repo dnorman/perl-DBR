@@ -40,6 +40,21 @@ sub new {
 	    $self->{limit} = $params{limit};
       }
 
+      if ( $params{select} ){
+
+	    $self->_select($params{select}) or return $self->_error('_select failed');
+	    $self->{type} = 'select';
+      }elsif( $params{insert} ){
+	    $self->{type} = 'insert';
+      }elsif( $params{update} ){
+	    $self->{type} = 'update';
+      }elsif( $params{delete} ){
+	    $self->{type} = 'delete';
+      }else{
+	    return $self->_error('must specify select, insert, update or delete');
+      }
+
+
       return( $self );
 }
 
@@ -111,18 +126,18 @@ sub _where{
 }
 
 
-sub select{
+sub _select{
       my $self   = shift;
-      my %params = @_;
+      my $params = shift;
 
       my $sql;
 
-      if( $params{count} ){
+      if( $params->{count} ){
 	  $sql .= 'count(*) ';
 	  $self->{flags}->{is_count} = 1;
 
-      }elsif($params{fields}){
-	    my $fields = $params{fields};
+      }elsif($params->{fields}){
+	    my $fields = $params->{fields};
 
 	    my $idx = -1;
 	    if (ref($fields) eq 'ARRAY') {
@@ -153,10 +168,72 @@ sub select{
       }
 
       $self->{main_sql} = $sql;
-      $self->{type} = 'select';
 
       return 1;
 }
+
+
+sub _modify{
+  my $self = shift;
+  my $params = shift;
+
+
+
+  $params{-table} ||= $params{-insert} || $params{-update};
+
+  return $self->_error('No proper -fields parameter specified') unless ref($params{-fields}) eq 'array';
+  return $self->_error('No -table parameter specified') unless $params{-table} =~ /^[A-Za-z0-9_-]+$/;
+
+  my %fields;
+  my $call = {params => \%params,fields => \%fields, tmp => {}};
+  my $fcount;
+  foreach my $field (keys %{$params{-fields}}){
+    next unless $field =~ /^[A-Za-z0-9_-]+$/;
+    ($fields{$field}) = $self->quote($params{-fields}->{$field});
+    return $self->_error("failed to quote value for field '$field'") unless defined($fields{$field});
+    $fcount++;
+  }
+  return $self->_error('No valid fields specified') unless $fcount;
+
+  my $sql;
+
+  my @fkeys = keys %fields;
+  if($params{-insert}){
+	return $self->_error('Failed to prepare sequence') unless $self->_prepareSequence($call);
+
+	$sql = "INSERT INTO $params{-table} ";
+	$sql .= '(' . join (',',@fkeys) . ')';
+	$sql .= ' VALUES ';
+	$sql .= '(' . join (',',map {$fields{$_}} @fkeys) . ')';
+
+ ### }elsif($params{-where}){
+ ###   $sql = "UPDATE $params{-table} SET ";
+
+	$sql .= join (', ',map {"$_ = $fields{$_}"} @fkeys);
+
+  my $rows;
+  if($params{-quiet}){
+	do {
+	      local $self->{dbh}->{PrintError} = 0; # make DBI quiet
+	      $rows = $self->{dbh}->do($sql);
+	};
+	return undef unless defined ($rows);
+  }else{
+	$rows = $self->{dbh}->do($sql);
+	return $self->_error('failed to execute statement') unless defined($rows);
+  }
+
+  if ($params{-insert}) {
+	my ($sequenceval) = $self->_getSequenceValue($call);
+	return $sequenceval;
+  } else {
+	return $rows || 0;	# number of rows updated or 0
+  }
+
+
+
+}
+
 sub sql{
       my $self = shift;
       my %params = @_;
@@ -178,7 +255,7 @@ sub sql{
       }elsif($type eq 'delete'){
 	    $sql .= "DELETE FROM $tables WHERE $self->{where_sql}";
       }
-      
+
       $sql .= ' FOR UPDATE'           if $self->{flags}->{lock};
       $sql .= " LIMIT $self->{limit}" if $self->{limit};
 
