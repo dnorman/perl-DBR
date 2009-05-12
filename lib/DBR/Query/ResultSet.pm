@@ -9,6 +9,7 @@ sub new {
       my %params = @_;
       my $self = {
 		  logger   => $params{logger},
+		  dbrh     => $params{dbrh},
 		  sth      => $params{sth},
 		  query    => $params{query},
 		  is_count => $params{is_count},
@@ -19,6 +20,7 @@ sub new {
       return $self->_error('sth object must be specified'   ) unless $self->{sth};
       return $self->_error('query object must be specified' ) unless $self->{query};
       return $self->_error('logger object must be specified') unless $self->{logger};
+      return $self->_error('dbrh object must be specified')   unless $self->{dbrh};
 
       my $fields = $self->{query}->fields or return $self->_error('Failed to get query fields');
 

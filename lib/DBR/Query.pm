@@ -10,7 +10,7 @@ no strict 'subs';
 use base 'DBR::Common';
 my $VALUE_OBJECT = 'DBR::Query::Value';
 my $QUERY_OBJECT = _PACKAGE_;
-use DBR::Query::Where;
+use DBR::Query::Part;
 
 sub new {
       my( $package ) = shift;
@@ -122,7 +122,7 @@ sub _where{
       my $self = shift;
       my $param = shift;
 
-      return $self->_error('param must be an AND/OR/COMPARE object') unless ref($param) =~ /^DBR::Query::Where::(AND|OR|COMPARE)$/;
+      return $self->_error('param must be an AND/OR/COMPARE object') unless ref($param) =~ /^DBR::Query::Part::(And|Or|Compare)$/;
 
       $param->validate($self) or return $self->_error('Where clause validation failed');
 
@@ -185,7 +185,7 @@ sub _update{
 
       return $self->_error('No set parameter specified') unless $params->{set};
       my $sets = $params->{set};
-      $sets = [$set] unless ref($set) eq 'ARRAY';
+      $sets = [$sets] unless ref($sets) eq 'ARRAY';
 
       my @sql;
       foreach my $set (@$sets) {
@@ -254,7 +254,7 @@ sub execute{
       my $self = shift;
       my %params = @_;
 
-      #$self->_logDebug( $self->sql );
+      $self->_logDebug( $self->sql );
 
       my $dbh = $self->{dbrh}->dbh or return $self->_error('failed to fetch dbh');
 
@@ -272,6 +272,7 @@ sub execute{
 	    }else{
 		  my $resultset = DBR::Query::ResultSet->new(
 							     logger => $self->{logger},
+							     dbrh   => $self->{dbrh},
 							     sth    => $sth,
 							     query  => $self,
 							     is_count => $self->{flags}->{is_count} || 0,
@@ -279,22 +280,22 @@ sub execute{
 
 		  return $resultset;
 	    }
-      }elsif($type eq 'insert'){
+      }elsif($self->{type} eq 'insert'){
 
 	    my $call = {};
 
 	    $self->_prepareSequence($call) or return $self->_error('Failed to prepare sequence');
 
-	    $rows = $dbh->do($self->sql);
+	    my $rows = $dbh->do($self->sql);
 
 	    my ($sequenceval) = $self->_getSequenceValue($call);
 
 	    # return $sequenceval;
 
 	    #HERE HERE HERE return a record object?
-      }elsif($type eq 'update'){
+      }elsif($self->{type} eq 'update'){
 
-	    $rows = $dbh->do($self->sql);
+	    my $rows = $dbh->do($self->sql);
 
 	    return $rows || 0;
 

@@ -50,7 +50,7 @@ while (my $row = $ret->next){
 
      # print $row->status ; # { handle => 'cancelled', }
 
-     ### $row->status('cancelled');
+      $row->status(3);
 
       print STDERR Dumper($row->ship_method_id);
 }

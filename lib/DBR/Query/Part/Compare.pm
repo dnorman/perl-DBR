@@ -38,22 +38,23 @@ sub new{
       my $operator = $value->op_hint || $params{operator} || 'eq';
 
       if ($value->{is_number}){
-	    return $self->_error("invalid operator '$operator'") unless $num_operators{ $operator };
+	    return $package->_error("invalid operator '$operator'") unless $num_operators{ $operator };
       }else{
-	    return $self->_error("invalid operator '$operator'") unless $str_operators{ $operator };
+	    return $package->_error("invalid operator '$operator'") unless $str_operators{ $operator };
       }
 
-      if ( $self->value->count > 1 ){
+      if ( $value->count > 1 ){
 	    $operator = 'in'    if $operator eq 'eq';
 	    $operator = 'notin' if $operator eq 'ne';
-      }elsif ($self->value->is_null) {
-	    $op = 'is'    if $op eq 'eq';
-	    $op = 'isnot' if $op eq 'ne';
+      }elsif ($value->is_null) {
+	    $operator = 'is'    if $operator eq 'eq';
+	    $operator = 'isnot' if $operator eq 'ne';
       }
 
       my $self = [ $field, $operator, $value ];
 
       bless( $self, $package );
+
       return $self;
 }
 
@@ -63,6 +64,6 @@ sub field    { return $_[0]->[0] }
 sub operator { return $_[0]->[1] }
 sub value    { return $_[0]->[2] }
 
-sub sql   { return $_[0]->field->sql . ' ' . $sql_ops{ $self->operator } . ' ' . $_[0]->value->sql }
+sub sql   { return $_[0]->field->sql . ' ' . $sql_ops{ $_[0]->operator } . ' ' . $_[0]->value->sql }
 
 sub _validate_self{ 1 }

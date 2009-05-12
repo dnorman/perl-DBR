@@ -8,6 +8,7 @@ package DBR::Object;
 use strict;
 use base 'DBR::Common';
 use DBR::Query::ResultSet;
+use DBR::Query::Part;
 use DBR::Operators;
 
 sub new {
@@ -54,17 +55,17 @@ sub where{
 	    push @and, $outfield;
       }
 
-      my $outwhere = DBR::Query::Where::AND->new(@and);
+      my $outwhere = DBR::Query::Part::And->new(@and);
 
       my $query = DBR::Query->new(
 				  logger => $self->{logger},
 				  dbrh    => $self->{dbrh},
+				  select => {
+					     fields => scalar($table->fields)
+					    },
 				  tables => $table->name,
 				  where  => $outwhere,
 				 ) or return $self->_error('failed to create Query object');
-      $query->select(
-		     fields => scalar($table->fields)
-		    ) or return $self->_error('Failed to set up select');
 
       my $resultset = $query->execute() or return $self->_error('failed to execute');
 

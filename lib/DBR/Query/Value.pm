@@ -37,6 +37,8 @@ sub new{
       my $value = $params{value};
       return $self->_error('value must be specified') unless $value;
 
+      return $self->_error('is_number must be specified') unless defined($params{is_number});
+
       $self->{is_number}  = $params{is_number}? 1 : 0;
       my $op_hint;
 
@@ -57,6 +59,7 @@ sub new{
       }
 
       if( $self->{is_number} ){
+	    print STDERR "NUMBER\n";
 	    foreach my $val ( @{$value}) {
 		  if ($val !~ /^-?\d*\.?\d+$/) {
 			return $self->_error("value $val is not a legal number");

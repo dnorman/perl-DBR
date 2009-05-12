@@ -8,8 +8,8 @@ package DBR::Compat::DBRv1;
 use strict;
 use base 'DBR::Common';
 use DBR::Query;
+use DBR::Config::Field::Anon;
 use DBR::Query::Value;
-use DBR::Query::Field;
 use DBR::Query::Part;
 
 sub new {
@@ -42,7 +42,8 @@ sub select {
       foreach my $field (@$fields){
 	    my $Qfield = DBR::Config::Field::Anon->new(
 						       logger => $self->{logger},
-						       name => $field
+						       dbrh   => $self->{dbrh},
+						       name   => $field
 						      ) or return $self->_error('Failed to create field object');
 	    push @Qfields, $Qfield;
       }
@@ -104,7 +105,12 @@ sub update {
       my $self = shift;
       my %params = @_;
 
+
       my $table = $params{-table} || $params{-update};
+      my $fields = $params{-fields};
+
+      return $self->_error('No -table parameter specified') unless $table =~ /^[A-Za-z0-9_-]+$/;
+      return $self->_error('No proper -fields parameter specified') unless ref($fields) eq 'HASH';
 
       my $where;
       if($params{-where}){
@@ -113,11 +119,13 @@ sub update {
 	    return $self->_error('-where hashref/arrayref must be specified');
       }
 
+      my @sets;
+      foreach my $field (keys %$fields){
+	    my $value = $fields->{$field};
 
-      my @Qfields;
-      foreach my $field (@$fields){
 	    my $fieldobj = DBR::Config::Field::Anon->new(
 							 logger => $self->{logger},
+							 dbrh   => $self->{dbrh},
 							 name   => $field
 							) or return $self->_error('Failed to create field object');
 
@@ -128,7 +136,7 @@ sub update {
 						 field  => $fieldobj,
 						 value  => $valobj
 						);
-	    push @Qfields, $Qfield;
+	    push @sets, $set;
       }
 
       #use Data::Dumper;
@@ -138,7 +146,7 @@ sub update {
 				  dbrh   => $self->{dbrh},
 				  logger => $self->{logger},
 				  update => {
-					     fields => \@Qfields,
+					     set => \@sets,
 					     quiet_error => $params{-quiet} ? 1:0,
 					    },
 				  tables => $table,
@@ -229,13 +237,14 @@ sub _where {
 
 sub _processfield{
       my $self    = shift;
-      my $field   = shift;
+      my $fieldname = shift;
       my $value   = shift;
 
-      my $fromfield = DBR::Config::Field::Anon->new(
-						    logger => $self->{logger},
-						    name   => $field
-						   ) or return $self->_error('Failed to create fromfield object');
+      my $field = DBR::Config::Field::Anon->new(
+						logger => $self->{logger},
+						dbrh   => $self->{dbrh},
+						name   => $fieldname
+					       ) or return $self->_error('Failed to create fromfield object');
       my $flags;
 
       if (ref($value) eq 'ARRAY'){
@@ -246,10 +255,11 @@ sub _processfield{
 
 	    my $tofield = DBR::Config::Field::Anon->new(
 							logger => $self->{logger},
+							dbrh   => $self->{dbrh},
 							name   => $value->[1]
 						       ) or return $self->_error('Failed to create tofield object');
 
-	    my $join = DBR::Query::Part::Join->new($field,$jointo)
+	    my $join = DBR::Query::Part::Join->new($field,$tofield)
 	      or return $self->_error('failed to create join object');
 
 	    return $join;
@@ -271,7 +281,7 @@ sub _processfield{
 
 	    $operator ||= 'eq';
 
-	    my $valobj = $self->_value($value) or return $self->_error('_value failed');
+	    my $valobj = $self->_value($value,$is_number) or return $self->_error('_value failed');
 
 	    my $compobj = DBR::Query::Part::Compare->new(
 							 field    => $field,
@@ -288,7 +298,9 @@ sub _processfield{
 sub _value {
       my $self = shift;
       my $value = shift;
+      my $is_number = shift || 0;
 
+      my $flags;
       if (ref($value) eq 'ARRAY'){
 	    $flags = shift @$value;
       }

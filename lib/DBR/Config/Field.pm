@@ -98,12 +98,13 @@ sub makevalue{ # shortcut function?
       return DBR::Query::Value->new(
 				    dbrh   => $self->{dbrh},
 				    value  => $value,
-				    number => $self->is_numeric,
+				    is_number => $self->is_numeric,
 				    field  => $self,
 				   );# or return $self->_error('failed to create value object');
 
 }
 
+sub field_id { $_[0]->{field_id} }
 sub table_id { $FIELDS_BY_ID{  $_[0]->{field_id} }->{table_id}    };
 sub name     { $FIELDS_BY_ID{  $_[0]->{field_id} }->{name}    };
 sub is_pkey  { $FIELDS_BY_ID{  $_[0]->{field_id} }->{is_pkey} }
@@ -119,7 +120,7 @@ sub table    {
 
 sub is_numeric{
       my $field = $FIELDS_BY_ID{ $_[0]->{field_id} };
-      return $datatype_lookup{ $field->{field_type} }->{numeric} ? 0:1;
+      return $datatype_lookup{ $field->{field_type} }->{numeric} ? 1:0;
 }
 
 1;

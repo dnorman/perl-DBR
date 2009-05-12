@@ -16,8 +16,8 @@ sub new{
       return $package->_error( 'to must be specified' ) unless ref($to)   =~ /^DBR::Config::Field/; # Could be ::Anon
 
 
-      $to->table_alias   or   return $self->_error('field ' . $to->name   . ' cannot be joined without a table alias');
-      $from->table_alias or   return $self->_error('field ' . $from->name . ' cannot be joined without a table alias');
+      $to->table_alias   or   return $package->_error('field ' . $to->name   . ' cannot be joined without a table alias');
+      $from->table_alias or   return $package->_error('field ' . $from->name . ' cannot be joined without a table alias');
 
 
       my $self = [ $to, $from ];
@@ -44,3 +44,5 @@ sub _validate_self{
 
       return 1;
 }
+
+1;

@@ -48,7 +48,7 @@ sub sql { # Used by AND/OR
 1;
 
 ###########################################
-package DBR::Query::Where::And;
+package DBR::Query::Part::And;
 use strict;
 our @ISA = ('DBR::Query::Part::AndOr');
 
@@ -57,7 +57,7 @@ sub type { return 'AND' };
 1;
 
 ###########################################
-package DBR::Query::Where::Or;
+package DBR::Query::Part::Or;
 use strict;
 our @ISA = ('DBR::Query::Part::AndOr');
 

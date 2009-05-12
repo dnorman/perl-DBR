@@ -4,6 +4,7 @@ use strict;
 use base 'DBR::Common';
 use Symbol qw( qualify_to_ref );
 use DBR::Query::Record;
+use DBR::Query::Part;
 
 my $BASECLASS = 'DBR::Query::Rec';
 my $classidx = 0;
@@ -13,27 +14,30 @@ sub new {
       my %params = @_;
       my $self = {
 		  logger => $params{logger},
+		  dbrh   => $params{dbrh},
 		 };
 
       bless( $self, $package ); # BS object
 
       my $fields = $params{fields} or return $self->_error('fields are required');
+      $self->{dbrh} or return $self->_error('dbrh object must be specified');
 
       my $class = $BASECLASS . ++$classidx;
 
       $self->{recordclass} = $class;
 
 
-      my @tableids;
+      my @table_ids;
       # It's important that we preserve the specific field objects from the query. They have payloads that new ones do not.
       foreach my $field (@$fields){ 
 	    my $field_id = $field->field_id or next; # Anon fields have no field_id
 	    my $table_id = $field->table_id;
+	    $self->{fieldmap}->{ $field_id } = $field;
 
 	    push @table_ids, $table_id;
       }
 
-      foreach my $table_id ($self->_uniq @table_ids){
+      foreach my $table_id ($self->_uniq( @table_ids )){
 
 	    my $table = DBR::Config::Table->new(
 						dbrh     => $self->{dbrh},
@@ -41,19 +45,20 @@ sub new {
 						table_id => $table_id,
 					       ) or return $self->_error('Failed to create table object');
 
-	    my @map;
-	    my @pk = $table->primary_key || return $self->_error('failed to retrieve primary key');
+	    my $pkeys = $table->primary_key or return $self->_error('failed to retrieve primary key');
 
+	    my @map;
 	    #We need to check to make sure that all PK fields are included in the query results.
 	    #These are field objects, but don't use them elsewhere. They are devoid of query indexes
-	    foreach my $pk_field (@pk){
-		  my $field = $self->{fieldmap}->{ $pk_field->field_id };
-		  $field or return $self->_error('Resultset is missing primary key field ' + $pk_field->name);
+	    foreach my $pk_field (@$pkeys){
 
-		  push @map, [$field->name, $field->_is_number, $field->index]; # Make a very lightweight definition of which primary key is which field
+		  my $field = $self->{fieldmap}->{ $pk_field->field_id };
+		  $field or return $self->_error('Resultset is missing primary key field ' . $pk_field->name);
+
+		  push @map, $field; # Make a very lightweight definition of which primary key is which field
 	    }
 
-	    $self->{tablemap}->{$table_id} = $table->name;
+	    $self->{tablemap}->{$table_id} = $table;
 	    $self->{pkmap}->{$table_id}    = \@map;
 
       }
@@ -62,11 +67,11 @@ sub new {
 
 	    my $sub = $self->_mk_method(
 					mode  => 'rw',
-					index => $qfield->index,
+					index => $field->index,
 					field => $field,
 				       ) or return $self->_error('Failed to create method');
 
-	    my $method = $qfield->name;
+	    my $method = $field->name;
 	    push @{$self->{methods}||=[]}, $method;
 
 	    print STDERR "$class\:\:$method\n";
@@ -120,33 +125,30 @@ sub _set{
        my $value = shift;
 
        # DO THIS ONCE PER TABLE
-
-       my $table = $self->{tablemap}->{ $field->field_id } || return $self->_error('Missing table');
-       my $pk    = $self->{pkmap}->{ $table->table_id }    || return $self->_error('Missing primary key');
-
+       my $table = $self->{tablemap}->{ $field->table_id } || return $self->_error('Missing table for table_id ' . $field->table_id );
+       my $pk    = $self->{pkmap}->{ $field->table_id }    || return $self->_error('Missing primary key');
 
        my $setvalue = DBR::Query::Value->new(
 					     dbrh   => $self->{dbrh},
-					     number => $field->is_number,
+					     is_number => $field->is_numeric,
 					     value  => $value,
 					    ) or return $self->_error('failed to create setvalue object');
 
-       my $setobj = DBR::Query::Part::Set->new(
-					       logger => $self->{logger},
-					       field  => $field,
-					       value  => $setvalue
-					      ) or return $self->_error('failed to create set object');
+       my $setobj = DBR::Query::Part::Set->new( $field, $setvalue ) or return $self->_error('failed to create set object');
 
        ##### Where ###########
        my @and;
        foreach my $part (@{ $pk }){
 	     my $value = DBR::Query::Value->new(
 						dbrh   => $self->{dbrh},
-						number => $part->[1],
-						value  => $record->[ $part->[2] ], ##
+						is_number => $part->is_numeric,
+						value  => $record->[ $part->index ], ##
 					       ) or return $self->_error('failed to create value object');
 
-	     my $outfield = DBR::Query::Part::Compare->new($part->[0], $value) or return $self->_error('failed to create compare object');
+	     my $outfield = DBR::Query::Part::Compare->new(
+							   field => $part,
+							   value => $value
+							  ) or return $self->_error('failed to create compare object');
 
 	     push @and, $outfield;
        }
@@ -165,7 +167,7 @@ sub _set{
 					     }
 				  ) or return $self->_error('failed to create Query object');
 
-       $query->execute() or return $self->_error('failed to execute');
+       return $query->execute() or return $self->_error('failed to execute');
 
 
 }

@@ -10,6 +10,7 @@ use base 'DBR::Common';
 
 sub makevalue{ undef }
 sub table_id { undef };
+sub field_id { undef };
 sub name     { die "shouldn't get here" };
 sub is_pkey  { undef }
 sub table    { undef }
@@ -47,9 +48,9 @@ sub sql  {
       $sql .= $name;
 
       if ( $self->{do_dealias} ) {
-	    $sql .= " AS $field";
+	    $sql .= " AS $name";
       } elsif ( $self->{do_alias} ) {
-	    $sql .= " AS '$table.$field'";
+	    $sql .= " AS '$alias.$name'";
       }
 
       return $sql;
