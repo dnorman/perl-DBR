@@ -44,12 +44,18 @@ sub new {
 
 	    $self->_select($params{select}) or return $self->_error('_select failed');
 	    $self->{type} = 'select';
+
       }elsif( $params{insert} ){
 	    $self->{type} = 'insert';
+	    $self->_insert($params{insert}) or return $self->_error('_insert failed');
+
       }elsif( $params{update} ){
 	    $self->{type} = 'update';
+	    $self->_update($params{update}) or return $self->_error('_update failed');
+
       }elsif( $params{delete} ){
 	    $self->{type} = 'delete';
+	    #Nada
       }else{
 	    return $self->_error('must specify select, insert, update or delete');
       }
@@ -173,64 +179,36 @@ sub _select{
 }
 
 
-sub _modify{
+sub _update{
+      my $self = shift;
+      my $params = shift;
+
+      return $self->_error('No set parameter specified') unless $params->{set};
+      my $sets = $params->{set};
+      $sets = [$set] unless ref($set) eq 'ARRAY';
+
+      my @sql;
+      foreach my $set (@$sets) {
+	    ref($set) eq 'DBR::Query::Part::Set'
+	      or return $self->_error('Set parameter must contain only set objects');
+
+	    push @sql, $set->sql;
+      }
+
+      $self->{main_sql} = join (', ', @sql);
+}
+
+sub _insert{
   my $self = shift;
   my $params = shift;
 
+  $self->_update($params) or return $self->_error('_update failed');
 
-
-  $params{-table} ||= $params{-insert} || $params{-update};
-
-  return $self->_error('No proper -fields parameter specified') unless ref($params{-fields}) eq 'array';
-  return $self->_error('No -table parameter specified') unless $params{-table} =~ /^[A-Za-z0-9_-]+$/;
-
-  my %fields;
-  my $call = {params => \%params,fields => \%fields, tmp => {}};
-  my $fcount;
-  foreach my $field (keys %{$params{-fields}}){
-    next unless $field =~ /^[A-Za-z0-9_-]+$/;
-    ($fields{$field}) = $self->quote($params{-fields}->{$field});
-    return $self->_error("failed to quote value for field '$field'") unless defined($fields{$field});
-    $fcount++;
-  }
-  return $self->_error('No valid fields specified') unless $fcount;
-
-  my $sql;
-
-  my @fkeys = keys %fields;
-  if($params{-insert}){
-	return $self->_error('Failed to prepare sequence') unless $self->_prepareSequence($call);
-
-	$sql = "INSERT INTO $params{-table} ";
-	$sql .= '(' . join (',',@fkeys) . ')';
-	$sql .= ' VALUES ';
-	$sql .= '(' . join (',',map {$fields{$_}} @fkeys) . ')';
-
- ### }elsif($params{-where}){
- ###   $sql = "UPDATE $params{-table} SET ";
-
-	$sql .= join (', ',map {"$_ = $fields{$_}"} @fkeys);
-
-  my $rows;
-  if($params{-quiet}){
-	do {
-	      local $self->{dbh}->{PrintError} = 0; # make DBI quiet
-	      $rows = $self->{dbh}->do($sql);
-	};
-	return undef unless defined ($rows);
-  }else{
-	$rows = $self->{dbh}->do($sql);
-	return $self->_error('failed to execute statement') unless defined($rows);
+  if($params->{quiet_error}){
+	$self->{quiet_error} = 1;
   }
 
-  if ($params{-insert}) {
-	my ($sequenceval) = $self->_getSequenceValue($call);
-	return $sequenceval;
-  } else {
-	return $rows || 0;	# number of rows updated or 0
-  }
-
-
+  return 1;
 
 }
 
@@ -249,7 +227,7 @@ sub sql{
 	    $sql .= "SELECT $self->{main_sql} FROM $tables";
 	    $sql .= " WHERE $self->{where_sql}" if $self->{where_sql};
       }elsif($type eq 'insert'){
-	    $sql .= "INSERT INTO $tables $self->{main_sql}";
+	    $sql .= "INSERT INTO $tables SET $self->{main_sql}";
       }elsif($type eq 'update'){
 	    $sql .= "UPDATE $tables SET $self->{main_sql} WHERE $self->{where_sql}";
       }elsif($type eq 'delete'){
@@ -276,26 +254,50 @@ sub execute{
       my $self = shift;
       my %params = @_;
 
-      $self->_logDebug($self->sql);
+      #$self->_logDebug( $self->sql );
 
       my $dbh = $self->{dbrh}->dbh or return $self->_error('failed to fetch dbh');
 
-      return $self->_error('failed to prepare statement') unless
-	my $sth = $dbh->prepare($self->sql);
+      local $dbh->{PrintError}; # Localize here to ensure the same scope
+      if(  $self->{quiet_error}  ){  $dbh->{PrintError} = 0 } # Eeeevil
 
-      if($params{sth_only}){
+      if($self->{type} eq 'select'){
 
-	    return $sth;
+	    return $self->_error('failed to prepare statement') unless
+	      my $sth = $dbh->prepare($self->sql);
 
-      }else{
-	    my $resultset = DBR::Query::ResultSet->new(
-						       logger => $self->{logger},
-						       sth    => $sth,
-						       query  => $self,
-						       is_count => $self->{flags}->{is_count} || 0,
-						      ) or return $self->_error('Failed to create resultset');
+	    if($params{sth_only}){
+		  return $sth;
 
-	    return $resultset;
+	    }else{
+		  my $resultset = DBR::Query::ResultSet->new(
+							     logger => $self->{logger},
+							     sth    => $sth,
+							     query  => $self,
+							     is_count => $self->{flags}->{is_count} || 0,
+							    ) or return $self->_error('Failed to create resultset');
+
+		  return $resultset;
+	    }
+      }elsif($type eq 'insert'){
+
+	    my $call = {};
+
+	    $self->_prepareSequence($call) or return $self->_error('Failed to prepare sequence');
+
+	    $rows = $dbh->do($self->sql);
+
+	    my ($sequenceval) = $self->_getSequenceValue($call);
+
+	    # return $sequenceval;
+
+	    #HERE HERE HERE return a record object?
+      }elsif($type eq 'update'){
+
+	    $rows = $dbh->do($self->sql);
+
+	    return $rows || 0;
+
       }
 
 }

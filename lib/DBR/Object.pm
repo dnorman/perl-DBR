@@ -46,7 +46,10 @@ sub where{
 
  	    my $value = $field->makevalue( $inwhere{ $fieldname } ) or return $self->_error("failed to build value object for $fieldname");
 
-	    my $outfield = DBR::Query::Where::COMPARE->new($field->name, $value) or return $self->_error('failed to create compare object');
+	    my $outfield = DBR::Query::Part::Compare->new(
+							  field => $field,
+							  value => $value
+							 ) or return $self->_error('failed to create compare object');
 
 	    push @and, $outfield;
       }

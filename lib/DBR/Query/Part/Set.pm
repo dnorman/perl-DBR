@@ -6,7 +6,7 @@
 ###########################################
 package DBR::Query::Set;
 
-use strict; use base 'DBR::Common';
+use strict; use base 'DBR::Part';
 
 sub new{
       my( $package ) = shift;
@@ -23,13 +23,11 @@ sub new{
 
 
 
-sub children { return () };
 sub field   { return $_[0]->[0] }
 sub value { return $_[0]->[1] }
 sub sql   { return $_[0]->field->sql . ' ' . $_[0]->value->sql }
 sub _validate_self{ 1 }
 
 sub validate{ 1 }
-sub logger { undef }
 
 1;

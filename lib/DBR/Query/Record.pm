@@ -121,9 +121,23 @@ sub _set{
 
        # DO THIS ONCE PER TABLE
 
-       my $table = $self->{tablemap}->{ $field->field_id } || return $self->_error('Missing table');;
+       my $table = $self->{tablemap}->{ $field->field_id } || return $self->_error('Missing table');
        my $pk    = $self->{pkmap}->{ $table->table_id }    || return $self->_error('Missing primary key');
 
+
+       my $setvalue = DBR::Query::Value->new(
+					     dbrh   => $self->{dbrh},
+					     number => $field->is_number,
+					     value  => $value,
+					    ) or return $self->_error('failed to create setvalue object');
+
+       my $setobj = DBR::Query::Part::Set->new(
+					       logger => $self->{logger},
+					       field  => $field,
+					       value  => $setvalue
+					      ) or return $self->_error('failed to create set object');
+
+       ##### Where ###########
        my @and;
        foreach my $part (@{ $pk }){
 	     my $value = DBR::Query::Value->new(
@@ -132,12 +146,14 @@ sub _set{
 						value  => $record->[ $part->[2] ], ##
 					       ) or return $self->_error('failed to create value object');
 
-	     my $outfield = DBR::Query::Where::COMPARE->new($part->[0], $value) or return $self->_error('failed to create compare object');
+	     my $outfield = DBR::Query::Part::Compare->new($part->[0], $value) or return $self->_error('failed to create compare object');
 
 	     push @and, $outfield;
        }
 
-       my $outwhere = DBR::Query::Where::AND->new(@and);
+
+       my $outwhere = DBR::Query::Part::And->new(@and);
+       #######################
 
        my $query = DBR::Query->new(
 				   logger => $self->{logger},
@@ -145,14 +161,14 @@ sub _set{
 				   tables => $table->name,
 				   where  => $outwhere,
 				   update => {
-					      fields => [ $field => $value] # WORKING HERE
+					      set => $setobj
 					     }
- 				 ) or return $self->_error('failed to create Query object');
+				  ) or return $self->_error('failed to create Query object');
 
-       my $resultset = $query->execute() or return $self->_error('failed to execute');
+       $query->execute() or return $self->_error('failed to execute');
 
 
- }
+}
 
 sub DESTROY{ # clean up the temporary object from the symbol table
       my $self = shift;

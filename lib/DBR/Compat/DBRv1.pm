@@ -10,7 +10,7 @@ use base 'DBR::Common';
 use DBR::Query;
 use DBR::Query::Value;
 use DBR::Query::Field;
-use DBR::Query::Where;
+use DBR::Query::Part;
 
 sub new {
       my( $package ) = shift;
@@ -123,11 +123,11 @@ sub update {
 
 	    my $valobj = $self->_value($value) or return $self->_error('_value failed');
 
-	    my $set = DBR::Query::Parts::Set->new(
-						  logger => $self->{logger},
-						  field  => $fieldobj,
-						  value  => $valobj
-						 );
+	    my $set = DBR::Query::Part::Set->new(
+						 logger => $self->{logger},
+						 field  => $fieldobj,
+						 value  => $valobj
+						);
 	    push @Qfields, $Qfield;
       }
 
@@ -138,11 +138,14 @@ sub update {
 				  dbrh   => $self->{dbrh},
 				  logger => $self->{logger},
 				  update => {
-					     fields => \@Qfields
+					     fields => \@Qfields,
+					     quiet_error => $params{-quiet} ? 1:0,
 					    },
 				  tables => $table,
 				  where  => $where
 				 ) or return $self->_error('failed to create query object');
+
+      return $query->execute();
 
 }
 
@@ -171,7 +174,7 @@ sub _where {
 			push @or, $self->_where($element) or $self->_error('convertvals failed');
 		  }
 
-		  push @out, DBR::Query::Where::OR->new( @or );
+		  push @out, DBR::Query::Part::Or->new( @or );
 
 	    } else {
 		  my $key   = $val1;
@@ -188,7 +191,7 @@ sub _where {
 			      my $query = $compat->select(%{$value}, -query => 1) or return $self->_error('failed to create query object');
 			      return $self->_error('invalid subquery') unless $query->can_be_subquery;
 
-			      push @out, DBR::Query::Where::SUBQUERY->new($key, $query);
+			      push @out, DBR::Query::Part::Subquery->new($key, $query);
 
 			}else{ #if( $self->{aliasmap} ){ #not a subquery... are we doing a join?
 			      my $alias = $key;
@@ -217,7 +220,7 @@ sub _where {
       }
 
       if(@out > 1){
-	    return DBR::Query::Where::AND->new(@out);
+	    return DBR::Query::Part::And->new(@out);
       }else{
 	    return $out[0];
       }
@@ -246,7 +249,7 @@ sub _processfield{
 							name   => $value->[1]
 						       ) or return $self->_error('Failed to create tofield object');
 
-	    my $join = DBR::Query::Where::JOIN->new($field,$jointo)
+	    my $join = DBR::Query::Part::Join->new($field,$jointo)
 	      or return $self->_error('failed to create join object');
 
 	    return $join;
@@ -270,11 +273,11 @@ sub _processfield{
 
 	    my $valobj = $self->_value($value) or return $self->_error('_value failed');
 
-	    my $compobj = DBR::Query::Where::COMPARE->new(
-							  field    => $field,
-							  operator => $operator,
-							  value    => $valobj
-							 ) or return $self->_error('failed to create compare object');
+	    my $compobj = DBR::Query::Part::Compare->new(
+							 field    => $field,
+							 operator => $operator,
+							 value    => $valobj
+							) or return $self->_error('failed to create compare object');
 
 	    return $compobj;
 

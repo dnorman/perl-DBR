@@ -6,12 +6,13 @@
 ###########################################
 package DBR::Query::Part::AndOr;
 
-use strict; use base 'DBR::Common';
+use strict;
+use base 'DBR::Query::Part';
 
 sub new{
       my( $package ) = shift;
 
-      return $package->_error('cannot call new on DBR::Query::Where') if $package eq 'DBR::Query::Part::AndOr';
+      return $package->_error('cannot call new on DBR::Query::Part::AndOr directly') if $package eq 'DBR::Query::Part::AndOr';
 
       for (@_){
 	    ref($_) =~ /^DBR::Query::Part::/ || return $package->_error('arguments must be part objects')
@@ -47,16 +48,18 @@ sub sql { # Used by AND/OR
 1;
 
 ###########################################
-package DBR::Query::Where::AND;
-use strict; our @ISA = ('DBR::Query::Part::AndOr');
+package DBR::Query::Where::And;
+use strict;
+our @ISA = ('DBR::Query::Part::AndOr');
 
 sub type { return 'AND' };
 
 1;
 
 ###########################################
-package DBR::Query::Where::OR;
-use strict; our @ISA = ('DBR::Query::Part::AndOr');
+package DBR::Query::Where::Or;
+use strict;
+our @ISA = ('DBR::Query::Part::AndOr');
 
 sub type { return 'OR' };
 
