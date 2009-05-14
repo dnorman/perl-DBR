@@ -61,15 +61,12 @@ sub connect {
 	    return $dbh;
       } else {
 
-	    my $hclass = 'DBR::Handle::' . $instance->module;
-	    #return $self->_error("Failed to Load $hclass ($@)") unless eval "require $hclass";
-
-	    return $self->_error("Failed to create $hclass object") unless
+	    return $self->_error("Failed to create Handle object") unless
 	      my $dbrh = DBR::Handle->new(
 					  dbh      => $dbh,
 					  dbr      => $self,
 					  logger   => $self->{logger},
-					  instance => $instance
+					  instance => $instance,
 					 );
 	    return $dbrh;
       }

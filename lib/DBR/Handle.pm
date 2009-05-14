@@ -9,7 +9,7 @@ use strict;
 use base 'DBR::Common';
 use DBR::Query;
 use DBR::Object;
-use DBR::Compat::DBRv1;
+use DBR::Interface::DBRv1;
 our $AUTOLOAD;
 
 sub new {
@@ -29,64 +29,37 @@ sub new {
       return $self->_error( 'dbr parameter is required'      ) unless $self->{dbr};
       return $self->_error( 'instance parameter is required' ) unless $self->{instance};
 
-      $self->{schema} = $self->{instance}->schema(
-						  dbrh => $self
-						 );
+      $self->{schema} = $self->{instance}->schema( dbrh => $self );
       return $self->_error( 'failed to retrieve schema' ) unless defined($self->{schema});
 
+
+      my $dclass = 'DBR::Driver::' . $self->{instance}->module;
+      return $self->_error("Failed to Load $dclass ($@)") unless eval "require $dclass";
+
+      return $self->_error("Failed to create $dclass object") unless
+	my $driver = $dclass->new(
+				  logger => $self->{logger},
+				  dbh    => $self->{dbh}
+				 );
+
+      $self->{driver} = $driver;
+
+      # Temporary solution to interfaces
+      $self->{dbrv1} = DBR::Interface::DBRv1->new(
+						  logger  => $self->{logger},
+						  dbrh    => $self,
+						 ) or return $self->_error('failed to create DBRv1 interface object');
 
       return( $self );
 }
 
-sub dbh { $_[0]->{dbh} }
+sub _dbh    { $_[0]->{dbh}    }
+sub _driver { $_[0]->{driver} }
 
-# -table -fields -where
-sub select{
-    my $self = shift;
-    my @params = @_;
-    my %params;
-
-    if(scalar(@params) == 1){
-      $params{-sql} = $params[0];
-    }else{
-      %params = @params;
-    }
-
-    my $compat = DBR::Compat::DBRv1->new(
-					 logger  => $self->{logger},
-					 dbrh    => $self,
-					) or return $self->_error('failed to create Query object');
-
-    return $compat->select(%params) or return $self->_error('failed to prepare select');
-
-
-}
-
-
-sub delete{
-  my $self = shift;
-  my %params = @_;
-
-  return $self->_error('No valid -where parameter specified') unless ref($params{-where}) eq 'HASH';
-  return $self->_error('No -table parameter specified') unless $params{-table} =~ /^[A-Za-z0-9_-]+$/;
-
-
-}
-
-sub insert{
-    my $self = shift;
-    my %params = @_;
-    return $self->_error('No -table parameter specified') unless $params{-table} =~ /^[A-Za-z0-9_-]+$/;
-
-    return $self->modify(@_,-insert => 1);
-}
-
-sub update{
-    my $self = shift;
-    my %params = @_;
-    return $self->_error('No -table parameter specified') unless $params{-table} =~ /^[A-Za-z0-9_-]+$/;
-    return $self->modify(@_,-update => 1);
-}
+sub select{ my $self = shift; return $self->{dbrv1}->select(@_); }
+sub insert{ my $self = shift; return $self->{dbrv1}->insert(@_); }
+sub update{ my $self = shift; return $self->{dbrv1}->update(@_); }
+sub delete{ my $self = shift; return $self->{dbrv1}->delete(@_); }
 
 sub _disconnect{
       my $self = shift;
@@ -109,7 +82,7 @@ sub AUTOLOAD {
 
       $method =~ s/.*:://;
       return unless $method =~ /[^A-Z]/; # skip DESTROY and all-cap methods
-      return $self->_error('Cannot autoload query object when no schema is defined') unless $self->{schema};
+      return $self->_error("Cannot autoload '$method' when no schema is defined") unless $self->{schema};
 
       my $table = $self->{schema}->get_table( $method ) or return $self->_error("no such table '$method' exists in this schema");
 

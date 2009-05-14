@@ -33,9 +33,9 @@ my $dbrh = $dbr->connect('esrp_main','query') || die "failed to connect";
 # $imaginary->where(orders.cust_id => 902349 );
 
 my $ret =  $dbrh->orders->where(
-			       cust_id => 902349,
-			       #status  => NOT 'ordered approved',
-			       #foo => \@somelist
+				cust_id => 902349,
+				#status  => NOT 'ordered approved',
+				#foo => \@somelist
 			      );
 
 #    die "select failed" unless
@@ -46,13 +46,15 @@ my $ret =  $dbrh->orders->where(
 #  			   );
 
 use Data::Dumper;
-while (my $row = $ret->next){
+while (my $order = $ret->next){
 
      # print $row->status ; # { handle => 'cancelled', }
 
-      $row->status(3);
+      $order->status(3);
 
-      print STDERR Dumper($row->ship_method_id);
+      print STDERR Dumper($order->ship_method_id);
+
+     #my $items = $order->items;#->set(something => 'foo');
 }
 
 #undef $ret;

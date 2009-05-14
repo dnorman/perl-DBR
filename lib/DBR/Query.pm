@@ -254,9 +254,10 @@ sub execute{
       my $self = shift;
       my %params = @_;
 
-      $self->_logDebug( $self->sql );
+      $self->_logDebug2( $self->sql );
 
-      my $dbh = $self->{dbrh}->dbh or return $self->_error('failed to fetch dbh');
+      my $dbh    = $self->{dbrh}->_dbh    or return $self->_error('failed to fetch dbh');
+      my $driver = $self->{dbrh}->_driver or return $self->_error('failed to fetch driver');
 
       local $dbh->{PrintError}; # Localize here to ensure the same scope
       if(  $self->{quiet_error}  ){  $dbh->{PrintError} = 0 } # Eeeevil
@@ -282,15 +283,13 @@ sub execute{
 	    }
       }elsif($self->{type} eq 'insert'){
 
-	    my $call = {};
-
-	    $self->_prepareSequence($call) or return $self->_error('Failed to prepare sequence');
+	    $driver->prepSequence() or return $self->_error('Failed to prepare sequence');
 
 	    my $rows = $dbh->do($self->sql);
 
-	    my ($sequenceval) = $self->_getSequenceValue($call);
+	    my ($sequenceval) = $driver->getSequenceValue();
 
-	    # return $sequenceval;
+	    return $sequenceval;
 
 	    #HERE HERE HERE return a record object?
       }elsif($self->{type} eq 'update'){
@@ -299,8 +298,15 @@ sub execute{
 
 	    return $rows || 0;
 
+      }elsif($self->{type} eq 'delete'){
+
+	    my $rows = $dbh->do($self->sql);
+
+	    return $rows || 0;
+
       }
 
+      return $self->_error('unknown query type')
 }
 
 1;

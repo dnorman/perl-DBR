@@ -74,7 +74,7 @@ sub new {
 	    my $method = $field->name;
 	    push @{$self->{methods}||=[]}, $method;
 
-	    print STDERR "$class\:\:$method\n";
+	    #print STDERR "$class\:\:$method\n";
 	    my $symbol = qualify_to_ref( "$class\:\:$method" );
 
 	    *$symbol = $sub;
@@ -183,6 +183,8 @@ sub DESTROY{ # clean up the temporary object from the symbol table
 	    #$self->_logDebug2("undef '$class\:\:$method'");
       }
 }
+
+1;
 
 package DBR::Query::Rec;
 

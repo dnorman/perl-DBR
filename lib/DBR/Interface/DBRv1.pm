@@ -3,7 +3,7 @@
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation.
 
-package DBR::Compat::DBRv1;
+package DBR::Interface::DBRv1;
 
 use strict;
 use base 'DBR::Common';
@@ -27,16 +27,24 @@ sub new {
       return( $self );
 }
 
+
+
 sub select {
       my $self   = shift;
-      my %params = @_;
+      my @params = @_;
+      my %params;
+
+      if(scalar(@params) == 1){
+	    $params{-sql} = $params[0];
+      }else{
+	    %params = @params;
+      }
 
       my $tables = $self->_split( $params{-table} || $params{-tables} ) or
 	return $self->_error("No -table[s] parameter specified");
 
       my $fields = $self->_split( $params{-fields} || $params{-field}) or
 	return $self->_error('No -field[s] parameter specified');
-
 
       my @Qfields;
       foreach my $field (@$fields){
@@ -100,13 +108,54 @@ sub select {
 
 }
 
+sub insert {
+      my $self = shift;
+      my %params = @_;
+
+
+      my $table = $params{-table} || $params{-insert};
+      my $fields = $params{-fields};
+
+      return $self->_error('No -table parameter specified') unless $table =~ /^[A-Za-z0-9_-]+$/;
+      return $self->_error('No proper -fields parameter specified') unless ref($fields) eq 'HASH';
+
+      my @sets;
+      foreach my $field (keys %$fields){
+	    my $value = $fields->{$field};
+
+	    my $fieldobj = DBR::Config::Field::Anon->new(
+							 logger => $self->{logger},
+							 dbrh   => $self->{dbrh},
+							 name   => $field
+							) or return $self->_error('Failed to create field object');
+
+	    my $valobj = $self->_value($value) or return $self->_error('_value failed');
+
+	    my $set = DBR::Query::Part::Set->new($fieldobj,$valobj) or return $self->_error('failed to create set object');
+	    push @sets, $set;
+      }
+
+
+      my $query = DBR::Query->new(
+				  dbrh   => $self->{dbrh},
+				  logger => $self->{logger},
+				  insert => {
+					     set => \@sets,
+					    },
+				  quiet_error => $params{-quiet} ? 1:0,
+				  tables => $table,
+				 ) or return $self->_error('failed to create query object');
+
+      return $query->execute();
+
+}
 
 sub update {
       my $self = shift;
       my %params = @_;
 
 
-      my $table = $params{-table} || $params{-update};
+      my $table  = $params{-table} || $params{-update};
       my $fields = $params{-fields};
 
       return $self->_error('No -table parameter specified') unless $table =~ /^[A-Za-z0-9_-]+$/;
@@ -131,24 +180,19 @@ sub update {
 
 	    my $valobj = $self->_value($value) or return $self->_error('_value failed');
 
-	    my $set = DBR::Query::Part::Set->new(
-						 logger => $self->{logger},
-						 field  => $fieldobj,
-						 value  => $valobj
-						);
+	    my $set = DBR::Query::Part::Set->new($fieldobj,$valobj) or return $self->_error('failed to create set object');
+
 	    push @sets, $set;
       }
 
-      #use Data::Dumper;
-      #print STDERR Dumper($where);
 
       my $query = DBR::Query->new(
 				  dbrh   => $self->{dbrh},
 				  logger => $self->{logger},
 				  update => {
 					     set => \@sets,
-					     quiet_error => $params{-quiet} ? 1:0,
 					    },
+				  quiet_error => $params{-quiet} ? 1:0,
 				  tables => $table,
 				  where  => $where
 				 ) or return $self->_error('failed to create query object');
@@ -156,7 +200,34 @@ sub update {
       return $query->execute();
 
 }
+sub delete {
+      my $self = shift;
+      my %params = @_;
 
+
+      my $table  = $params{-table} || $params{-delete};
+
+      return $self->_error('No -table parameter specified') unless $table =~ /^[A-Za-z0-9_-]+$/;
+
+      my $where;
+      if($params{-where}){
+	    $where = $self->_where($params{-where}) or return $self->_error('failed to prep where');
+      }else{
+	    return $self->_error('-where hashref/arrayref must be specified');
+      }
+
+      my $query = DBR::Query->new(
+				  dbrh   => $self->{dbrh},
+				  logger => $self->{logger},
+				  delete => 1,
+				  quiet_error => $params{-quiet} ? 1:0,
+				  tables => $table,
+				  where  => $where
+				 ) or return $self->_error('failed to create query object');
+
+      return $query->execute();
+
+}
 
 sub _where {
       my $self = shift;
@@ -191,10 +262,10 @@ sub _where {
 		  if (ref($value) eq 'HASH') {
 			if($value->{-table} && ($value->{-field} || $value->{-fields})){ #does it smell like a subquery?
 
-			      my $compat = DBR::Query::Compat::DBRv1->new(
-									  logger => $self->{logger},
-									  dbrh    => $self->{dbrh},
-									 ) or return $self->_error('failed to create Query object');
+			      my $compat = DBR::Interface::DBRv1->new(
+								      logger => $self->{logger},
+								      dbrh    => $self->{dbrh},
+								     ) or return $self->_error('failed to create Query object');
 
 			      my $query = $compat->select(%{$value}, -query => 1) or return $self->_error('failed to create query object');
 			      return $self->_error('invalid subquery') unless $query->can_be_subquery;

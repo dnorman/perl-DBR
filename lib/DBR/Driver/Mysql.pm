@@ -4,7 +4,7 @@ use strict;
 use base 'DBR::Driver';
 
 
-sub _getSequenceValue{
+sub getSequenceValue{
       my $self = shift;
       my $call = shift;
 

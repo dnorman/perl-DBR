@@ -32,7 +32,7 @@ sub new{
       }
 
       $self->{dbrh} or return $self->_error('dbrh must be specified');
-      $self->{dbh} = $self->{dbrh}->dbh or return $self->_error('failed to fetch dbh');
+      $self->{dbh} = $self->{dbrh}->_dbh or return $self->_error('failed to fetch dbh');
 
       my $value = $params{value};
       return $self->_error('value must be specified') unless $value;
@@ -59,7 +59,6 @@ sub new{
       }
 
       if( $self->{is_number} ){
-	    print STDERR "NUMBER\n";
 	    foreach my $val ( @{$value}) {
 		  if ($val !~ /^-?\d*\.?\d+$/) {
 			return $self->_error("value $val is not a legal number");

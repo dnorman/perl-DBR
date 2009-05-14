@@ -45,7 +45,7 @@ sub count{
 
       $self->_execute or return $self->_error('failed to execute');
 
-       my $count;
+      my $count;
       if ($self->{is_count}){
 	    ($count) = $self->{sth}->fetchrow_array();
 	    $self->reset();

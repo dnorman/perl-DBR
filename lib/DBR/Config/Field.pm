@@ -53,10 +53,10 @@ sub load{
 
       my $dbh = $dbr->connect($handle,$class) || return $self->_error("Failed to connect to '$handle','$class'");
 
-      return $self->_error('Failed to select instances') unless
+      return $self->_error('Failed to select fields') unless
 	my $fields = $dbh->select(
 				  -table => 'dbr_fields',
-				  -fields => 'field_id table_id name field_type default_select is_nullable is_signed is_pkey is_enum enum_param max_value',
+				  -fields => 'field_id table_id name field_type is_nullable is_signed is_pkey is_enum enum_param max_value',
 				  -where  => { table_id => ['d in',@$table_ids] },
 				 );
 
