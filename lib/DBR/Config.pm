@@ -106,12 +106,12 @@ sub load_dbconf{
       if(%schema_ids){
 	    $self->_error("failed to create schema handles") unless
 	      my $schemas = DBR::Config::Schema->load(
-								   logger   => $self->{logger},
-								   schema_id => [keys %schema_ids],
-								   dbr       => $dbr,
-								   handle    => $handle,
-								   class     =>  $class,
-								  );
+						      logger   => $self->{logger},
+						      schema_id => [keys %schema_ids],
+						      dbr       => $dbr,
+						      handle    => $handle,
+						      class     =>  $class,
+						     );
       }
 
       return 1;
