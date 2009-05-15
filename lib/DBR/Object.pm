@@ -34,9 +34,9 @@ sub where{
       my %inwhere = @_;
 
       # Use caller information to determine selected fields
-      my ( $package, $filename, $line, $method) = caller(1);
-
-      # LOOKUP FIELDS HERE
+      my @caller = caller(0);my @caller1 = caller(1);
+      use Data::Dumper;
+      print STDERR Dumper(\@caller,\@caller1);
 
 
       my $table = $self->{table};
@@ -74,6 +74,42 @@ sub where{
 
 #Fetch by Primary key
 sub fetch{
+      
 }
 
+use Digest::MD5 qw(md5_base64);
+
+
+sub test {
+      my $self = shift;
+      return $self->_caller;
+
+}
+
+sub _caller{
+      my $offset = 1;
+
+      my @parts;
+      while($offset){
+	    my (undef,$file,$line) = caller($offset++);
+
+	    if($file =~ /^\//){ # starts with Slash
+		  $offset = 0; #everything is good
+	    }else{
+		  if ($file !~ /^\(eval/){ # If it's an eval, then we do another loop
+			# Not an eval, just slap on the directory we are in and call it done
+			$file = $ENV{'PWD'} . '/' . $file;
+			$offset = 0;
+		  }
+	    }
+
+	    push @parts, $file . '*' . $line;
+      }
+
+      my $ident = join('|',@parts);
+
+      return $ident;
+      #return md5_base64($ident);
+
+}
 1;

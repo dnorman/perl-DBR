@@ -60,7 +60,6 @@ sub new {
 	    return $self->_error('must specify select, insert, update or delete');
       }
 
-
       return( $self );
 }
 

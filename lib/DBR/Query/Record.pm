@@ -62,11 +62,11 @@ sub new {
 	    $self->{pkmap}->{$table_id}    = \@map;
 
       }
-
+      my $mode = 'rw';
       foreach my $field (@$fields){
 
 	    my $sub = $self->_mk_method(
-					mode  => 'rw',
+					mode  => $mode,
 					index => $field->index,
 					field => $field,
 				       ) or return $self->_error('Failed to create method');
