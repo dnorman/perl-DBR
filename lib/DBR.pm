@@ -23,8 +23,8 @@ sub new {
 	$self->{config} =  DBR::Config->new( logger => $self->{logger} );
 
       $self->{config} -> load_file(
-				   -dbr  => $self,
-				   -file => $params{-conf}
+				   dbr  => $self,
+				   file => $params{-conf}
 				  ) or return $self->_error("Failed to load DBR conf file");
 
       $self->{CACHE} = {};
@@ -49,27 +49,13 @@ sub connect {
       }
 
       my $instance = DBR::Config::Instance->lookup(
+						   dbr    => $self,
 						   logger => $self->{logger},
 						   handle => $name,
-						   class => $class
+						   class  => $class
 						  ) or return $self->_error("No config found for db '$name' class '$class'");
 
-      return $self->_error('failed to get database handle') unless
-	my $dbh = $self->_gethandle($instance);
-
-      if (lc($flag) eq 'dbh') {
-	    return $dbh;
-      } else {
-
-	    return $self->_error("Failed to create Handle object") unless
-	      my $dbrh = DBR::Handle->new(
-					  dbh      => $dbh,
-					  dbr      => $self,
-					  logger   => $self->{logger},
-					  instance => $instance,
-					 );
-	    return $dbrh;
-      }
+      return $instance->connect($flag);
 
 }
 
@@ -94,50 +80,11 @@ sub unmap{
 sub flush_handles{
     my $self = shift;
 
-    foreach my $dbname (keys %{$self->{CACHE}}){
-	  foreach my $class (keys %{$self->{CACHE}->{$dbname}}){
-		my $dbh = $self->{CACHE}->{$dbname}->{$class};
-		$dbh->disconnect();
-		delete $self->{CACHE}->{$dbname}->{class};
-	  }
-    }
+    return DBR::Config::Instance->flush_all_handles;
 
-    return undef;
 }
 
-sub _gethandle{
-      my $self     = shift;
-      my $instance = shift;
-      my $dbh;
 
-      #Ask the instance what it's handle and class are because it may have been gotten by an alias.
-      my $realname  = $instance->handle;
-      my $realclass = $instance->class;
-      my $guid      = $instance->guid;
-
-      $self->_logDebug2("Connecting to $realname, $realclass");
-
-      $dbh = $self->{CACHE}->{ $guid };
-      if ($dbh) {
-	    if (  $dbh->do( "SELECT 1" )  ) {
-		  $self->_logDebug2('Re-using existing connection');
-	    } else {
-		  $dbh->disconnect();
-		  $dbh = $self->{CACHE}->{ $guid } = undef;
-	    }
-      }
-
-      if (!$dbh) {
-	    $self->_logDebug2('getting a new connection');
-	    $dbh = $instance->new_connection() or return $self->_error("Failed to connect to $realname, $realclass");
-
-	    $self->{CACHE}->{ $guid } = $dbh;
-	    $self->_logDebug2('Connected');
-
-      }
-
-      return $dbh;
-}
 
 sub DESTROY{
     my $self = shift;

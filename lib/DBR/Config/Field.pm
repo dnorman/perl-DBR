@@ -44,15 +44,13 @@ sub load{
       my $self = { logger => $params{logger} };
       bless( $self, $package ); # Dummy object
 
-      my $dbr    = $params{dbr}    || return $self->_error('dbr is required');
-      my $handle = $params{handle} || return $self->_error('handle is required');
-      my $class  = $params{class}  || return $self->_error('class is required');
+      my $instance = $params{instance} || return $self->_error('instance is required');
 
       my $table_ids = $params{table_id} || return $self->_error('table_id is required');
       $table_ids = [$table_ids] unless ref($table_ids) eq 'ARRAY';
 
 
-      my $dbh = $dbr->connect($handle,$class) || return $self->_error("Failed to connect to '$handle','$class'");
+      my $dbh = $instance->connect || return $self->_error("Failed to connect to ${\$instance->name}");
 
       return $self->_error('Failed to select fields') unless
 	my $fields = $dbh->select(
@@ -78,9 +76,7 @@ sub load{
 
 	    DBR::Config::Field::Trans->load(
 					    logger => $self->{logger},
-					    dbr    => $dbr,
-					    handle => $handle,
-					    class  => $class,
+					    instance => $instance,
 					    field_id => \@trans_fids,
 					   ) or return $self->_error('failed to load translators');
 

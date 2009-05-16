@@ -20,11 +20,9 @@ sub load{
       my $self = { logger => $params{logger} };
       bless( $self, $package ); # Dummy object
 
-      my $dbr    = $params{dbr}    || return $self->_error('dbr is required');
-      my $handle = $params{handle} || return $self->_error('handle is required');
-      my $class  = $params{class}  || return $self->_error('class is required');
+      my $instance = $params{instance} || return $self->_error('instance is required');
 
-      my $dbh = $dbr->connect($handle,$class) || return $self->_error("Failed to connect to '$handle','$class'");
+      my $dbh = $instance->connect || return $self->_error("Failed to connect to ${\$instance->name}");
 
       my $schema_ids = $params{schema_id} || return $self->_error('schema_id is required');
       $schema_ids = [$schema_ids] unless ref($schema_ids) eq 'ARRAY';
@@ -44,9 +42,7 @@ sub load{
 
       DBR::Config::Table->load(
 			       logger => $self->{logger},
-			       dbr    => $dbr,
-			       handle => $handle,
-			       class  => $class,
+			       instance => $instance,
 			       schema_id => \@schema_ids,
 			      ) or return $package->_error('failed to load tables');
 

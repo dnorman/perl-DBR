@@ -11,6 +11,7 @@ use base 'DBR::Common';
 use DBR::Config::Schema;
 
 my $GUID = 1;
+my %CONCACHE;
 
 #here is a list of the currently supported databases and their connect string formats
 my %connectstrings = (
@@ -21,21 +22,55 @@ my %connectstrings = (
 my %INSTANCES;
 my %INSTANCES_BY_GUID;
 
+
+sub flush_all_handles {
+      # can be run with or without an object
+      my $cache = \%CONCACHE;
+      foreach my $dbname (keys %{$cache}){
+
+	    foreach my $class (keys %{$cache->{$dbname}}){
+
+		my $dbh = $cache->{$dbname}->{$class};
+		$dbh->disconnect();
+		delete $cache->{$dbname}->{class};
+
+	  }
+
+      }
+
+      return 1;
+}
+
 sub lookup{
       my $package = shift;
       my %params = @_;
 
-      my $self = { logger => $params{logger} };
-      bless( $self, $package ); # Dummy object
+      my $self = {
+		  dbr    => $params{dbr},
+		  logger => $params{logger}
+		 };
+      bless( $self, $package );
 
-      my $handle = $params{handle} || return $self->_error('handle is required');
-      my $class  = $params{class}  || 'master';
+      return $self->_error('dbr is required')    unless $self->{dbr};
+      return $self->_error('logger is required') unless $self->{logger};
 
-      my $instance = $INSTANCES{$handle}->{$class} || $INSTANCES{$handle}->{'*'}; # handle aliases if there's no exact match
+      if( $params{guid} ){
 
-      return $self->_error("No DB instance found for '$handle','$class'") unless $instance;
+	    $INSTANCES_BY_GUID{ $params{guid} } or return $self->_error('no such guid');
+	    $self->{guid} = $params{guid};
 
-      return $instance;
+      }else{
+	    my $handle = $params{handle} || return $self->_error('handle is required');
+	    my $class  = $params{class}  || 'master';
+
+	    my $conf = $INSTANCES{$handle}->{$class} || $INSTANCES{$handle}->{'*'}; # handle aliases if there's no exact match
+
+	    return $self->_error("No DB instance found for '$handle','$class'") unless $conf;
+
+	    $self->{guid} = $conf->{guid};
+      }
+
+      return $self;
 
 }
 
@@ -44,14 +79,15 @@ sub load_from_db{
       my( $package ) = shift;
       my %params = @_;
 
-      my $self = { logger => $params{logger} };
+      my $self = {
+		  dbr    => $params{dbr},
+		  logger => $params{logger} };
       bless( $self, $package ); # Dummy object
 
-      my $dbr    = $params{dbr}    || return $self->_error('dbr is required');
-      my $handle = $params{handle} || return $self->_error('handle is required');
-      my $class  = $params{class}  || return $self->_error('class is required');
+      return $self->_error('dbr is required') unless $self->{dbr};
 
-      my $dbh = $dbr->connect($handle,$class) || return $self->_error("Failed to connect to '$handle','$class'");
+      my $parent = $params{parent_inst} || return $self->_error('parent_inst is required');
+      my $dbh = $parent->connect || return $self->_error("Failed to connect to (@{[$parent->handle]} @{[$parent->class]})");
 
       return $self->_error('Failed to select instances') unless
 	my $instrows = $dbh->select(
@@ -62,9 +98,10 @@ sub load_from_db{
       foreach my $instrow (@$instrows){
 
 	    my $instance = $self->register(
+					   dbr    => $self->{dbr},
 					   logger => $self->{logger},
 					   spec   => $instrow
-					  ) || $self->_error("failed to load instance from database ($handle,$class)") && next;
+					  ) || $self->_error("failed to load instance from database (@{[$parent->handle]} @{[$parent->class]})") && next;
 	    push @instances, $instance;
       }
 
@@ -77,10 +114,17 @@ sub register { # basically the same as a new
       my %params = @_;
 
 
-      my $self = { logger => $params{logger} };
+      my $self = {
+		  dbr    => $params{dbr},
+		  logger => $params{logger}
+		 };
       bless( $self, $package );
 
-      my $spec = $params{spec};
+      return $self->_error( 'dbr is required'     ) unless $self->{dbr};
+      return $self->_error( 'logger is required'  ) unless $self->{logger};
+
+
+      my $spec = $params{spec} or return $self->_error( 'spec ref is required' );
 
       my $config = {
 		    handle      => $spec->{handle}   || $spec->{name} || $spec->{dbname},
@@ -104,31 +148,96 @@ sub register { # basically the same as a new
 
       $config->{connectstring} = $connectstrings{$config->{module}} || return $self->_error("module '$config->{module}' is not a supported database type");
 
-      $config->{dbr_bootstrap} = 1 if $spec->{dbr_bootstrap};
+      $config->{dbr_bootstrap} = $spec->{dbr_bootstrap}? 1:0;
 
       foreach my $key (keys %{$config}) {
 	    $config->{connectstring} =~ s/-$key-/$config->{$key}/;
       }
 
-      $config->{guid} = $GUID++;
-      $self->{_conf} = $config;
+      my $guid = $GUID++;
+      $INSTANCES_BY_GUID{ $guid } = $config;
+      $self->{guid} = $config->{guid} = $guid;
+      # Now we are cool to start calling accessors
 
-      # Now register this instance in the global repository
-      $INSTANCES{ $self->handle }->{ $self->class } = $self;
+      # Register this instance in the global repository
+      $INSTANCES{ $self->handle }->{ $self->class } = $config;
 
-      $INSTANCES_BY_GUID{ $self->guid } = $self;
       if ($spec->{alias}) {
-	    $INSTANCES{ $spec->{alias} }->{'*'} = $self;
+	    $INSTANCES{ $spec->{alias} }->{'*'} = $config;
       }
 
 
       return( $self );
 }
 
-sub new_connection{
+
+#######################################################################
+############################                                          #
+############################  All subs below here require an object   #
+############################                                          #
+#######################################################################
+
+
+sub connect{
+      my $self = shift;
+      my $flag = shift;
+
+      return $self->_error('failed to get database handle') unless
+	my $dbh = $self->_gethandle;
+
+      if (lc($flag) eq 'dbh') {
+	    return $dbh;
+      } else {
+
+	    return $self->_error("Failed to create Handle object") unless
+	      my $dbrh = DBR::Handle->new(
+					  dbh      => $dbh,
+					  dbr      => $self->{dbr},
+					  logger   => $self->{logger},
+					  instance => $self,
+					 );
+	    return $dbrh;
+      }
+}
+
+sub _gethandle{
+      my $self = shift;
+      my $dbh;
+
+      #Ask the instance what it's handle and class are because it may have been gotten by an alias.
+      my $realname  = $self->handle;
+      my $realclass = $self->class;
+      my $guid      = $self->guid;
+
+      $self->_logDebug2("Connecting to $realname, $realclass");
+      my $cache = \%CONCACHE;
+
+      $dbh = $cache->{ $guid };
+      if ($dbh) {
+	    if (  $dbh->ping  ) { #$dbh->do( "SELECT 1" ) 
+		  $self->_logDebug2('Re-using existing connection');
+	    } else {
+		  $dbh->disconnect();
+		  $dbh = $cache->{ $guid } = undef;
+	    }
+      }
+
+      if (!$dbh) {
+	    $self->_logDebug2('getting a new connection');
+	    $dbh = $self->_new_connection() or return $self->_error("Failed to connect to $realname, $realclass");
+
+	    $cache->{ $guid } = $dbh;
+	    $self->_logDebug2('Connected');
+
+      }
+
+      return $dbh;
+}
+
+sub _new_connection{
       my $self = shift;
 
-      my $config = $self->{_conf};
+      my $config = $INSTANCES_BY_GUID{ $self->{guid} };
       my @params = ($config->{connectstring}, $config->{user}, $config->{password});
 
       my $dbh = DBI->connect(@params) or
@@ -137,12 +246,13 @@ sub new_connection{
       return $dbh;
 }
 
-sub handle { $_[0]->{_conf}->{handle}   }
-sub class  { $_[0]->{_conf}->{class}    }
-sub guid   { $_[0]->{_conf}->{guid}     }
-sub module { $_[0]->{_conf}->{module}   }
-sub dbr_bootstrap{ $_[0]->{_conf}->{dbr_bootstrap} || 0 }
-sub schema_id { $_[0]->{_conf}->{schema_id} }
+sub handle        { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{handle}   }
+sub class         { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{class}    }
+sub guid          { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{guid}     }
+sub module        { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{module}   }
+sub dbr_bootstrap { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{dbr_bootstrap} }
+sub schema_id     { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{schema_id} }
+sub name          { return $_[0]->handle . ' ' . $_[0]->class }
 
 #shortcut to fetch the schema object that corresponds to this instance
 sub schema{

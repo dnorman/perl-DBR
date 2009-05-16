@@ -21,16 +21,12 @@ sub load{
       my $self = { logger => $params{logger} };
       bless( $self, $package ); # Dummy object
 
-      my $dbr    = $params{dbr}    || return $self->_error('dbr is required');
-      my $handle = $params{handle} || return $self->_error('handle is required');
-      my $class  = $params{class}  || return $self->_error('class is required');
+      my $instance = $params{instance} || return $self->_error('instance is required');
 
       my $schema_ids = $params{schema_id} || return $self->_error('schema_id is required');
       $schema_ids = [$schema_ids] unless ref($schema_ids) eq 'ARRAY';
 
-      my $dbh = $dbr->connect($handle,$class) || return $self->_error("Failed to connect to '$handle','$class'");
-
-
+      my $dbh = $instance->connect || return $self->_error("Failed to connect to @{[$instance->name]}");
 
       return $self->_error('Failed to select instances') unless
 	my $tables = $dbh->select(
@@ -47,15 +43,15 @@ sub load{
 						 table_id  => $table->{table_id},
 						) or return $self->_error('failed to register table');
 
+	    $table->{conf_instance_guid} = $instance->guid;
+
 	    $TABLES_BY_ID{ $table->{table_id} } = $table;
 	    push @table_ids, $table->{table_id};
       }
 
       DBR::Config::Field->load(
 			       logger => $self->{logger},
-			       dbr    => $dbr,
-			       handle => $handle,
-			       class  => $class,
+			       instance => $instance,
 			       table_id => \@table_ids,
 			      ) or return $self->_error('failed to load fields');
 
@@ -139,5 +135,15 @@ sub primary_key{ #HERE HERE HERE - Optimize this
 }
 
 sub name { $TABLES_BY_ID{  $_[0]->{table_id} }->{name} };
+sub conf_instance {
+      my $self = shift;
 
+      my $guid = $TABLES_BY_ID{  $self->{table_id} }->{conf_instance_guid};
+
+      return DBR::Config::Instance->lookup(
+					   dbr => $self->{dbrh}->_dbr, # HERE HERE HERE - This is ugly
+					   logger => $self->{logger},
+					   guid => $guid
+					  ) or return $self->_error('Failed to fetch conf instance');
+}
 1;

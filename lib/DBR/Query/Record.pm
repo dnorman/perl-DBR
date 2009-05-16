@@ -100,7 +100,12 @@ sub _mk_method{
       my $value    = $record . '[' . $idx . ']';
 
       my $code;
+      my $trans;
       if($mode eq 'rw' && $field){
+	    if ($trans = $field->translator){
+		  $value = "\$trans->forward($value)";
+	    }
+
 	    $code = "   $setvalue ? \$parent->_set( $record, \$field, $setvalue ) : $value   ";
       }elsif($mode eq 'ro'){
 	    $code = "   $value   ";
@@ -108,13 +113,15 @@ sub _mk_method{
       $code = "sub {$code}";
       $self->_logDebug2($code);
 
-      return $self->_eval_method($field,$code);
+      return $self->_eval_method($field,$trans,$code);
 }
 
 #Seperate method for scope cleanliness
 sub _eval_method{
       my $parent = shift;
       my $field  = shift;
+      my $trans  = shift;
+
       return eval shift;
 }
 
@@ -129,17 +136,13 @@ sub _set{
        my $pk    = $self->{pkmap}->{ $field->table_id }    || return $self->_error('Missing primary key');
 
        my $setvalue = $field->makevalue($value) or return $self->_error('failed to create setvalue object');
-       my $setobj = DBR::Query::Part::Set->new( $field, $setvalue ) or return $self->_error('failed to create set object');
+       my $setobj   = DBR::Query::Part::Set->new( $field, $setvalue ) or return $self->_error('failed to create set object');
 
        ##### Where ###########
        my @and;
        foreach my $part (@{ $pk }){
 	     my $value = $part->makevalue( $record->[ $part->index ] ) or return $self->_error('failed to create value object');
-
-	     my $outfield = DBR::Query::Part::Compare->new(
-							   field => $part,
-							   value => $value
-							  ) or return $self->_error('failed to create compare object');
+	     my $outfield = DBR::Query::Part::Compare->new( field => $part, value => $value ) or return $self->_error('failed to create compare object');
 
 	     push @and, $outfield;
        }
@@ -153,9 +156,7 @@ sub _set{
 				   dbrh   => $self->{dbrh},
 				   tables => $table->name,
 				   where  => $outwhere,
-				   update => {
-					      set => $setobj
-					     }
+				   update => { set => $setobj }
 				  ) or return $self->_error('failed to create Query object');
 
        return $query->execute() or return $self->_error('failed to execute');

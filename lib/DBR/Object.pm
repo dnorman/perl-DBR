@@ -11,6 +11,9 @@ use DBR::Query::ResultSet;
 use DBR::Query::Part;
 use DBR::Operators;
 
+use Digest::MD5 qw(md5_base64);
+my %SCOPES;
+
 sub new {
       my( $package ) = shift;
       my %params = @_;
@@ -33,12 +36,10 @@ sub where{
       my $self = shift;
       my %inwhere = @_;
 
+      my $scope_id = $self->_getscope or return $self->_error('Failed to get calling scope');
+      $self->_logDebug2("Scope ID is $scope_id");
+
       # Use caller information to determine selected fields
-      my @caller = caller(0);my @caller1 = caller(1);
-      use Data::Dumper;
-      print STDERR Dumper(\@caller,\@caller1);
-
-
       my $table = $self->{table};
       my @and;
       foreach my $fieldname (keys %inwhere){
@@ -77,29 +78,23 @@ sub fetch{
       
 }
 
-use Digest::MD5 qw(md5_base64);
 
-
-sub test {
+sub _getscope{
       my $self = shift;
-      return $self->_caller;
 
-}
-
-sub _caller{
       my $offset = 1;
 
       my @parts;
-      while($offset){
+      while($offset < 51){
 	    my (undef,$file,$line) = caller($offset++);
 
 	    if($file =~ /^\//){ # starts with Slash
-		  $offset = 0; #everything is good
+		  $offset = 51; #everything is good
 	    }else{
 		  if ($file !~ /^\(eval/){ # If it's an eval, then we do another loop
 			# Not an eval, just slap on the directory we are in and call it done
 			$file = $ENV{'PWD'} . '/' . $file;
-			$offset = 0;
+			$offset = 51;
 		  }
 	    }
 
@@ -108,8 +103,42 @@ sub _caller{
 
       my $ident = join('|',@parts);
 
-      return $ident;
-      #return md5_base64($ident);
+      my $digest = md5_base64($ident);
 
+      my $scope_id = $SCOPES{$digest}; # Check the cache!
+      return $scope_id if $scope_id;
+
+      my $dbrh = $self->{dbrh};
+
+      my $table = $self->{table};
+      my $instance = $table->conf_instance or return $self->_error('Failed to get conf instance');
+
+      my $dbrh = $instance->connect or return $self->_error("Failed to connect to ${\$instance->name}");
+
+      # If the insert fails, that means someone else has won the race condition, try try again
+      my $try;
+      while(++$try < 3){
+	    #Yeahhh... using the old way for now, Don't you like absurd recursion? perhaps change this?
+	    my $record = $dbrh->select(
+				       -table => 'dbr_scopes',
+				       -fields => 'scope_id',
+				       -where => {digest => $digest},
+				       -single => 1,
+				      );
+
+	    return $record->{scope_id} if $record;
+
+	    my $scope_id = $dbrh->insert(
+					 -table => 'dbr_scopes',
+					 -fields => {
+						     digest => $digest
+						    },
+					 -quiet => 1,
+					);
+
+	    return $scope_id if $scope_id;
+      }
+
+      return $self->_error('Something failed');
 }
 1;

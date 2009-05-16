@@ -15,13 +15,8 @@ sub new {
   my %params = @_;
   my $self = {logger => $params{logger}};
 
+  return $self->_error( 'logger is required'  ) unless $self->{logger};
   bless( $self, $package );
-
-  # so we can easily override these in the future if necessary
-  $self->{dbr_tables} = {
-			 fields    => 'dbr_fields',
-			};
-  $self->{INSTANCES} = {};
 
   return( $self );
 }
@@ -31,8 +26,8 @@ sub load_file{
       my $self = shift;
       my %params = @_;
 
-      my $dbr   = $params{'-dbr'}   or return $self->_error( '-dbr parameter is required'  );
-      my $file  = $params{'-file'}  or return $self->_error( '-file parameter is required' );
+      my $dbr   = $params{'dbr'}   or return $self->_error( 'dbr parameter is required'  );
+      my $file  = $params{'file'}  or return $self->_error( 'file parameter is required' );
       $self->_logDebug2("loading config file '$file'");
       my @conf;
       my $setcount = 0;
@@ -68,15 +63,15 @@ sub load_file{
 	    $count++;
 
 	    my $instance = DBR::Config::Instance->register(
+							   dbr    => $dbr,
 							   logger => $self->{logger},
 							   spec   => $instspec
 							  ) || $self->_error("failed to load DBR conf file '$file' (stanza #$count)") && next;
 	    if($instance->dbr_bootstrap){
 		  #don't bail out here on error
 		  $self->load_dbconf(
-				     dbr    => $dbr,
-				     handle => $instance->handle,
-				     class  => $instance->class
+				     dbr      => $dbr,
+				     instance => $instance
 				    ) || $self->_error("failed to load DBR config tables") && next;
 	    }
       }
@@ -89,16 +84,18 @@ sub load_dbconf{
       my $self  = shift;
       my %params = @_;
 
-      my $dbr    = $params{'dbr'}    or return $self->_error( 'dbr parameter is required'    );
-      my $handle = $params{'handle'} or return $self->_error( 'handle parameter is required' );
-      my $class  = $params{'class'}  or return $self->_error( 'class parameter is required'  );
+
+
+      my $dbr         = $params{'dbr'}      or return $self->_error( 'dbr parameter is required'    );
+      my $parent_inst = $params{'instance'} or return $self->_error( 'instance parameter is required' );
+
+
 
       $self->_error("failed to create instance handles") unless
 	my $instances = DBR::Config::Instance->load_from_db(
 							    logger   => $self->{logger},
 							    dbr      => $dbr,
-							    handle   => $handle,
-							    class    => $class,
+							    parent_inst => $parent_inst
 							   );
       my %schema_ids;
       map {$schema_ids{ $_->schema_id } = 1 } @$instances;
@@ -106,11 +103,9 @@ sub load_dbconf{
       if(%schema_ids){
 	    $self->_error("failed to create schema handles") unless
 	      my $schemas = DBR::Config::Schema->load(
-						      logger   => $self->{logger},
+						      logger    => $self->{logger},
 						      schema_id => [keys %schema_ids],
-						      dbr       => $dbr,
-						      handle    => $handle,
-						      class     =>  $class,
+						      instance  => $parent_inst,
 						     );
       }
 

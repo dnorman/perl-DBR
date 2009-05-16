@@ -53,6 +53,7 @@ sub new {
       return( $self );
 }
 
+sub _dbr    { $_[0]->{dbr}    }
 sub _dbh    { $_[0]->{dbh}    }
 sub _driver { $_[0]->{driver} }
 

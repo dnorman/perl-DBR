@@ -15,7 +15,7 @@ sub name     { die "shouldn't get here" };
 sub is_pkey  { undef }
 sub table    { undef }
 sub is_numeric{ undef }
-
+sub translator { undef }
 
 sub table_alias{
       my $self = shift;
