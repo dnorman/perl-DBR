@@ -9,6 +9,7 @@ use strict;
 use base 'DBR::Config::Field::Common';
 use DBR::Query::Value;
 use DBR::Config::Table;
+use DBR::Config::Field::Trans;
 
 my %FIELDS_BY_ID;
 
@@ -56,10 +57,11 @@ sub load{
       return $self->_error('Failed to select fields') unless
 	my $fields = $dbh->select(
 				  -table => 'dbr_fields',
-				  -fields => 'field_id table_id name field_type is_nullable is_signed is_pkey is_enum enum_param max_value',
+				  -fields => 'field_id table_id name data_type is_nullable is_signed is_pkey trans_id max_value',
 				  -where  => { table_id => ['d in',@$table_ids] },
 				 );
 
+      my @trans_fids;
       foreach my $field (@$fields){
 
 	    DBR::Config::Table->_register_field(
@@ -68,11 +70,20 @@ sub load{
 						field_id => $field->{field_id},
 					       ) or return $self->_error('failed to register field');
 	    $FIELDS_BY_ID{ $field->{field_id} } = $field;
+	    push @trans_fids, $field->{field_id} if $field->{trans_id};
       }
 
 
-      if (@){
-	    
+      if (@trans_fids){
+
+	    DBR::Config::Field::Trans->load(
+					    logger => $self->{logger},
+					    dbr    => $dbr,
+					    handle => $handle,
+					    class  => $class,
+					    field_id => \@trans_fids,
+					   ) or return $self->_error('failed to load translators');
+
       }
 
       return 1;
@@ -102,6 +113,7 @@ sub makevalue{ # shortcut function?
 
       return DBR::Query::Value->new(
 				    dbrh   => $self->{dbrh},
+				    logger => $self->{logger},
 				    value  => $value,
 				    is_number => $self->is_numeric,
 				    field  => $self,
@@ -125,7 +137,20 @@ sub table    {
 
 sub is_numeric{
       my $field = $FIELDS_BY_ID{ $_[0]->{field_id} };
-      return $datatype_lookup{ $field->{field_type} }->{numeric} ? 1:0;
+      return $datatype_lookup{ $field->{data_type} }->{numeric} ? 1:0;
+}
+
+sub translator{
+      my $self = shift;
+
+      my $trans_id = $FIELDS_BY_ID{ $self->{field_id} }->{trans_id} or return undef;
+
+      return DBR::Config::Field::Trans->new(
+					    dbrh     => $self->{dbrh},
+					    logger   => $self->{logger},
+					    trans_id => $trans_id,
+					    field_id => $self->{field_id},
+					   );
 }
 
 1;

@@ -32,7 +32,7 @@ sub load{
       return $self->_error('Failed to select instances') unless
 	my $schemas = $dbh->select(
 				   -table => 'dbr_schemas',
-				   -fields => 'schema_id handle display_name definition_mode enum_scheme enum_call',
+				   -fields => 'schema_id handle display_name definition_mode',
 				   -where  => { schema_id => ['d in', @{$schema_ids}] },
 				  );
 
@@ -43,12 +43,12 @@ sub load{
       }
 
       DBR::Config::Table->load(
-					    logger => $self->{logger},
-					    dbr    => $dbr,
-					    handle => $handle,
-					    class  => $class,
-					    schema_id => \@schema_ids,
-					   ) or return $package->_error('failed to load tables');
+			       logger => $self->{logger},
+			       dbr    => $dbr,
+			       handle => $handle,
+			       class  => $class,
+			       schema_id => \@schema_ids,
+			      ) or return $package->_error('failed to load tables');
 
       return 1;
 }

@@ -1,21 +1,78 @@
-package DBR::Enum;
+package DBR::Config::Field::Trans::Enum;
 
 use strict;
 use base 'DBR::Common';
 
-sub new {
-  my( $package ) = shift;
-  my %params = @_;
-  my $self = {
-	      logger => $params{logger},
-	      dbh    => $params{dbh},
-	     };
+my %FIELDMAP;
 
-  bless( $self, $package );
+sub load{
+      my( $package ) = shift;
+      my %params = @_;
 
-  return $self->_error('dbh object must be specified')   unless $self->{dbh};
+      my $self = { logger => $params{logger} };
+      bless( $self, $package ); # Dummy object
 
-  return( $self );
+      my $dbr    = $params{dbr}    || return $self->_error('dbr is required');
+      my $handle = $params{handle} || return $self->_error('handle is required');
+      my $class  = $params{class}  || return $self->_error('class is required');
+
+      my $field_ids = $params{field_id} || return $self->_error('field_id is required');
+      $field_ids = [$field_ids] unless ref($field_ids) eq 'ARRAY';
+
+      my $dbh = $dbr->connect($handle,$class) || return $self->_error("Failed to connect to '$handle','$class'");
+
+
+      return $self->_error('Failed to select from enum_map') unless
+	my $maps = $dbh->select(
+				-table => 'enum_map',
+				-fields => 'field_id enum_id',
+				-where  => { field_id => ['d in',@$field_ids] },
+			       );
+
+      my @enumids = $self->_uniq( map {  $_->{enum_id} } @$maps);
+
+      return $self->_error('Failed to select from enum') unless
+	my $values = $dbh->select(
+				 -table => 'enum',
+				 -fields => 'enum_id handle name override_id',
+				 -where  => { enum_id => ['d in',@enumids ] },
+				);
+
+      my %VALUES_BY_ID;
+      foreach my $value (@$values){
+	    my $enum_id = $value->{enum_id};
+	    my $id = $value->{override_id} or $enum_id;
+
+	    $VALUES_BY_ID{ $enum_id } = [$id,$value->{handle},$value->{name}];
+      }
+
+      foreach my $map (@$maps){
+	    my $enum_id = $map->{enum_id};
+	    my $value = $VALUES_BY_ID{ $enum_id };
+
+	    my $ref = $FIELDMAP{ $map->{field_id} } ||=[];
+
+	    $ref->[0]->{ $value->[0] } = $value; # Forward
+	    $ref->[1]->{ $value->[1] } = $value; # Backward
+
+      }
+      return 1;
+}
+
+
+sub new { die "Should not get here" }
+
+
+sub forward{
+      my $self = shift;
+      my $id   = shift;
+      return $FIELDMAP{ $self->{field_id} }->[0]->{ $id }->[1]; # handle
+}
+
+sub backward{
+      my $self = shift;
+      my $handle = shift;
+      return $FIELDMAP{ $self->{field_id} }->[1]->{ $handle }->[0]; # id
 }
 
 
@@ -43,47 +100,6 @@ sub _enum {
 
       bless $lookup, 'ESRPCommon::EnumHandler';
       return $lookup;
-}
-
-
-sub _enumlist {
-      my $self = shift;
-      my $context = shift;
-      my $field = shift;
-
-      return $self->_error('must pass in context') unless $context;
-      return $self->_error('must pass in field') unless $field;
-
-      $ENUM ||= {};
-      $ENUM->{list} ||= {};
-
-      my $retlist;
-      if($ENUM->{list} && $ENUM->{timestamp} > ($self->_time() - 1800)) {
-
-	    $retlist = $ENUM->{list};
-
-      } else {
-
-	    return $self->_error('failed to connect to esrp_main') unless
-	      my $dbh = $self->{dbr}->connect('esrp_main','query');
-
-	    return $self->_error('failed to select from esrp_enum') unless
-	      my $enums = $dbh->select(
-				       -table => 'esrp_enum',
-				       -fields => 'context field handle name val sortval',
-				      );
-
-	    my $enumlist = {};
-	    map {   push @{  $enumlist->{$_->{context}}->{$_->{field}}  },  { handle => $_->{handle}, value => $_->{val}, name => $_->{name}, sortval => $_->{sortval}}   } @{$enums};
-
-	    $ENUM->{list} = $enumlist;
-	    $ENUM->{timestamp} = $self->_time();
-
-	    $retlist = $ENUM->{list};
-
-      }
-
-      return clone($retlist->{$context}->{$field});
 }
 
 

@@ -37,18 +37,12 @@ sub new{
       my $value = $params{value};
       return $self->_error('value must be specified') unless $value;
 
-      return $self->_error('is_number must be specified') unless defined($params{is_number});
-
-      $self->{is_number}  = $params{is_number}? 1 : 0;
-      my $op_hint;
-
       if ( ref($value) eq 'DBR::Operator' ) {
 	    my $wrapper = $value;
 
 	    $value   = $wrapper->value;
-	    $op_hint = $wrapper->operator;
+	    $self->{op_hint} = $wrapper->operator;
       }
-      $self->{op_hint} = $op_hint;
 
       my $ref = ref($value);
 
@@ -56,6 +50,25 @@ sub new{
 	    $value = [$value];
       }elsif ($ref ne 'ARRAY'){
 	    return $self->_error('value must be a scalar or an arrayref');
+      }
+
+      if(ref($field) eq 'DBR::Config::Field'){ # No Anon
+	    $self->{is_number} = $field->is_numeric? 1 : 0;
+
+	    my $trans = $field->translator;
+	    if($trans){
+
+		  my @translated;
+		  foreach (@$value){
+			my $tv = $trans->backward($_) or return $self->_error("invalid value '$_' for field " . $field->name );
+			push @translated, $tv;
+		  }
+		  $value = \@translated;
+	    }
+      }else{
+	    return $self->_error('is_number must be specified') unless defined($params{is_number});
+
+	    $self->{is_number}  = $params{is_number}? 1 : 0;
       }
 
       if( $self->{is_number} ){
@@ -67,11 +80,6 @@ sub new{
       }
 
       $self->{value}    = $value;
-
-      # #Translation plugins go here
-      if($field){
-	    #
-      }
 
       return $self;
 
@@ -122,6 +130,6 @@ sub quoted{
 
 }
 
-
+sub logger { $_[0]->{logger} }
 
 

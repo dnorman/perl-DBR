@@ -128,22 +128,13 @@ sub _set{
        my $table = $self->{tablemap}->{ $field->table_id } || return $self->_error('Missing table for table_id ' . $field->table_id );
        my $pk    = $self->{pkmap}->{ $field->table_id }    || return $self->_error('Missing primary key');
 
-       my $setvalue = DBR::Query::Value->new(
-					     dbrh   => $self->{dbrh},
-					     is_number => $field->is_numeric,
-					     value  => $value,
-					    ) or return $self->_error('failed to create setvalue object');
-
+       my $setvalue = $field->makevalue($value) or return $self->_error('failed to create setvalue object');
        my $setobj = DBR::Query::Part::Set->new( $field, $setvalue ) or return $self->_error('failed to create set object');
 
        ##### Where ###########
        my @and;
        foreach my $part (@{ $pk }){
-	     my $value = DBR::Query::Value->new(
-						dbrh   => $self->{dbrh},
-						is_number => $part->is_numeric,
-						value  => $record->[ $part->index ], ##
-					       ) or return $self->_error('failed to create value object');
+	     my $value = $part->makevalue( $record->[ $part->index ] ) or return $self->_error('failed to create value object');
 
 	     my $outfield = DBR::Query::Part::Compare->new(
 							   field => $part,
