@@ -17,8 +17,9 @@ sub new {
       my %params = @_;
 
       my $self = {
-		  dbrh     => $params{dbrh},
-		  logger   => $params{logger},
+		  dbrh   => $params{dbrh},
+		  logger => $params{logger},
+		  scope  => $params{scope},
 		 };
 
       bless( $self, $package );
@@ -110,6 +111,8 @@ sub _tables{
       return 1;
 }
 
+
+sub scope { $_[0]->{scope} }
 sub check_table{
       my $self  = shift;
       my $alias = shift;

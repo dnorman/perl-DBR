@@ -27,6 +27,24 @@ sub _split{
       return $out;
 }
 
+# returns true if all elements of Arrayref A (or single value) are present in arrayref B
+sub _b_in{
+      my $self = shift;
+      my $value1 = shift;
+      my $value2 = shift;
+      $value1 = [$value1] unless ref($value1);
+      $value2 = [$value2] unless ref($value2);
+      return undef unless (ref($value1) eq 'ARRAY' && ref($value2) eq 'ARRAY');
+      my %valsA = map {$_ => 1} @{$value2};
+      my $results;
+      foreach my $val (@{$value1}) {
+            unless ($valsA{$val}) {
+                  return 0;
+            }
+      }
+      return 1;
+}
+
 sub _stopwatch{
       my $self = shift;
       my $label = shift;

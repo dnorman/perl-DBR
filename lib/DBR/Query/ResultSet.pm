@@ -22,12 +22,10 @@ sub new {
       return $self->_error('logger object must be specified') unless $self->{logger};
       return $self->_error('dbrh object must be specified')   unless $self->{dbrh};
 
-      my $fields = $self->{query}->fields or return $self->_error('Failed to get query fields');
-
       my $record = DBR::Query::Record->new(
-					  dbrh   => $self->{dbrh},
-					  logger => $self->{logger},
-					  fields => $fields,
+					   dbrh   => $self->{dbrh},
+					   logger => $self->{logger},
+					   query  => $self->{query},
 					 ) or return $self->_error('failed to create record class');
 
       # need to keep this in scope, because it removes the dynamic class when DESTROY is called

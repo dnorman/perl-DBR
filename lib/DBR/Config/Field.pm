@@ -142,7 +142,6 @@ sub translator{
       my $trans_id = $FIELDS_BY_ID{ $self->{field_id} }->{trans_id} or return undef;
 
       return DBR::Config::Field::Trans->new(
-					    dbrh     => $self->{dbrh},
 					    logger   => $self->{logger},
 					    trans_id => $trans_id,
 					    field_id => $self->{field_id},

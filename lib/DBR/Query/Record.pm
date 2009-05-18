@@ -9,17 +9,25 @@ use DBR::Query::Part;
 my $BASECLASS = 'DBR::Query::Rec';
 my $classidx = 0;
 
+
 sub new {
       my( $package ) = shift;
       my %params = @_;
       my $self = {
 		  logger => $params{logger},
 		  dbrh   => $params{dbrh},
+		  query  => $params{query},
 		 };
 
       bless( $self, $package ); # BS object
 
-      my $fields = $params{fields} or return $self->_error('fields are required');
+      $self->{query} or return $self->_error('query is required');
+
+      $self->{scope} = $self->{query}->scope; # optional
+
+      my $fields = $self->{query}->fields or return $self->_error('Failed to get query fields');
+      $fields = [ @$fields ]; #Shallow clone
+
       $self->{dbrh} or return $self->_error('dbrh object must be specified');
 
       my $class = $BASECLASS . ++$classidx;
@@ -45,21 +53,29 @@ sub new {
 						table_id => $table_id,
 					       ) or return $self->_error('Failed to create table object');
 
-	    my $pkeys = $table->primary_key or return $self->_error('failed to retrieve primary key');
+	    my $allfields = $table->fields or return $self->_error('failed to retrieve fields for table');
 
-	    my @map;
+	    my @pk;
 	    #We need to check to make sure that all PK fields are included in the query results.
 	    #These are field objects, but don't use them elsewhere. They are devoid of query indexes
-	    foreach my $pk_field (@$pkeys){
+	    foreach my $checkfield (@$allfields){
+		  my $field = $self->{fieldmap}->{ $checkfield->field_id };
 
-		  my $field = $self->{fieldmap}->{ $pk_field->field_id };
-		  $field or return $self->_error('Resultset is missing primary key field ' . $pk_field->name);
+		  if( $checkfield->is_pkey ){
+			if(!$field){
+			      return $self->_error('Resultset is missing primary key field ' . $checkfield->name);
+			}
 
-		  push @map, $field; # Make a very lightweight definition of which primary key is which field
+			push @pk, $field;
+		  }else{
+			if(!$field){
+			      push @$fields, $checkfield; #not in the resultset, but we should still know about it
+			}
+		  }
 	    }
 
 	    $self->{tablemap}->{$table_id} = $table;
-	    $self->{pkmap}->{$table_id}    = \@map;
+	    $self->{pkmap}->{$table_id}    = \@pk;
 
       }
       my $mode = 'rw';
@@ -90,23 +106,28 @@ sub _mk_method{
       my %params = @_;
 
       my $mode = $params{mode} or return $self->_error('Mode is required');
-      my $idx = $params{index};
-      return $self->_error('index is required') unless defined $idx;
 
       my $field = $params{field};
 
       my $record   = '$_[0]'; # $self   = shift
       my $setvalue = '$_[1]'; # $set    = shift
-      my $value    = $record . '[' . $idx . ']';
+      my $value;
+
+      my $idx = $params{index};
+      if(defined $idx){ #did we actually fetch this?
+	    $value = $record . '[' . $idx . ']';
+      }else{
+	    $value = "\$p->_get( $record, \$f )";
+      }
 
       my $code;
       my $trans;
       if($mode eq 'rw' && $field){
 	    if ($trans = $field->translator){
-		  $value = "\$trans->forward($value)";
+		  $value = "\$t->forward($value)";
 	    }
 
-	    $code = "   $setvalue ? \$parent->_set( $record, \$field, $setvalue ) : $value   ";
+	    $code = "   exists( $setvalue ) ? \$p->_set( $record, \$f, $setvalue ) : $value   ";
       }elsif($mode eq 'ro'){
 	    $code = "   $value   ";
       }
@@ -118,9 +139,9 @@ sub _mk_method{
 
 #Seperate method for scope cleanliness
 sub _eval_method{
-      my $parent = shift;
-      my $field  = shift;
-      my $trans  = shift;
+      my $p = shift;
+      my $f = shift;
+      my $t = shift;
 
       return eval shift;
 }
@@ -163,6 +184,49 @@ sub _set{
 
 
 }
+sub _get{
+       my $self = shift;
+       my $record = shift;
+       my $field = shift;
+
+       # DO THIS ONCE PER TABLE
+       my $table = $self->{tablemap}->{ $field->table_id } || return $self->_error('Missing table for table_id ' . $field->table_id );
+       my $pk    = $self->{pkmap}->{ $field->table_id }    || return $self->_error('Missing primary key');
+
+       ##### Where ###########
+       my @and;
+       foreach my $part (@{ $pk }){
+	     my $value = $part->makevalue( $record->[ $part->index ] ) or return $self->_error('failed to create value object');
+	     my $outfield = DBR::Query::Part::Compare->new( field => $part, value => $value ) or return $self->_error('failed to create compare object');
+
+	     push @and, $outfield;
+       }
+
+
+       my $outwhere = DBR::Query::Part::And->new(@and);
+       #######################
+
+       my $query = DBR::Query->new(
+				   logger => $self->{logger},
+				   dbrh   => $self->{dbrh},
+				   tables => $table->name,
+				   where  => $outwhere,
+				   select => { fields => [$field] }
+				  ) or return $self->_error('failed to create Query object');
+
+       my $sth = $query->execute(
+				 sth_only => 1 # Don't want to create another resultset
+				) or return $self->_error('failed to execute');
+
+       $sth->execute() or return $self->_error('Failed to execute sth');
+       my $row  = $sth->fetchrow_arrayref() or return $self->_error('Failed to fetchrow');
+
+       #HERE HERE HERE cache this, and update the accessor?
+       $self->{scope}->addfield($field) or return $self->_error('Failed to add field to scope');
+
+       return $row->[0];
+}
+
 
 sub DESTROY{ # clean up the temporary object from the symbol table
       my $self = shift;
