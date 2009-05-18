@@ -22,16 +22,6 @@ sub new {
       return $self->_error('logger object must be specified') unless $self->{logger};
       return $self->_error('dbrh object must be specified')   unless $self->{dbrh};
 
-      my $record = DBR::Query::Record->new(
-					   dbrh   => $self->{dbrh},
-					   logger => $self->{logger},
-					   query  => $self->{query},
-					 ) or return $self->_error('failed to create record class');
-
-      # need to keep this in scope, because it removes the dynamic class when DESTROY is called
-      $self->{record} = $record;
-
-      $self->{rc} = $record->class;
       #prime the pump
       $self->{next} = *_first;
 
@@ -121,6 +111,18 @@ sub next { $_[0]->{next}->( $_[0] ) }
 
 sub _first{
       my $self = shift;
+
+      my $record = DBR::Query::Record->new(
+					   dbrh   => $self->{dbrh},
+					   logger => $self->{logger},
+					   query  => $self->{query},
+					 ) or return $self->_error('failed to create record class');
+
+      # need to keep this in scope, because it removes the dynamic class when DESTROY is called
+      $self->{record} = $record;
+
+      $self->{rc} = $record->class;
+
       $self->_execute() or return $self->_error('failed to execute');
 
       if ($self->{rowcount} > 200) {
