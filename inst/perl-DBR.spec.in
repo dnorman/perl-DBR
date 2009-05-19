@@ -21,7 +21,7 @@ See README for more information.
 %setup -q -n DBR-%{version}
 
 %build
-./configure --with-install-dir=%{RPM_BUILD_ROOT}/%{_perldir}
+./configure --with-perl-install-path=%{RPM_BUILD_ROOT}/%{_perldir}
 make
 
 %check

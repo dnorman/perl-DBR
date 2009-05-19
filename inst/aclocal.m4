@@ -8,7 +8,7 @@ AC_DEFUN([LE_MSG_CONFIGURE_START],
 AC_DEFUN([LE_MSG_CONFIGURE_END],
 [
    AC_MSG_RESULT
-   AC_MSG_RESULT([Type 'make install' to install the library.])
+   AC_MSG_RESULT([Type $MAKE to prep the library.])
    AC_MSG_RESULT
 ])
 
