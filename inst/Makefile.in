@@ -1,0 +1,20 @@
+PERL      = @PERL@
+PERLVER   = @PERL_VERSION@
+
+MAKE	  = @MAKE@
+
+DESTDIR   = @INSTALL_PATH@
+CTARGETS  = Makefile autom4te.cache config.log config.status
+DCTARGETS = configure
+
+all:
+	@echo "Type '$(MAKE) install' to install the library."
+
+install:
+	@echo "Installing DBR to $(DESTDIR) ..."
+
+clean: 
+	$(RM) -rf $(CTARGETS)
+
+distclean: clean
+	$(RM) -rf $(DCTARGETS)
