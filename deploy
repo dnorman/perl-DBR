@@ -1,0 +1,29 @@
+#!/bin/zsh
+
+BN0=`basename $0`
+PROG=DBR
+BDIR=/tmp/build-${PROG}-$$
+opd=`pwd`
+
+error () {
+   echo "${BN0}: error: $1"
+   exit $2
+}
+
+cleanup () {
+   rm -rf ${BDIR}
+}
+
+trap 0 1 2 15 cleanup
+
+if [ $# -ne 0 ]; then
+   error "Wrong number of arguments (should be 0)"
+fi
+
+sitedir=$(perl -V:sitelib | sed "s/.*'\(.*\)';/\1/g")
+
+echo ""
+echo "Deploying ${PROG} to ${sitedir}"
+echo ""
+
+sudo cp -R lib/* ${sitedir}
