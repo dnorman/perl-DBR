@@ -77,7 +77,6 @@ sub new {
   my( $package ) = shift;
   my %params = @_;
   my $self = {
-	      dbrh     => $params{dbrh},
 	      logger   => $params{logger},
 	      table_id => $params{table_id}
 	     };
@@ -85,7 +84,6 @@ sub new {
   bless( $self, $package );
 
   return $self->_error('table_id is required') unless $self->{table_id};
-  return $self->_error('dbrh object must be specified')   unless $self->{dbrh};
 
   $TABLES_BY_ID{ $self->{table_id} } or return $self->_error("table_id $self->{table_id} doesn't exist");
 
@@ -99,7 +97,6 @@ sub get_field{
       my $field_id = $FIELDS_BY_NAME{ $self->{table_id} } -> { $name } || return $self->_error("field $name does not exist");
 
       my $field = DBR::Config::Field->new(
-					  dbrh     => $self->{dbrh},
 					  logger   => $self->{logger},
 					  field_id => $field_id,
 					 ) or return $self->_error('failed to create table object');
@@ -114,7 +111,6 @@ sub fields{
       foreach my $field_id (    values %{$FIELDS_BY_NAME{$self->{table_id}}}   ) {
 
 	    my $field = DBR::Config::Field->new(
-						dbrh     => $self->{dbrh},
 						logger   => $self->{logger},
 						field_id => $field_id,
 					       ) or return $self->_error('failed to create table object');
@@ -138,12 +134,12 @@ sub name { $TABLES_BY_ID{  $_[0]->{table_id} }->{name} };
 sub conf_instance {
       my $self = shift;
 
+
       my $guid = $TABLES_BY_ID{  $self->{table_id} }->{conf_instance_guid};
 
       return DBR::Config::Instance->lookup(
-					   dbr => $self->{dbrh}->_dbr, # HERE HERE HERE - This is ugly
 					   logger => $self->{logger},
-					   guid => $guid
+					   guid   => $guid
 					  ) or return $self->_error('Failed to fetch conf instance');
 }
 1;

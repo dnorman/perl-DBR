@@ -27,7 +27,6 @@ sub new {
 				   file => $params{-conf}
 				  ) or return $self->_error("Failed to load DBR conf file");
 
-      $self->{CACHE} = {};
       return( $self );
 }
 

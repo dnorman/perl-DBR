@@ -18,7 +18,6 @@ sub new {
 
       my $self = {
 		  dbh      => $params{dbh},
-		  dbr      => $params{dbr},
 		  logger   => $params{logger},
 		  instance => $params{instance}
 		 };
@@ -26,10 +25,9 @@ sub new {
       bless( $self, $package );
 
       return $self->_error( 'dbh parameter is required'      ) unless $self->{dbh};
-      return $self->_error( 'dbr parameter is required'      ) unless $self->{dbr};
       return $self->_error( 'instance parameter is required' ) unless $self->{instance};
 
-      $self->{schema} = $self->{instance}->schema( dbrh => $self );
+      $self->{schema} = $self->{instance}->schema();
       return $self->_error( 'failed to retrieve schema' ) unless defined($self->{schema});
 
 
@@ -53,7 +51,6 @@ sub new {
       return( $self );
 }
 
-sub _dbr    { $_[0]->{dbr}    }
 sub _dbh    { $_[0]->{dbh}    }
 sub _driver { $_[0]->{driver} }
 

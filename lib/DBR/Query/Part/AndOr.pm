@@ -31,6 +31,7 @@ sub _validate_self{ return scalar($_[0]->children)?1:$_[0]->_error('Invalid obje
 
 sub sql { # Used by AND/OR
       my $self = shift;
+      my $dbrh = shift or return $self->_error('dbrh must be specified');
       my $nested = shift;
 
 
@@ -39,7 +40,7 @@ sub sql { # Used by AND/OR
 
       my $sql;
       $sql .= '(' if $nested;
-      $sql .= join(' ' . $type . ' ', map { $_->sql(1) } $self->children );
+      $sql .= join(' ' . $type . ' ', map { $_->sql($dbrh,1) } $self->children );
       $sql .= ')' if $nested;
 
       return $sql;

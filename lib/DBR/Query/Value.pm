@@ -19,7 +19,6 @@ sub new{
 
 
       my $self = {
-		  dbrh   => $params{dbrh},
 		  logger => $params{logger},
 		  field  => $field
 		 };
@@ -30,9 +29,6 @@ sub new{
       if (defined $field){ #field object is optional
 	    return $self->_error('invalid field object') unless ref($field) eq 'DBR::Config::Field';
       }
-
-      $self->{dbrh} or return $self->_error('dbrh must be specified');
-      $self->{dbh} = $self->{dbrh}->_dbh or return $self->_error('failed to fetch dbh');
 
       my $value = $params{value};
       return $self->_error('value must be specified') unless $value;
@@ -96,10 +92,11 @@ sub count    { return scalar(  @{ $_[0]->{value} } ) }
 
 sub sql {
       my $self = shift;
+      my $dbrh = shift or return $self->_error('dbrh is required');
 
       my $sql;
 
-      my $values = $self->quoted;
+      my $values = $self->quoted($dbrh);
 
       if (@$values > 1) {
 	    $sql .= '(' . join(',',@{$values}) . ')';
@@ -121,11 +118,14 @@ sub is_null{
 
 sub quoted{
       my $self = shift;
+      my $dbrh = shift or return $self->_error('dbrh is required');
+
+      my $dbh = $dbrh->_dbh or return $self->_error('failed to retrieve dbh');
 
       if ($self->is_number){
 	    return [ map { defined($_)?$_:'NULL' } @{$self->{value}} ];
       }else{
-	    return [ map { defined($_)?$_:'NULL' } map { $self->{dbh}->quote($_) } @{$self->{value}} ];
+	    return [ map { defined($_)?$_:'NULL' } map { $dbh->quote($_) } @{$self->{value}} ];
       }
 
 }

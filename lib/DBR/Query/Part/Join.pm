@@ -33,7 +33,9 @@ sub type { return 'JOIN' };
 
 sub sql {
       my $self = shift;
-      return $self->from->sql . ' = ' . $self->to->sql;
+      my $dbrh = shift or return $self->_error('dbrh must be specified');
+
+      return $self->from->sql( $dbrh ) . ' = ' . $self->to->sql( $dbrh );
 }
 sub _validate_self{
       my $self = shift;

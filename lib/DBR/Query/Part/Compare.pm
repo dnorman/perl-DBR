@@ -64,6 +64,6 @@ sub field    { return $_[0]->[0] }
 sub operator { return $_[0]->[1] }
 sub value    { return $_[0]->[2] }
 
-sub sql   { return $_[0]->field->sql . ' ' . $sql_ops{ $_[0]->operator } . ' ' . $_[0]->value->sql }
+sub sql   { return $_[0]->field->sql($_[1]) . ' ' . $sql_ops{ $_[0]->operator } . ' ' . $_[0]->value->sql($_[1]) }
 
 sub _validate_self{ 1 }

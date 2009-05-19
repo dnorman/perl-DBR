@@ -16,7 +16,6 @@ sub new {
       my( $package ) = shift;
       my %params = @_;
       my $self = {
-		  dbrh     => $params{dbrh},
 		  logger   => $params{logger},
 		  instance => $params{conf_instance},
 		  extra_ident => $params{extra_ident},
@@ -24,7 +23,6 @@ sub new {
 
       bless( $self, $package );
 
-      return $self->_error('dbrh is required') unless $self->{dbrh};
       return $self->_error('logger is required') unless $self->{logger};
       return $self->_error('conf_instance is required')   unless $self->{instance};
 
@@ -124,9 +122,8 @@ sub fields{
       my @fields;
       foreach my $fid (@$fids){
 	     my $field = DBR::Config::Field->new(
-						dbrh     => $self->{dbrh},
-						logger   => $self->{logger},
-						field_id => $fid,
+						 logger   => $self->{logger},
+						 field_id => $fid,
 					       ) or return $self->_error('failed to create table object');
 	    push @fields, $field;
       }

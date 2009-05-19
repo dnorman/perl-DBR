@@ -26,7 +26,7 @@ sub new{
 
 sub field   { return $_[0]->[0] }
 sub value { return $_[0]->[1] }
-sub sql   { return $_[0]->field->sql . ' = ' . $_[0]->value->sql }
+sub sql   { return $_[0]->field->sql($_[1]) . ' = ' . $_[0]->value->sql($_[1]) }
 sub _validate_self{ 1 }
 
 sub validate{ 1 }

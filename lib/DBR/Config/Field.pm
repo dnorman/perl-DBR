@@ -90,7 +90,6 @@ sub new {
       my $package = shift;
       my %params = @_;
       my $self = {
-		  dbrh     => $params{dbrh},
 		  logger   => $params{logger},
 		  field_id => $params{field_id},
 		 };
@@ -98,7 +97,6 @@ sub new {
       bless( $self, $package );
 
       return $self->_error('field_id is required') unless $self->{field_id};
-      return $self->_error('dbrh object must be specified')   unless $self->{dbrh};
 
       return( $self );
 }
@@ -108,7 +106,6 @@ sub makevalue{ # shortcut function?
       my $value = shift;
 
       return DBR::Query::Value->new(
-				    dbrh   => $self->{dbrh},
 				    logger => $self->{logger},
 				    value  => $value,
 				    is_number => $self->is_numeric,
@@ -125,7 +122,6 @@ sub table    {
       my $self = shift;
 
       return DBR::Config::Table->new(
-				     dbrh     => $self->{dbrh},
 				     logger   => $self->{logger},
 				     table_id => $FIELDS_BY_ID{  $_[0]->{field_id} }->{table_id}
 				    );

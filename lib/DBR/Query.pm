@@ -128,7 +128,7 @@ sub _where{
 
       $param->validate($self) or return $self->_error('Where clause validation failed');
 
-      my $where = $param->sql or return $self->_error('Failed to retrieve sql');
+      my $where = $param->sql( $self->{dbrh} ) or return $self->_error('Failed to retrieve sql');
 
       return $where || '';
 }
@@ -159,7 +159,7 @@ sub _select{
 			      return $self->_error('invalid table alias "' . $field->table_alias . '" in -fields')        unless $self->{aliasmap}->{ $field->table_alias };
 			}
 
-			push @fieldsql, $field->sql;
+			push @fieldsql, $field->sql( $self->{dbrh} );
 			$field->index(++$idx);
 
 			$self->{flags}->{can_be_subquery} = 1 if scalar(@fieldsql) == 1;
@@ -194,7 +194,7 @@ sub _update{
 	    ref($set) eq 'DBR::Query::Part::Set'
 	      or return $self->_error('Set parameter must contain only set objects');
 
-	    push @sql, $set->sql;
+	    push @sql, $set->sql( $self->{dbrh} );
       }
 
       $self->{main_sql} = join (', ', @sql);

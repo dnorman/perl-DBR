@@ -36,7 +36,6 @@ sub where{
 
       my $table = $self->{table};
       my $scope = DBR::Config::Scope->new(
-					  dbrh          => $self->{dbrh},
 					  logger        => $self->{logger},
 					  conf_instance => $table->conf_instance,
 					  extra_ident   => $table->name,

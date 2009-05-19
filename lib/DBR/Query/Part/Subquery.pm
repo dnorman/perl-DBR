@@ -24,7 +24,7 @@ sub new{
 sub type { return 'SUBQUERY' };
 sub field   { return $_[0]->[0] }
 sub query { return $_[0]->[1] }
-sub sql   { return $_[0]->field->sql . ' IN (' . $_[0]->query->sql . ')'}
+sub sql   { return $_[0]->field->sql($_[1]) . ' IN (' . $_[0]->query->sql($_[1]) . ')'}
 
 sub _validate_self{ 1 }
 
