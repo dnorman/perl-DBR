@@ -1,0 +1,56 @@
+#!/bin/zsh
+
+BN0=`basename $0`
+PROG=DBR
+BDIR=/tmp/build-${PROG}-$$
+opd=`pwd`
+
+error () {
+   echo "${BN0}: error: $1"
+   exit $2
+}
+
+cleanup () {
+   rm -rf ${BDIR}
+}
+
+trap 0 1 2 15 cleanup
+
+if [ $# -ne 2 ]; then
+   error "Wrong number of arguments (should be 2)"
+fi
+
+VERS=$1
+RELN=$2
+PVER=${PROG}-${VERS}
+PDIR=${BDIR}/${PVER}
+
+echo ""
+echo "creating distributable tarball for ${PROG} v. ${VERS}"
+echo ""
+
+cd inst
+sed 's/%VERSION%/'$VERS'/g' configure.ac.in > configure.ac
+sed -i 's/%RELEASE%/'$RELN'/g' configure.ac
+autoconf
+
+mkdir -p ${PDIR}/src
+
+cp make-makefile configure Makefile.in perl-DBR.spec.in ${PDIR}
+
+cd ../doc
+cp README COPYING ${PDIR}
+
+cd ../lib
+
+tar -cf - . | (cd ${PDIR}/src; tar -xf -)
+
+cd ${PDIR}/src
+
+find . -type d -name .svn -exec rm -rf '{}' \;
+
+cd ${BDIR}
+
+tar -czf ${opd}/${PVER}.tar.gz ${PVER}
+
+echo "Complete!"
