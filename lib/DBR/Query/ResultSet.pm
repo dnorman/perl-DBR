@@ -2,7 +2,7 @@ package DBR::Query::ResultSet;
 
 use strict;
 use base 'DBR::Common';
-use DBR::Query::Record;
+use DBR::Query::RecMaker;
 
 sub new {
       my( $package ) = shift;
@@ -27,6 +27,17 @@ sub new {
 
       return( $self );
 }
+
+sub set{
+      my $self = shift;
+      my %fields = @_;
+
+      
+   #    my $setvalue = $field->makevalue($value) or return $self->_error('failed to create setvalue object');
+    #   my $setobj   = DBR::Query::Part::Set->new( $field, $setvalue ) or return $self->_error('failed to create set object');
+
+
+};
 
 sub count{
       my $self = shift;
@@ -112,16 +123,19 @@ sub next { $_[0]->{next}->( $_[0] ) }
 sub _first{
       my $self = shift;
 
-      my $record = DBR::Query::Record->new(
-					   dbrh   => $self->{dbrh},
-					   logger => $self->{logger},
-					   query  => $self->{query},
-					 ) or return $self->_error('failed to create record class');
+      if(!$self->{record}){
+	    $self->_stopwatch();
+	    my $record = DBR::Query::RecMaker->new(
+						   dbrh   => $self->{dbrh},
+						   logger => $self->{logger},
+						   query  => $self->{query},
+						  ) or return $self->_error('failed to create record class');
 
-      # need to keep this in scope, because it removes the dynamic class when DESTROY is called
-      $self->{record} = $record;
-
-      $self->{rc} = $record->class;
+	    # need to keep this in scope, because it removes the dynamic class when DESTROY is called
+	    $self->{record} = $record;
+	    $self->{rc} = $record->class;
+	    $self->_stopwatch('recmaker');
+      }
 
       $self->_execute() or return $self->_error('failed to execute');
 
@@ -150,7 +164,7 @@ sub _nextmem{
 	    $self->{next} = *reset;
       }
 
-      return bless($row,$self->{rc});
+      return bless([$row,$self],$self->{rc});
 }
 
 
@@ -165,9 +179,10 @@ sub _fetch{
       if (!$row){
 	    $self->{finished} = 1;
 	    $self->reset;
+	    return undef;
       }
 
-      return bless($row,$self->{rc});
+      return bless([$row,$self],$self->{rc});
 }
 
 sub reset{
@@ -182,7 +197,7 @@ sub reset{
 
 sub DESTROY{
       my $self = shift;
-
+      print STDERR "RS DESTROY\n";
       $self->{finished} || $self->{sth}->finish();
 
       return 1;

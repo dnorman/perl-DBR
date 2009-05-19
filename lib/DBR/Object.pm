@@ -9,7 +9,6 @@ use strict;
 use base 'DBR::Common';
 use DBR::Query::ResultSet;
 use DBR::Query::Part;
-use DBR::Operators;
 use DBR::Config::Scope;
 
 
@@ -39,7 +38,8 @@ sub where{
       my $scope = DBR::Config::Scope->new(
 					  dbrh          => $self->{dbrh},
 					  logger        => $self->{logger},
-					  conf_instance => $table->conf_instance
+					  conf_instance => $table->conf_instance,
+					  extra_ident   => $table->name,
 					 ) or return $self->_error('Failed to get calling scope');
 
 

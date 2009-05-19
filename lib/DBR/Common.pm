@@ -53,7 +53,6 @@ sub _stopwatch{
       my ($m) = $method =~ /([^\:]+)$/;
 
       if($label){
-
 	    my $elapsed = Time::HiRes::time() - $TIMERS{$method};
 	    my $seconds = sprintf('%.8f',$elapsed);
 	    $self->_logDebug( "$m ($label) took $seconds seconds");

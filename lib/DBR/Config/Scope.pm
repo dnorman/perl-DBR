@@ -18,7 +18,8 @@ sub new {
       my $self = {
 		  dbrh     => $params{dbrh},
 		  logger   => $params{logger},
-		  instance => $params{conf_instance}
+		  instance => $params{conf_instance},
+		  extra_ident => $params{extra_ident},
 		 };
 
       bless( $self, $package );
@@ -26,7 +27,6 @@ sub new {
       return $self->_error('dbrh is required') unless $self->{dbrh};
       return $self->_error('logger is required') unless $self->{logger};
       return $self->_error('conf_instance is required')   unless $self->{instance};
-
 
       my $offset = $params{offset} || 1;
       my $scope_id = $self->_get_scope_id($offset + 1) or return $self->_error('failed to determine scope_id');
@@ -57,8 +57,8 @@ sub _get_scope_id{
 	    push @parts, $file . '*' . $line;
       }
 
-      my $ident = join('|',@parts);
-      print STDERR "SCOPE: '$ident'\n";
+      my $ident = join('|',grep {$_} (@parts,$self->{extra_ident}));
+      #print STDERR "SCOPE: '$ident'\n";
       my $digest = md5_base64($ident);
 
       my $scope_id = $SCOPE_CACHE{$digest}; # Check the cache!
