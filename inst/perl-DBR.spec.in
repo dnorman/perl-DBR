@@ -6,9 +6,12 @@ Version:        @PACKAGE_VERSION@
 Release:        @DBR_RELEASE@
 Summary:        Database object-relational mapping for MySQL and PostgreSQL
 License:        GPL2
+Group:          Development/Libraries
 URL:            http://code.google.com/p/perl-dbr/
 Source0:        %{_src}
 
+BuildArch:      noarch
+BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires:  make
 
 Requires:       perl >= 5.8.8
@@ -21,7 +24,7 @@ See README for more information.
 %setup -q -n DBR-%{version}
 
 %build
-./configure --with-perl-install-path=%{RPM_BUILD_ROOT}/%{_perldir}
+./configure --with-perl-install-path=$RPM_BUILD_ROOT/%{_perldir}
 make
 
 %check
@@ -36,7 +39,7 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root,-)
 %doc README COPYING
-%{_perldir}/auto/*
+%{_perldir}/DBR.pm
 %{_perldir}/DBR/*
 
 %changelog
