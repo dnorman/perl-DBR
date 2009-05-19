@@ -1,0 +1,44 @@
+%define _perldir @INSTALL_PATH@
+%define _src DBR-%{version}.tar.gz
+
+Name:           perl-DBR
+Version:        @PACKAGE_VERSION@
+Release:        @DBR_RELEASE@
+Summary:        Database object-relational mapping for MySQL and PostgreSQL
+License:        GPL2
+URL:            http://code.google.com/p/perl-dbr/
+Source0:        %{_src}
+
+BuildRequires:  make
+
+Requires:       perl >= 5.8.8
+
+%description
+DBR is an Object-Relational Mapping layer for MySQL and PostgreSQL databases.
+See README for more information.
+
+%prep
+%setup -q -n DBR-%{version}
+
+%build
+./configure --with-install-dir=%{RPM_BUILD_ROOT}/%{_perldir}
+make
+
+%check
+make test
+
+%install
+make install
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+%files
+%defattr(-,root,root,-)
+%doc README COPYING
+%{_perldir}/auto/*
+%{_perldir}/DBR/*
+
+%changelog
+* Mon May 18 2009 khudson 0.0-0
+- Initial checkin.

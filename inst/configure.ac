@@ -1,14 +1,16 @@
-AC_INIT([DBR],[1.0],[dev@drjays.com])
-AC_COPYRIGHT([(C) 2009 DrJays.com, Inc.])
+AC_INIT([DBR],[%VERSION%],[dnorman@drjays.com])
+AC_COPYRIGHT([(C) 2009 Daniel Norman, DrJays.com, Inc.])
 
 LE_MSG_CONFIGURE_START
 
+DBR_RELEASE=%RELEASE%
 
 AC_CHECK_PROG(MAKE,make,make)
 AC_CHECK_PROG(PERL,perl,perl)
 AC_PROG_PERL_VERSION(5.8.8)
 AC_PERL_GET_VERSION
 AC_PERL_MODULE_INSTALL_PATH
+AC_CONFIG_FILES([perl-DBR.spec])
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
 

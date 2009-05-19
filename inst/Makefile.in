@@ -4,7 +4,7 @@ PERLVER   = @PERL_VERSION@
 MAKE	  = @MAKE@
 
 DESTDIR   = @INSTALL_PATH@
-CTARGETS  = Makefile autom4te.cache config.log config.status
+CTARGETS  = Makefile perl-DBR.spec autom4te.cache config.log config.status
 DCTARGETS = configure
 
 all:
