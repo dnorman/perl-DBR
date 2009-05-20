@@ -3,13 +3,13 @@
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation.
 
-package DBR::Config::Field::Trans;
+package DBR::Config::Trans;
 
 
 use strict;
 use base 'DBR::Common';
 
-use DBR::Config::Field::Trans::Enum;
+use DBR::Config::Trans::Enum;
 
 
 
@@ -33,7 +33,7 @@ sub load{
 
 	    my $module = $MODULES{$trans_id} or $self->_error('invalid module') or next;
 
-	    my $pkg = 'DBR::Config::Field::Trans::' . $module;
+	    my $pkg = 'DBR::Config::Trans::' . $module;
 	    #eval "require $pkg" or $self->_error('failed to load package ' . $pkg) or next;
 
 	    $pkg->load(

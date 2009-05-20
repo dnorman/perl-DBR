@@ -1,4 +1,4 @@
-package DBR::Config::Field::Trans::Enum;
+package DBR::Config::Trans::Enum;
 
 use strict;
 use base 'DBR::Common';

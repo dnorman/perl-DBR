@@ -9,7 +9,7 @@ use strict;
 use base 'DBR::Config::Field::Common';
 use DBR::Query::Value;
 use DBR::Config::Table;
-use DBR::Config::Field::Trans;
+use DBR::Config::Trans;
 
 my %FIELDS_BY_ID;
 
@@ -74,11 +74,11 @@ sub load{
 
       if (@trans_fids){
 
-	    DBR::Config::Field::Trans->load(
-					    logger => $self->{logger},
-					    instance => $instance,
-					    field_id => \@trans_fids,
-					   ) or return $self->_error('failed to load translators');
+	    DBR::Config::Trans->load(
+				   logger => $self->{logger},
+				   instance => $instance,
+				   field_id => \@trans_fids,
+				  ) or return $self->_error('failed to load translators');
 
       }
 
@@ -137,7 +137,7 @@ sub translator{
 
       my $trans_id = $FIELDS_BY_ID{ $self->{field_id} }->{trans_id} or return undef;
 
-      return DBR::Config::Field::Trans->new(
+      return DBR::Config::Trans->new(
 					    logger   => $self->{logger},
 					    trans_id => $trans_id,
 					    field_id => $self->{field_id},
