@@ -29,13 +29,9 @@ sub load{
       my $field_ids = $params{field_id} || return $self->_error('field_id is required');
       $field_ids = [$field_ids] unless ref($field_ids) eq 'ARRAY';
 
-      #my $dbh = $instance->connect || return $self->_error("Failed to connect to ${\$instance->name}");
-
-
       foreach my $trans_id (keys %MODULES){
 
-	    my $module = $MODULES{$trans_id};
-	    # $self->_error('invalid module') && next unless $module;
+	    my $module = $MODULES{$trans_id} or $self->_error('invalid module') or next;
 
 	    my $pkg = 'DBR::Config::Field::Trans::' . $module;
 	    #eval "require $pkg" or $self->_error('failed to load package ' . $pkg) or next;

@@ -17,23 +17,23 @@ sub load{
       my $field_ids = $params{field_id} || return $self->_error('field_id is required');
       $field_ids = [$field_ids] unless ref($field_ids) eq 'ARRAY';
 
-      my $dbh = $instance->connect || return $self->_error("Failed to connect to ${\$instance->name}");
+      my $dbrh = $instance->connect || return $self->_error("Failed to connect to ${\$instance->name}");
 
       return $self->_error('Failed to select from enum_map') unless
-	my $maps = $dbh->select(
-				-table => 'enum_map',
-				-fields => 'field_id enum_id',
-				-where  => { field_id => ['d in',@$field_ids] },
-			       );
+	my $maps = $dbrh->select(
+				 -table => 'enum_map',
+				 -fields => 'field_id enum_id',
+				 -where  => { field_id => ['d in',@$field_ids] },
+				);
 
       my @enumids = $self->_uniq( map {  $_->{enum_id} } @$maps);
 
       return $self->_error('Failed to select from enum') unless
-	my $values = $dbh->select(
-				 -table => 'enum',
-				 -fields => 'enum_id handle name override_id',
-				 -where  => { enum_id => ['d in',@enumids ] },
-				);
+	my $values = $dbrh->select(
+				   -table => 'enum',
+				   -fields => 'enum_id handle name override_id',
+				   -where  => { enum_id => ['d in',@enumids ] },
+				  );
 
       my %VALUES_BY_ID;
       foreach my $value (@$values){

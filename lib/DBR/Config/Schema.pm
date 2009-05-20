@@ -22,17 +22,17 @@ sub load{
 
       my $instance = $params{instance} || return $self->_error('instance is required');
 
-      my $dbh = $instance->connect || return $self->_error("Failed to connect to ${\$instance->name}");
+      my $dbrh = $instance->connect || return $self->_error("Failed to connect to ${\$instance->name}");
 
       my $schema_ids = $params{schema_id} || return $self->_error('schema_id is required');
       $schema_ids = [$schema_ids] unless ref($schema_ids) eq 'ARRAY';
 
       return $self->_error('Failed to select instances') unless
-	my $schemas = $dbh->select(
-				   -table => 'dbr_schemas',
-				   -fields => 'schema_id handle display_name definition_mode',
-				   -where  => { schema_id => ['d in', @{$schema_ids}] },
-				  );
+	my $schemas = $dbrh->select(
+				    -table => 'dbr_schemas',
+				    -fields => 'schema_id handle display_name definition_mode',
+				    -where  => { schema_id => ['d in', @{$schema_ids}] },
+				   );
 
       my @schema_ids; # track the schema ids from this request seperately from the global cache
       foreach my $schema (@$schemas){

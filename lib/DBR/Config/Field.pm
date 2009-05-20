@@ -50,14 +50,14 @@ sub load{
       $table_ids = [$table_ids] unless ref($table_ids) eq 'ARRAY';
 
 
-      my $dbh = $instance->connect || return $self->_error("Failed to connect to ${\$instance->name}");
+      my $dbrh = $instance->connect || return $self->_error("Failed to connect to ${\$instance->name}");
 
       return $self->_error('Failed to select fields') unless
-	my $fields = $dbh->select(
-				  -table => 'dbr_fields',
-				  -fields => 'field_id table_id name data_type is_nullable is_signed is_pkey trans_id max_value',
-				  -where  => { table_id => ['d in',@$table_ids] },
-				 );
+	my $fields = $dbrh->select(
+				   -table => 'dbr_fields',
+				   -fields => 'field_id table_id name data_type is_nullable is_signed is_pkey trans_id max_value',
+				   -where  => { table_id => ['d in',@$table_ids] },
+				  );
 
       my @trans_fids;
       foreach my $field (@$fields){

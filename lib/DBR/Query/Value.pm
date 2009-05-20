@@ -120,12 +120,12 @@ sub quoted{
       my $self = shift;
       my $dbrh = shift or return $self->_error('dbrh is required');
 
-      my $dbh = $dbrh->_dbh or return $self->_error('failed to retrieve dbh');
+      my $conn = $dbrh->_conn or return $self->_error('failed to retrieve connection object');
 
       if ($self->is_number){
 	    return [ map { defined($_)?$_:'NULL' } @{$self->{value}} ];
       }else{
-	    return [ map { defined($_)?$_:'NULL' } map { $dbh->quote($_) } @{$self->{value}} ];
+	    return [ map { defined($_)?$_:'NULL' } map { $conn->quote($_) } @{$self->{value}} ];
       }
 
 }

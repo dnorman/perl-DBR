@@ -17,30 +17,21 @@ sub new {
       my %params = @_;
 
       my $self = {
-		  dbh      => $params{dbh},
+		  conn     => $params{conn},
 		  logger   => $params{logger},
 		  instance => $params{instance}
 		 };
 
       bless( $self, $package );
 
-      return $self->_error( 'dbh parameter is required'      ) unless $self->{dbh};
-      return $self->_error( 'instance parameter is required' ) unless $self->{instance};
+      return $self->_error( 'conn object is required'         ) unless $self->{conn};
+      return $self->_error( 'instance parameter is required'  ) unless $self->{instance};
+
+      use Data::Dumper;
+      print STDERR Dumper( $self->{conn} );
 
       $self->{schema} = $self->{instance}->schema();
-      return $self->_error( 'failed to retrieve schema' ) unless defined($self->{schema});
-
-
-      my $dclass = 'DBR::Driver::' . $self->{instance}->module;
-      return $self->_error("Failed to Load $dclass ($@)") unless eval "require $dclass";
-
-      return $self->_error("Failed to create $dclass object") unless
-	my $driver = $dclass->new(
-				  logger => $self->{logger},
-				  dbh    => $self->{dbh}
-				 );
-
-      $self->{driver} = $driver;
+      return $self->_error( 'failed to retrieve schema' ) unless defined($self->{schema}); # schema is not required
 
       # Temporary solution to interfaces
       $self->{dbrv1} = DBR::Interface::DBRv1->new(
@@ -51,26 +42,13 @@ sub new {
       return( $self );
 }
 
-sub _dbh    { $_[0]->{dbh}    }
 sub _driver { $_[0]->{driver} }
+sub _conn   { $_[0]->{conn}    } # Connection object
 
-sub select{ my $self = shift; return $self->{dbrv1}->select(@_); }
-sub insert{ my $self = shift; return $self->{dbrv1}->insert(@_); }
-sub update{ my $self = shift; return $self->{dbrv1}->update(@_); }
-sub delete{ my $self = shift; return $self->{dbrv1}->delete(@_); }
-
-sub _disconnect{
-      my $self = shift;
-
-      return $self->_error('dbh not found!') unless
-	my $dbh = $self->{dbr}->{CACHE}->{$self->{name}}->{$self->{class}};
-      delete $self->{dbr}->{CACHE}->{$self->{name}}->{$self->{class}};
-
-      $dbh->disconnect();
-
-
-      return 1;
-}
+sub select{ my $self = shift; return $self->{dbrv1}->select(@_) }
+sub insert{ my $self = shift; return $self->{dbrv1}->insert(@_) }
+sub update{ my $self = shift; return $self->{dbrv1}->update(@_) }
+sub delete{ my $self = shift; return $self->{dbrv1}->delete(@_) }
 
 sub AUTOLOAD {
       my $self = shift;
@@ -98,69 +76,55 @@ sub begin{
 
       return $self->_error('Already transaction - cannot begin') if $self->{'_intran'};
 
-      my $transcache = $self->{dbr}->{'_transcache'} ||= {};
-      unless($self->{config}->{nestedtrans}){
-	    if( $transcache->{$self->{name}} ){
-		  #already in transaction bail out
-		  $self->_logDebug('BEGIN - Fake');
-		  $self->{'_faketran'} = 1;
-		  $self->{'_intran'} = 1;
-		  $transcache->{$self->{name}}++;
-		  return 1;
-	    }
-      }
+      my $conn = $self->{conn};
 
-      $self->_logDebug('BEGIN');
-      my $success = $self->{dbh}->do('BEGIN');
-      return $self->_error('Failed to begin transaction') unless $success;
-      $self->{'_intran'} = 1;
-      $transcache->{$self->{name}}++;
-      return 1;
-}
-
-sub commit{
-      my $self = shift;
-
-      my $transcache = $self->{dbr}->{'_transcache'} ||= {};
-      if($self->{'_faketran'}){
-	    $self->_logDebug('COMMIT - Fake');
-	    $self->{'_faketran'} = 0;
-	    $self->{'_intran'} = 0;
-	    $transcache->{$self->{name}}--;
+      if ( $conn->b_intrans && !$conn->b_nestedTrans ){ # No nested transactions
+	    $self->_logDebug('BEGIN - Fake');
+	    $self->{'_faketran'} = $self->{'_intran'} = 1; #already in transaction, we are not doing a real begin
 	    return 1;
       }
 
-      return $self->_error('Not in transaction - cannot commit') unless $self->{'_intran'};
-      $self->_logDebug('COMMIT');
-      my $success = $self->{dbh}->do('COMMIT');
-      return $self->_error('Failed to commit transaction') unless $success;
-      $self->{'_intran'} = 0;
-      $transcache->{$self->{name}}--;
+      $conn->begin or return $self->_error('Failed to begin transaction');
 
+      $self->{'_intran'} = 1;
+      return 1;
+
+}
+sub commit{
+      my $self = shift;
+      return $self->_error('Not in transaction - cannot commit') unless $self->{'_intran'};
+
+      my $conn = $self->{conn};
+
+      if($self->{'_faketran'}){
+	    $self->_logDebug('COMMIT - Fake');
+	    $self->{'_faketran'} = $self->{'_intran'} = 0;
+
+	    return 1;
+      }
+
+      $conn->commit or return $self->_error('Failed to commit transaction') unless $success;
+
+      $self->{'_intran'} = 0;
       return 1;
 }
 
 sub rollback{
       my $self = shift;
+      return $self->_error('Not in transaction - cannot rollback') unless $self->{'_intran'};
 
-      my $transcache = $self->{dbr}->{'_transcache'} ||= {};
+      my $conn = $self->{conn};
       if($self->{'_faketran'}){
+
 	    $self->_logDebug('ROLLBACK - Fake');
-	    $self->{'_faketran'} = 0;
-	    $self->{'_intran'} = 0;
-	    $transcache->{$self->{name}}--;
-	    #$self->{dbh}->{'AutoCommit'} = 1;
+	    $self->{'_faketran'} = $self->{'_intran'} = 0;
+
 	    return 1;
       }
 
-      return $self->_error('Not in transaction - cannot rollback') unless $self->{'_intran'};
+      $conn->rollback or return $self->_error('Failed to roll back transaction');
 
-      $self->_logDebug('ROLLBACK');
-      my $success = $self->{dbh}->do('ROLLBACK');
-      #$self->{dbh}->{'AutoCommit'} = 1;
-      return $self->_error('Failed to roll back transaction') unless $success;
       $self->{'_intran'} = 0;
-      $transcache->{$self->{name}}--;
       return 1;
 }
 

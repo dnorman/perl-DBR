@@ -11,7 +11,6 @@ use base 'DBR::Common';
 use DBR::Config::Schema;
 
 my $GUID = 1;
-my %CONCACHE;
 
 #here is a list of the currently supported databases and their connect string formats
 my %connectstrings = (
@@ -19,23 +18,19 @@ my %connectstrings = (
 		      Pg    => 'dbi:Pg:dbname=-database-;host=-hostname-',
 		     );
 
-my %INSTANCES;
+my %CONCACHE;
+my %INSTANCE_MAP;
 my %INSTANCES_BY_GUID;
 
 
 sub flush_all_handles {
       # can be run with or without an object
       my $cache = \%CONCACHE;
-      foreach my $dbname (keys %{$cache}){
 
-	    foreach my $class (keys %{$cache->{$dbname}}){
-
-		my $dbh = $cache->{$dbname}->{$class};
+      foreach my $guid (keys %INSTANCES_BY_GUID){
+		my $dbh = $cache->{ $guid };
 		$dbh->disconnect();
-		delete $cache->{$dbname}->{class};
-
-	  }
-
+		delete $cache->{ $guid };
       }
 
       return 1;
@@ -53,20 +48,17 @@ sub lookup{
       return $self->_error('logger is required') unless $self->{logger};
 
       if( $params{guid} ){
-
-	    $INSTANCES_BY_GUID{ $params{guid} } or return $self->_error('no such guid');
 	    $self->{guid} = $params{guid};
-
       }else{
 	    my $handle = $params{handle} || return $self->_error('handle is required');
 	    my $class  = $params{class}  || 'master';
 
-	    my $conf = $INSTANCES{$handle}->{$class} || $INSTANCES{$handle}->{'*'}; # handle aliases if there's no exact match
+	    $self->{guid} = $INSTANCE_MAP{$handle}->{$class} || $INSTANCE_MAP{$handle}->{'*'} or # handle aliases if there's no exact match
+	      return $self->_error("No DB instance found for '$handle','$class'");
 
-	    return $self->_error("No DB instance found for '$handle','$class'") unless $conf;
-
-	    $self->{guid} = $conf->{guid};
       }
+
+      $INSTANCES_BY_GUID{ $self->{guid} } or return $self->_error('no such guid');
 
       return $self;
 
@@ -78,7 +70,8 @@ sub load_from_db{
       my %params = @_;
 
       my $self = {
-		  logger => $params{logger} };
+		  logger => $params{logger}
+		 };
       bless( $self, $package ); # Dummy object
 
       my $parent = $params{parent_inst} || return $self->_error('parent_inst is required');
@@ -140,6 +133,10 @@ sub register { # basically the same as a new
 
       $config->{connectstring} = $connectstrings{$config->{module}} || return $self->_error("module '$config->{module}' is not a supported database type");
 
+      my $dclass = 'DBR::Driver::' . $config->{module};
+      return $self->_error("Failed to Load $dclass ($@)") unless eval "require $dclass";
+      $config->{driverclass} = $dclass;
+
       $config->{dbr_bootstrap} = $spec->{dbr_bootstrap}? 1:0;
 
       foreach my $key (keys %{$config}) {
@@ -152,10 +149,10 @@ sub register { # basically the same as a new
       # Now we are cool to start calling accessors
 
       # Register this instance in the global repository
-      $INSTANCES{ $self->handle }->{ $self->class } = $config;
+      $INSTANCE_MAP{ $self->handle }->{ $self->class } = $guid;
 
       if ($spec->{alias}) {
-	    $INSTANCES{ $spec->{alias} }->{'*'} = $config;
+	    $INSTANCE_MAP{ $spec->{alias} }->{'*'} = $guid;
       }
 
 
@@ -205,7 +202,7 @@ sub _gethandle{
 
       $dbh = $cache->{ $guid };
       if ($dbh) {
-	    if (  $dbh->ping  ) { #$dbh->do( "SELECT 1" ) 
+	    if (  $dbh->ping  ) { #$dbh->do( "SELECT 1" )
 		  $self->_logDebug2('Re-using existing connection');
 	    } else {
 		  $dbh->disconnect();
@@ -234,7 +231,21 @@ sub _new_connection{
       my $dbh = DBI->connect(@params) or
 	return $self->_error("Error: Failed to connect to db $config->{handle},$config->{class}");
 
-      return $dbh;
+      my $dclass = $config->{driverclass};
+
+      return $self->_error("Failed to create $dclass object") unless
+	my $driver = $dclass->new(
+				  logger => $self->{logger},
+				  dbh    => $dbh
+				 );
+
+      return $self->_error("Failed to create Handle object") unless
+	my $conn = DBR::Util::Connection->new(
+					      dbh      => $dbh,
+					      driver   => $driver,
+					      logger   => $self->{logger},
+					     );
+      return $conn;
 }
 
 sub handle        { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{handle}   }

@@ -26,14 +26,14 @@ sub load{
       my $schema_ids = $params{schema_id} || return $self->_error('schema_id is required');
       $schema_ids = [$schema_ids] unless ref($schema_ids) eq 'ARRAY';
 
-      my $dbh = $instance->connect || return $self->_error("Failed to connect to @{[$instance->name]}");
+      my $dbrh = $instance->connect || return $self->_error("Failed to connect to @{[$instance->name]}");
 
       return $self->_error('Failed to select instances') unless
-	my $tables = $dbh->select(
-				  -table  => 'dbr_tables',
-				  -fields => 'table_id schema_id name',
-				  -where  => { schema_id => ['d in', @{$schema_ids}] },
-				 );
+	my $tables = $dbrh->select(
+				   -table  => 'dbr_tables',
+				   -fields => 'table_id schema_id name',
+				   -where  => { schema_id => ['d in', @{$schema_ids}] },
+				  );
 
       my @table_ids;
       foreach my $table (@$tables){
