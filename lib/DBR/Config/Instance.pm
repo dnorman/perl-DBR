@@ -28,8 +28,8 @@ sub flush_all_handles {
       my $cache = \%CONCACHE;
 
       foreach my $guid (keys %INSTANCES_BY_GUID){
-		my $dbh = $cache->{ $guid };
-		$dbh->disconnect();
+		my $conn = $cache->{ $guid };
+		$conn->disconnect();
 		delete $cache->{ $guid };
       }
 
@@ -133,9 +133,10 @@ sub register { # basically the same as a new
 
       $config->{connectstring} = $connectstrings{$config->{module}} || return $self->_error("module '$config->{module}' is not a supported database type");
 
-      my $dclass = 'DBR::Driver::' . $config->{module};
-      return $self->_error("Failed to Load $dclass ($@)") unless eval "require $dclass";
-      $config->{driverclass} = $dclass;
+      my $connclass = 'DBR::Util::Connection::' . $config->{module};
+      return $self->_error("Failed to Load $connclass ($@)") unless eval "require $connclass";
+
+      $config->{connclass} = $connclass;
 
       $config->{dbr_bootstrap} = $spec->{dbr_bootstrap}? 1:0;
 
@@ -172,15 +173,15 @@ sub connect{
       my $flag = shift;
 
       return $self->_error('failed to get database handle') unless
-	my $dbh = $self->_gethandle;
+	my $conn = $self->_gethandle;
 
       if (lc($flag) eq 'dbh') {
-	    return $dbh;
+	    return $conn->dbh;
       } else {
 
 	    return $self->_error("Failed to create Handle object") unless
 	      my $dbrh = DBR::Handle->new(
-					  dbh      => $dbh,
+					  conn     => $conn,
 					  logger   => $self->{logger},
 					  instance => $self,
 					 );
@@ -190,7 +191,6 @@ sub connect{
 
 sub _gethandle{
       my $self = shift;
-      my $dbh;
 
       #Ask the instance what it's handle and class are because it may have been gotten by an alias.
       my $realname  = $self->handle;
@@ -200,26 +200,26 @@ sub _gethandle{
       $self->_logDebug2("Connecting to $realname, $realclass");
       my $cache = \%CONCACHE;
 
-      $dbh = $cache->{ $guid };
-      if ($dbh) {
-	    if (  $dbh->ping  ) { #$dbh->do( "SELECT 1" )
+      my $conn = $cache->{ $guid };
+      if ($conn) {
+	    if (  $conn->ping  ) {
 		  $self->_logDebug2('Re-using existing connection');
 	    } else {
-		  $dbh->disconnect();
-		  $dbh = $cache->{ $guid } = undef;
+		  $conn->disconnect();
+		  $conn = $cache->{ $guid } = undef;
 	    }
       }
 
-      if (!$dbh) {
+      if (!$conn) {
 	    $self->_logDebug2('getting a new connection');
-	    $dbh = $self->_new_connection() or return $self->_error("Failed to connect to $realname, $realclass");
+	    $conn = $self->_new_connection() or return $self->_error("Failed to connect to $realname, $realclass");
 
-	    $cache->{ $guid } = $dbh;
+	    $cache->{ $guid } = $conn;
 	    $self->_logDebug2('Connected');
 
       }
 
-      return $dbh;
+      return $conn;
 }
 
 sub _new_connection{
@@ -231,20 +231,14 @@ sub _new_connection{
       my $dbh = DBI->connect(@params) or
 	return $self->_error("Error: Failed to connect to db $config->{handle},$config->{class}");
 
-      my $dclass = $config->{driverclass};
+      my $connclass = $config->{connclass};
 
-      return $self->_error("Failed to create $dclass object") unless
-	my $driver = $dclass->new(
-				  logger => $self->{logger},
-				  dbh    => $dbh
-				 );
+      return $self->_error("Failed to create $connclass object") unless
+	my $conn = $connclass->new(
+				   logger => $self->{logger},
+				   dbh    => $dbh
+				  );
 
-      return $self->_error("Failed to create Handle object") unless
-	my $conn = DBR::Util::Connection->new(
-					      dbh      => $dbh,
-					      driver   => $driver,
-					      logger   => $self->{logger},
-					     );
       return $conn;
 }
 

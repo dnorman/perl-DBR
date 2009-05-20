@@ -20,7 +20,7 @@ sub new {
       return $self->_error("Error: -conf must be specified") unless $params{-conf};
 
       return $self->_error("Failed to create DBR::Config object") unless
-	$self->{config} =  DBR::Config->new( logger => $self->{logger} );
+	$self->{config} = DBR::Config->new( logger => $self->{logger} );
 
       $self->{config} -> load_file(
 				   dbr  => $self,
@@ -69,27 +69,8 @@ sub remap{
       return 1;
 }
 
-sub unmap{
-      my $self = shift;
-      undef $self->{globalclass};
-
-      return 1;
-}
-
-sub flush_handles{
-    my $self = shift;
-
-    return DBR::Config::Instance->flush_all_handles;
-
-}
-
-
-
-sub DESTROY{
-    my $self = shift;
-
-    $self->flush_handles();
-
-}
+sub unmap{ undef $_[0]->{globalclass}; return 1 }
+sub flush_handles{ DBR::Config::Instance->flush_all_handles }
+sub DESTROY{ $_[0]->flush_handles }
 
 1;

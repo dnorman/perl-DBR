@@ -258,16 +258,14 @@ sub execute{
 
       $self->_logDebug2( $self->sql );
 
-      my $dbh    = $self->{dbrh}->_dbh    or return $self->_error('failed to fetch dbh');
-      my $driver = $self->{dbrh}->_driver or return $self->_error('failed to fetch driver');
+      my $conn   = $self->{dbrh}->_conn  or return $self->_error('failed to fetch conn');
 
-      local $dbh->{PrintError}; # Localize here to ensure the same scope
-      if(  $self->{quiet_error}  ){  $dbh->{PrintError} = 0 } # Eeeevil
+      $conn->quiet_next_error if $self->{quiet_error};
 
       if($self->{type} eq 'select'){
 
 	    return $self->_error('failed to prepare statement') unless
-	      my $sth = $dbh->prepare($self->sql);
+	      my $sth = $conn->prepare($self->sql);
 
 	    if($params{sth_only}){
 		  return $sth;
@@ -285,24 +283,24 @@ sub execute{
 	    }
       }elsif($self->{type} eq 'insert'){
 
-	    $driver->prepSequence() or return $self->_error('Failed to prepare sequence');
+	    $conn->prepSequence() or return $self->_error('Failed to prepare sequence');
 
-	    my $rows = $dbh->do($self->sql);
+	    my $rows = $conn->do($self->sql);
 
-	    my ($sequenceval) = $driver->getSequenceValue();
+	    my ($sequenceval) = $conn->getSequenceValue();
 
 	    return $sequenceval;
 
 	    #HERE HERE HERE return a record object?
       }elsif($self->{type} eq 'update'){
 
-	    my $rows = $dbh->do($self->sql);
+	    my $rows = $conn->do($self->sql);
 
 	    return $rows || 0;
 
       }elsif($self->{type} eq 'delete'){
 
-	    my $rows = $dbh->do($self->sql);
+	    my $rows = $conn->do($self->sql);
 
 	    return $rows || 0;
 

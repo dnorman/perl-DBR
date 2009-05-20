@@ -27,9 +27,6 @@ sub new {
       return $self->_error( 'conn object is required'         ) unless $self->{conn};
       return $self->_error( 'instance parameter is required'  ) unless $self->{instance};
 
-      use Data::Dumper;
-      print STDERR Dumper( $self->{conn} );
-
       $self->{schema} = $self->{instance}->schema();
       return $self->_error( 'failed to retrieve schema' ) unless defined($self->{schema}); # schema is not required
 
@@ -42,7 +39,6 @@ sub new {
       return( $self );
 }
 
-sub _driver { $_[0]->{driver} }
 sub _conn   { $_[0]->{conn}    } # Connection object
 
 sub select{ my $self = shift; return $self->{dbrv1}->select(@_) }
@@ -103,7 +99,7 @@ sub commit{
 	    return 1;
       }
 
-      $conn->commit or return $self->_error('Failed to commit transaction') unless $success;
+      $conn->commit or return $self->_error('Failed to commit transaction');
 
       $self->{'_intran'} = 0;
       return 1;

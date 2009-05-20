@@ -21,15 +21,27 @@ sub new {
       bless( $self, $package );
 
       return $self->_error('logger is required') unless $self->{logger};
-      return $self->_error('driver is required')    unless $self->{driver};
       return $self->_error('dbh is required')    unless $self->{dbh};
+      $self->{lastping} = time; # assume the setup of the connection as being a good ping
 
       return $self;
 }
 
-sub do      { shift;  return $_->{dbh}->do(@_) }
-sub prepare { shift;  return $_->{dbh}->prepare(@_) }
-sub execute { shift;  return $_->{dbh}->execute(@_) }
+sub do      { my $self = shift;  return $self->_wrap($self->{dbh}->do(@_))       }
+sub prepare { my $self = shift;  return $self->_wrap($self->{dbh}->prepare(@_))  }
+sub execute { my $self = shift;  return $self->_wrap($self->{dbh}->execute(@_))  }
+sub disconnect { my $self = shift; return $self->_wrap($self->{dbh}->disconnect(@_))  }
+sub quote { my $self = shift;  return $self->{dbh}->quote(@_)  }
+
+sub ping {
+      my $self = shift;
+
+      $self->_logDebug2('PING');
+      return 1 if $self->{lastping} + 5 > time; # only ping every 5 seconds
+      $self->{dbh}->ping or return undef;
+      $self->{lastping} + 5 > time;
+      return 1;
+}
 
 sub begin {
       my $self = shift;
@@ -79,6 +91,20 @@ sub getSequenceValue{
 sub b_intrans{ $_[0]->{_intran} ? 1:0 }
 sub b_nestedTrans{ 0 }
 
+sub quiet_next_error{
+      my $self = shift;
 
+      $self->{dbh}->{PrintError} = 0;
 
+      return 1;
+}
+
+sub _wrap{
+      my $self = shift;
+
+      #reset any variables now
+      $self->{dbh}->{PrintError} = 1;
+
+      return wantarray?@_:$_[0];
+}
 1;
