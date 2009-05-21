@@ -164,7 +164,7 @@ sub _nextmem{
 	    $self->{next} = *reset;
       }
 
-      return bless([$row,$self],$self->{rc});
+      return bless([$row],$self->{rc});
 }
 
 
@@ -182,7 +182,7 @@ sub _fetch{
 	    return undef;
       }
 
-      return bless([$row,$self],$self->{rc});
+      return bless([$row],$self->{rc});
 }
 
 sub reset{
