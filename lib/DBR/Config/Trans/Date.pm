@@ -1,4 +1,4 @@
-package DBR::Config::Trans::Dollars;
+package DBR::Config::Trans::Date;
 
 use strict;
 use base 'DBR::Config::Trans';
@@ -9,7 +9,7 @@ sub new { die "Should not get here" }
 sub forward{
       my $self = shift;
       my $cents = shift;
-      return bless( [$cents] , 'DBR::_DOLLARS');
+      return bless( [$cents] , 'DBR::_DATE');
 }
 
 sub backward{
@@ -22,7 +22,7 @@ sub backward{
       return sprintf("%.0f", ($prettymoney * 100) );
 }
 
-package DBR::_DOLLARS;
+package DBR::_DATE;
 
 use strict;
 use Carp;

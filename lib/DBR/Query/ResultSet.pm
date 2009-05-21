@@ -3,6 +3,7 @@ package DBR::Query::ResultSet;
 use strict;
 use base 'DBR::Common';
 use DBR::Query::RecMaker;
+use Carp;
 
 sub new {
       my( $package ) = shift;
@@ -28,6 +29,12 @@ sub new {
       return( $self );
 }
 
+
+
+sub next { $_[0]->{next}->( $_[0] ) }
+sub delete {croak "Mass delete is not allowed. No cookie for you!"}
+
+
 sub set{
       my $self = shift;
       my %fields = @_;
@@ -49,7 +56,7 @@ sub count{
 	    ($count) = $self->{sth}->fetchrow_array();
 	    $self->reset();
       }else{
-	    return $self->{rowcount};
+	    return $self->{rowcount} || $self->{rows_hint}; # rowcount should be authoritative, but fail over to the hint
       }
 
       return $count;
@@ -93,6 +100,16 @@ sub map {
       return $ret;
 }
 
+
+
+
+
+
+
+###################################################
+### Utility #######################################
+###################################################
+
 sub _execute{
       my $self = shift;
 
@@ -109,16 +126,15 @@ sub _execute{
 
       my $sth = $self->{sth};
 
-      $self->{rowcount} = $sth->execute();
-      $self->_logDebug("ROWS: $self->{rowcount}");
-      return $self->_error('failed to execute statement') unless defined($self->{rowcount});
+      my $rv = $sth->execute();
+      $self->{rows_hint} = $rv + 0;
+      $self->_logDebug("ROWS: $self->{rows_hint}");
+      return $self->_error('failed to execute statement') unless $rv;
       $self->{finished} = 0;
       $self->{record_idx} = 0;
 
       return 1;
 }
-
-sub next { $_[0]->{next}->( $_[0] ) }
 
 sub _first{
       my $self = shift;
@@ -139,11 +155,12 @@ sub _first{
 
       $self->_execute() or return $self->_error('failed to execute');
 
-      if ($self->{rowcount} > 200) {
+      if ($self->{rows_hint} > 200) {
 	    $self->{next} = *_fetch;
 	    return $self->_fetch();
       }else{
 	    $self->{rows} = $self->{sth}->fetchall_arrayref();
+	    $self->{rowcount} = $self->{sth}->rows;
 	    $self->{sth}->finish();
 	    $self->{finished} = 1;
 	    $self->{next} = *_nextmem;

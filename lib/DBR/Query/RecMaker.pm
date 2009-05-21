@@ -6,12 +6,11 @@ use Symbol qw( qualify_to_ref delete_package);
 use DBR::Query::RecHelper;
 use DBR::Query::Part;
 
-#IDPOOL is a revolving door of package ids... we have to reuse package names otherwise we get a nasty memory leak
-my @IDPOOL = (1..15); # Prime the ID pool with multiple IDs just to reduce the risk of a package getting used when it shouldn't
-my $BASECLASS = 'DBR::_R';
-my $classidx = 1; #overflow
+#IDPOOL is a revolving door of package ids... we do this to guard against memory leaks... juuust in case
+my @IDPOOL = (1..200);
+my $classidx = 200; #overflow
 
-#%REFCOUNT;
+my $BASECLASS = 'DBR::_R';
 
 sub new {
       my( $package ) = shift;
@@ -29,7 +28,7 @@ sub new {
       $self->{scope} = $self->{query}->scope; # optional
       $self->{dbrh} or return $self->_error('dbrh object must be specified');
 
-      $self->{classidx} = ++$classidx; # (shift @IDPOOL) || ++$classidx;
+      $self->{classidx} = (shift @IDPOOL) || ++$classidx;
       print STDERR "PACKAGEID: $self->{classidx}\n";
 
       $self->_prep or return $self->_error('prep failed');
@@ -60,6 +59,7 @@ sub _prep{
 
       my %tablemap;
       my %pkmap;
+      my %flookup;
       foreach my $table_id ($self->_uniq( @table_ids )){
 
 	    my $table = DBR::Config::Table->new(
@@ -87,6 +87,9 @@ sub _prep{
 			      push @$fields, $checkfield; #not in the resultset, but we should still know about it
 			}
 		  }
+		  $field ||= $checkfield;
+
+		  $flookup{$field->name} = $field;
 	    }
 
 	    $tablemap{$table_id} = $table;
@@ -100,34 +103,35 @@ sub _prep{
 					      dbrh     => $self->{dbrh},
 					      tablemap => \%tablemap,
 					      pkmap    => \%pkmap,
+					      flookup  => \%flookup,
 					      scope    => $self->{scope}
 					     ) or return $self->_error('Failed to create RecHelper object');
 
       my $mode = 'rw';
       foreach my $field (@$fields){
-
-	    my $sub = $self->_mk_method(
-					mode  => $mode,
-					index => $field->index,
-					field => $field,
-					helper => $helper,
-				       ) or return $self->_error('Failed to create method');
-
-	    my $method = $field->name;
-	    #push @{$self->{methods}||=[]}, $method;
-
-	    #print STDERR "$class\:\:$method\n";
-	    my $symbol = qualify_to_ref( "$class\:\:$method" );
-	    *$symbol = $sub;
+	    my $mymode = $mode;
+	    $mymode = 'ro' if $field->is_pkey;
+	    $self->_mk_accessor(
+				mode  => $mymode,
+				index => $field->index,
+				field => $field,
+				helper => $helper,
+			       ) or return $self->_error('Failed to create accessor');
       }
 
-     # my $destroy =  qualify_to_ref( "$class\:\:DESTROY" );
-     # *destroy = eval 'sub {}'
+      $self->_mk_method(
+			method => 'set',
+			helper => $helper,
+		       ) or $self->_error('Failed to create set method');
 
+      $self->_mk_method(
+			method => 'get',
+			helper => $helper,
+		       ) or $self->_error('Failed to create get method');
       return 1;
 }
 
-sub _mk_method{
+sub _mk_accessor{
       my $self = shift;
       my %params = @_;
 
@@ -135,6 +139,7 @@ sub _mk_method{
       my $helper = $params{helper} or return $self->_error('helper is required');
 
       my $field = $params{field};
+      my $method = $field->name;
 
       my $obj      = '$_[0]';
       my $record   = $obj . '[0]';
@@ -145,7 +150,7 @@ sub _mk_method{
       if(defined $idx){ #did we actually fetch this?
 	    $value = $record . '[' . $idx . ']';
       }else{
-	    $value = "\$h->get( $obj, \$f )";
+	    $value = "\$h->getfield( $obj, \$f )";
       }
 
       my $code;
@@ -155,19 +160,24 @@ sub _mk_method{
 		  $value = "\$t->forward($value)";
 	    }
 
-	    $code = "   exists( $setvalue ) ? \$h->set( $obj, \$f, $setvalue ) : $value   ";
+	    $code = "   exists( $setvalue ) ? \$h->setfield( $record, \$f, $setvalue ) : $value   ";
       }elsif($mode eq 'ro'){
 	    $code = "   $value   ";
       }
       $code = "sub {$code}";
       $self->_logDebug2($code);
 
-      my $ref = _eval_method($helper,$field,$trans,$code) or $self->_error('Failed to eval method' . $@);
-      return $ref;
+      my $subref = _eval_accessor($helper,$field,$trans,$code) or $self->_error('Failed to eval accessor' . $@);
+
+      my $symbol = qualify_to_ref( $self->{recordclass} . '::' . $method );
+      *$symbol = $subref;
+
+      return 1;
 }
 
-#Seperate method for scope cleanliness
-sub _eval_method{
+#Seperate sub for scope cleanliness
+# This creates a blend of custom written perl code, and closure.
+sub _eval_accessor{
       my $h = shift;
       my $f = shift;
       my $t = shift;
@@ -176,29 +186,42 @@ sub _eval_method{
 }
 
 
+sub _mk_method{
+      my $self = shift;
+      my %params = @_;
+
+      my $helper = $params{helper} or return $self->_error('helper is required');
+      my $method = $params{method} or return $self->_error('method is required');
+
+      my $obj      = 'shift->';
+      my $record   = $obj . '[0]';
+
+      my $code = "\$h->$method($record,\@_)";
+
+      $code = "sub {$code}";
+      $self->_logDebug2($code);
+
+      my $subref = _eval_method($helper,$code) or $self->_error('Failed to eval accessor' . $@);
+      my $symbol = qualify_to_ref( $self->{recordclass} . '::' . $method );
+      *$symbol = $subref;
+
+      return 1;
+}
+
+#Seperate sub for scope cleanliness
+sub _eval_method{
+      my $h = shift;
+      return eval shift;
+}
+
 sub DESTROY{ # clean up the temporary object from the symbol table
       my $self = shift;
       $self->_logDebug2('Destroy');
-      my $class = $self->{recordclass};
+      push @IDPOOL, $self->{classidx};
 
+      my $class = $self->{recordclass};
       print STDERR "DESTROY $class, $self->{classidx}\n";
       Symbol::delete_package($class);
-
-      #Unfortunately we have to reuse the package names, otherwise we get memory leaks.
-      #Yes, even though we are supposedly deleting the package
-     # push @IDPOOL, $self->{classidx};
-
-#       print STDERR "\n\nAFTER ($class)\n";
-#       foreach my $entry ( keys %DBR::Query:: )
-# 	{
-# 	      print STDERR "$entry\n";
-# 	}
-      
-#       print STDERR "\n\nAFTER2 ($class)\n";
-#       foreach my $entry ( keys %DBR::Query::Rec1:: )
-# 	{
-# 	      print STDERR "$entry\n";
-# 	}
 }
 
 1;

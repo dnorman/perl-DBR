@@ -38,11 +38,11 @@ sub load{
 	    my $pkg = 'DBR::Config::Trans::' . $module;
 	    #eval "require $pkg" or $self->_error('failed to load package ' . $pkg) or next;
 
-	    $pkg->load(
-		       logger => $self->{logger},
-		       instance => $instance,
-		       field_id => $field_ids,
-		      ) or return $self->_error('failed to load translator' . $module);
+	    $pkg->moduleload(
+			     logger => $self->{logger},
+			     instance => $instance,
+			     field_id => $field_ids,
+			    ) or return $self->_error('failed to load translator' . $module);
 
       }
 
@@ -50,7 +50,9 @@ sub load{
       return 1;
 }
 
+sub moduleload{ 1 } # Stub
 
+sub module { $_[0]->{module} }
 sub new {
       my $package = shift;
       my %params = @_;
@@ -63,6 +65,7 @@ sub new {
       return $package->_error('trans_id must be specified') unless $self->{trans_id};
 
       my $module = $MODULES{ $self->{trans_id} } or $self->_error('invalid module');
+      $self->{module} = $module;
 
       bless( $self, $package . '::' . $module );
       return $self->_error('field_id is required')            unless $self->{field_id};

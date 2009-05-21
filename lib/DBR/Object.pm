@@ -155,3 +155,20 @@ sub get{
 }
 
 1;
+
+
+
+sub enum{
+      my $self = shift;
+      my $fieldname = shift;
+
+      my $table = $self->{table};
+      my $field = $table->get_field( $fieldname ) or return $self->_error("invalid field $fieldname");
+
+      my $trans = $field->translator or return $self->_error("Field '$fieldname' has no translator");
+      $trans->module eq 'Enum' or return $self->_error("Field '$fieldname' is not an enum");
+
+      my $opts = $trans->options or return $self->_error('Failed to get opts');
+
+      return wantarray?@{$opts}:$opts;
+}

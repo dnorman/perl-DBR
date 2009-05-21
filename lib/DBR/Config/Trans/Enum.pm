@@ -1,12 +1,24 @@
 package DBR::Config::Trans::Enum;
 
 use strict;
-use base 'DBR::Common';
+use base 'DBR::Config::Trans';
+
 use Clone qw(clone);
+use constant {
+	      # Cache Constants
+	      x_list  => 0,
+	      x_hmap  => 1,
+	      x_idmap => 2,
+
+	      # Value Constants
+	      v_id     => 0,
+	      v_handle => 1,
+	      v_name   => 2,
+	     };
 
 my %FIELDMAP;
 
-sub load{
+sub moduleload{
       my( $package ) = shift;
       my %params = @_;
 
@@ -23,7 +35,7 @@ sub load{
       return $self->_error('Failed to select from enum_map') unless
 	my $maps = $dbrh->select(
 				 -table => 'enum_map',
-				 -fields => 'field_id enum_id',
+				 -fields => 'field_id enum_id sortval',
 				 -where  => { field_id => ['d in',@$field_ids] },
 				);
 
@@ -41,17 +53,17 @@ sub load{
 	    my $enum_id = $value->{enum_id};
 	    my $id = $value->{override_id} or $enum_id;
 
-	    $VALUES_BY_ID{ $enum_id } = [$id,$value->{handle},$value->{name}]; # 
+	    $VALUES_BY_ID{ $enum_id } = [$id,$value->{handle},$value->{name}]; #
       }
 
-      foreach my $map (@$maps){
+      foreach my $map (sort {$a->{sortval} <=> $b->{sortval}} @$maps){
 	    my $enum_id = $map->{enum_id};
 	    my $value = $VALUES_BY_ID{ $enum_id };
 
 	    my $ref = $FIELDMAP{ $map->{field_id} } ||=[];
-
-	    $ref->[0]->{ $value->[0] } = $value; # Forward
-	    $ref->[1]->{ $value->[1] } = $value; # Backward
+	    push @{$ref->[ x_list ]}, $value;
+	    $ref->[ x_hmap  ]->{ $value->[ v_handle ] } = $value; # Forward
+	    $ref->[ x_idmap ]->{ $value->[ v_id     ] } = $value; # Backward
 
       }
 
@@ -61,38 +73,88 @@ sub load{
 
 sub new { die "Should not get here" }
 
+sub options{
+      my $self = shift;
+
+      my $opts = $FIELDMAP{ $self->{field_id} }->[ x_list ];
+      return [ map { bless([$_,$self->{field_id}], 'DBR::_ENUM') } @$opts  ];
+}
 
 sub forward{
       my $self = shift;
       my $id   = shift;
-      return bless( clone( $FIELDMAP{ $self->{field_id} }->[0]->{ $id }) , 'DBR::_ENUM');
+      return bless( [ $FIELDMAP{ $self->{field_id} }->[ x_idmap ]->{ $id }, $self->{field_id} ] , 'DBR::_ENUM');
 }
 
 sub backward{
       my $self = shift;
       my $handle = shift;
-      return $FIELDMAP{ $self->{field_id} }->[1]->{ $handle }->[0]; # id
+      return $FIELDMAP{ $self->{field_id} }->[ x_hmap ]->{ $handle }->[ v_id ]; # id
 }
 
+###############################################################################################################
+###############################################################################################################
+###############################################################################################################
+###############################################################################################################
+
 package DBR::_ENUM;
+
+use constant {
+	      # Cache Constants
+	      x_list  => 0,
+	      x_hmap  => 1,
+	      x_idmap => 2,
+
+	      # Value Constants
+	      v_id     => 0,
+	      v_handle => 1,
+	      v_name   => 2,
+	     };
+use strict;
 use Carp;
-use overload 
-'""' => sub { shift->[1] }, # same as handle, below
+use overload
+# Values
+'""' => sub { $_[0]->name },
+
+# Operators
+'eq' => sub { $_[0]->handle eq _strhandle($_[1]) },
+'ne' => sub { $_[0]->handle ne _strhandle($_[1]) },
 'nomethod' => sub {croak "Enum object: Invalid operation '$_[3]' The ways in which you can use an enum are restricted"}
 ;
 
-sub id     {shift->[0]}
-sub handle {shift->[1]}
-sub name   {shift->[2]}
+sub id     { $_[0][0]->[ v_id     ] }
+sub handle { $_[0][0]->[ v_handle ] }
+sub name   { $_[0][0]->[ v_name   ] }
+sub chunk {return { handle => $_[0]->handle, name => $_[0]->name} }
+sub field_id { $_[0][1] }
 
-# Future thought, validate that all values being tested are legit enum handles
-sub in{ 
-      my $hand = shift->handle;
+sub in{
+      my $self = shift;
 
-      for (map { split(/\s+/,$_) } @_){
-	    return 1 if $hand eq $_;
+      my $hmap = $FIELDMAP{ $self->field_id }->[ x_hmap ] or die 'Unable to locate field in cache';
+
+      my $id = $self->id;
+      my @ids = map {
+	    $hmap->{$_}->[ v_id ] or croak "Enum->in: Invalid value $_" 
       }
+	map {
+	      split(/\s+/,$_)
+	} @_;
+
+      map { return 1 if $id eq $_ } @ids;
+
       return 0;
 }
+
+#######################################
+#########   Util   ####################
+#######################################
+
+sub _strhandle{
+      my $val = $_[1] || $_[0]; # can be OO or functional
+      return $val->handle if ref($val) eq __PACKAGE__;
+      return $val;
+}
+
 
 1;
