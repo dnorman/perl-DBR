@@ -2,6 +2,7 @@ package DBR::Config::Trans::Enum;
 
 use strict;
 use base 'DBR::Common';
+use Clone qw(clone);
 
 my %FIELDMAP;
 
@@ -40,7 +41,7 @@ sub load{
 	    my $enum_id = $value->{enum_id};
 	    my $id = $value->{override_id} or $enum_id;
 
-	    $VALUES_BY_ID{ $enum_id } = [$id,$value->{handle},$value->{name}];
+	    $VALUES_BY_ID{ $enum_id } = [$id,$value->{handle},$value->{name}]; # 
       }
 
       foreach my $map (@$maps){
@@ -64,7 +65,7 @@ sub new { die "Should not get here" }
 sub forward{
       my $self = shift;
       my $id   = shift;
-      return $FIELDMAP{ $self->{field_id} }->[0]->{ $id }->[1]; # handle
+      return bless( clone( $FIELDMAP{ $self->{field_id} }->[0]->{ $id }) , 'DBR::_ENUM');
 }
 
 sub backward{
@@ -73,32 +74,25 @@ sub backward{
       return $FIELDMAP{ $self->{field_id} }->[1]->{ $handle }->[0]; # id
 }
 
+package DBR::_ENUM;
+use Carp;
+use overload 
+'""' => sub { shift->[1] }, # same as handle, below
+'nomethod' => sub {croak "Enum object: Invalid operation '$_[3]' The ways in which you can use an enum are restricted"}
+;
 
-sub _enum {
-      my $self = shift;
-      my $context = shift;
-      my $field = shift;
-      my $flag = shift;
+sub id     {shift->[0]}
+sub handle {shift->[1]}
+sub name   {shift->[2]}
 
-      return $self->_error('must pass in context') unless $context;
-      return $self->_error('must pass in field') unless $field;
+# Future thought, validate that all values being tested are legit enum handles
+sub in{ 
+      my $hand = shift->handle;
 
-
-      return $self->_error('_enumlist failed') unless
-	my $enums = $self->_enumlist($context,$field);
-
-      my $lookup = {};
-      if($flag eq 'text'){
-	    map {  $lookup->{$_->{value}} = $_->{name}  } @{$enums};
-      }elsif($flag eq 'reverse'){
-	    map {  $lookup->{$_->{value}} = $_->{handle}  } @{$enums};
-      }else{
-	    map {  $lookup->{$_->{handle}} = $_->{value}  } @{$enums};
+      for (map { split(/\s+/,$_) } @_){
+	    return 1 if $hand eq $_;
       }
-
-      bless $lookup, 'ESRPCommon::EnumHandler';
-      return $lookup;
+      return 0;
 }
-
 
 1;

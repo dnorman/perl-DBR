@@ -8,7 +8,7 @@ use DBR::Query::Part;
 
 #IDPOOL is a revolving door of package ids... we have to reuse package names otherwise we get a nasty memory leak
 my @IDPOOL = (1..15); # Prime the ID pool with multiple IDs just to reduce the risk of a package getting used when it shouldn't
-my $BASECLASS = 'DBR::Query::Rec';
+my $BASECLASS = 'DBR::_R';
 my $classidx = 1; #overflow
 
 #%REFCOUNT;
@@ -136,7 +136,8 @@ sub _mk_method{
 
       my $field = $params{field};
 
-      my $record   = '$_[0][0]';
+      my $obj      = '$_[0]';
+      my $record   = $obj . '[0]';
       my $setvalue = '$_[1]';
       my $value;
 
@@ -144,7 +145,7 @@ sub _mk_method{
       if(defined $idx){ #did we actually fetch this?
 	    $value = $record . '[' . $idx . ']';
       }else{
-	    $value = "\$h->get( $record, \$f )";
+	    $value = "\$h->get( $obj, \$f )";
       }
 
       my $code;
@@ -154,7 +155,7 @@ sub _mk_method{
 		  $value = "\$t->forward($value)";
 	    }
 
-	    $code = "   exists( $setvalue ) ? \$h->set( $record, \$f, $setvalue ) : $value   ";
+	    $code = "   exists( $setvalue ) ? \$h->set( $obj, \$f, $setvalue ) : $value   ";
       }elsif($mode eq 'ro'){
 	    $code = "   $value   ";
       }

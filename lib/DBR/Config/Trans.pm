@@ -10,11 +10,13 @@ use strict;
 use base 'DBR::Common';
 
 use DBR::Config::Trans::Enum;
+use DBR::Config::Trans::Dollars;
 
 
 
 my %MODULES = (
 	       1 => 'Enum',
+	       2 => 'Dollars',
 	      );
 
 sub load{
