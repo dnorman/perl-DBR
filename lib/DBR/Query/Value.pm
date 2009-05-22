@@ -33,7 +33,7 @@ sub new{
       my $value = $params{value};
       return $self->_error('value must be specified') unless $value;
 
-      if ( ref($value) eq 'DBR::Operator' ) {
+      if ( ref($value) eq 'DBR::Util::Operator' ) {
 	    my $wrapper = $value;
 
 	    $value   = $wrapper->value;

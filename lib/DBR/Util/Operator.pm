@@ -1,4 +1,4 @@
-package DBR::Operator;
+package DBR::Util::Operator;
 
 use strict;
 require Exporter;
