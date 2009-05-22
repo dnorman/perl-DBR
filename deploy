@@ -23,6 +23,12 @@ fi
 sitedir=$(perl -V:sitelib | sed "s/.*'\(.*\)';/\1/g")
 
 echo ""
+echo "Cleaning ${PROG} from ${sitedir}"
+echo ""
+
+rm -rf ${sitedir}/${PROG}.pm ${sitedir}/${PROG}
+
+echo ""
 echo "Deploying ${PROG} to ${sitedir}"
 echo ""
 
