@@ -11,6 +11,10 @@ for i in $(find . -type d -print); do
    dni=`dirname $az`
    bni=`basename $az`
 
+   if echo ${az} | grep -iq '.svn'; then
+      continue;
+   fi
+
    echo -e '\tmkdir -p $(DESTDIR)/'$az >> Makefile
 done
 
@@ -18,6 +22,10 @@ for i in $(find . -type f -print); do
    az=${i//.\//}
    dni=`dirname $az`
    bni=`basename $az`
+
+   if echo ${az} | grep -iq '.svn'; then
+      continue;
+   fi
 
    if [ "$bni" = "Makefile" ]; then
       continue;

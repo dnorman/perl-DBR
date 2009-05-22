@@ -14,7 +14,7 @@ cleanup () {
    rm -rf ${BDIR}
 }
 
-trap 0 1 2 15 cleanup
+trap cleanup 0 1 2 15
 
 if [ $# -ne 0 ]; then
    error "Wrong number of arguments (should be 0)"
@@ -26,4 +26,5 @@ echo ""
 echo "Deploying ${PROG} to ${sitedir}"
 echo ""
 
-sudo cp -R lib/* ${sitedir}
+inst/make-makefile lib
+cd lib && make DESTDIR="${sitedir}" install
