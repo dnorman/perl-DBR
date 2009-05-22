@@ -3,6 +3,7 @@ package DBR::Query::RecHelper;
 use strict;
 use base 'DBR::Common';
 use DBR::Query::Part;
+use Carp;
 
 sub new {
       my( $package ) = shift;
@@ -106,43 +107,14 @@ sub _set{
       return $rv;
 }
 
+
+#HERE HERE HERE -> move this directly to the record class
 # This version of get is less efficient for fields that aren't prefetched, but much faster overall I think
 sub get{
       my $self = shift;
       my $record = shift;
-
-      my @out;
-      foreach (map { split(/\s+/,$_) } @_){
-	    my $val = $record->$_;
-	    print "VAL OF $_ is '$val'\n";
-	    push @out, $val;
-      }
-      return @out;
-
-      #return map { ($record->$_) } map { split(/\s+/,$_) } @_;
+      map { ($record->$_) } map { split(/\s+/,$_) } @_;
 }
-
-#Unfinished, heavy version of get, I'm not convinced that it's necessary
-# sub get{
-#       my $self = shift;
-#       my $record = shift;
-#       my @fieldnames = @_;
-#
-#       my %gets;
-#       my @out;
-#       my $oidx=0;
-#       foreach my $fieldname (@fieldnames){
-# 	    my $field = $self->{flookup}->{$fieldname} or return $self->_error("$fieldname is not a valid field");
-# 	    my $idx = $field->index;
-#
-# 	    if (defined($idx) && exists($record->[$idx])){
-# 		  $out[$oidx] = $record->[$idx];
-# 	    }else{
-# 	    }
-#       }
-#
-#       return 1;
-# }
 
 # Fetch a field ONLY if it was not prefetched
 sub getfield{
@@ -155,58 +127,34 @@ sub getfield{
        my $idx = $field->index;
        return $record->[$idx] if defined($idx) && exists($record->[$idx]);
 
-       my $rv = $self->_get( $record, $field->table_id, [$field] ) or return $self->_error('Failed to _get');
-       print STDERR "VAL: $rv->[0]\n";
-       return $rv->[0];
+       $self->{scope}->addfield($field) or return $self->_error('Failed to add field to scope');
 
-}
+       my ($outwhere,$tablename)  = $self->_pk_where($record,$field->table_id) or return $self->_error('failed to create where tree');
 
-sub _get{
-      my $self = shift;
-      my $record = shift;
-      my $table_id = shift;
-      my $fields = shift;
+       # Because we are doing a new select, which will set the indexes on
+       # its fields, we must clone the field provided by the original query
+       my $newfield = $field->clone;
 
-      my ($outwhere,$tablename)  = $self->_pk_where($record,$table_id) or return $self->_error('failed to create where tree');
+       my $query = DBR::Query->new(
+				   logger => $self->{logger},
+				   dbrh   => $self->{dbrh},
+				   tables => $tablename,
+				   where  => $outwhere,
+				   select => { fields => [ $newfield ] } # use the new cloned field
+				  ) or return $self->_error('failed to create Query object');
 
-      # Because we are doing a new select, which will set the indexes on its fields, we must
-      # clone the fields provided by the original query and be able to match them up later
-      my @old2new = map { [$_,$_->clone] } @$fields;
+       my $sth = $query->execute(
+				 sth_only => 1 # Don't want to create another resultset object
+				) or return $self->_error('failed to execute');
 
-      my $query = DBR::Query->new(
-				  logger => $self->{logger},
-				  dbrh   => $self->{dbrh},
-				  tables => $tablename,
-				  where  => $outwhere,
-				  select => { fields => [map { $_->[1] } @old2new] } # use the new cloned fields
-				 ) or return $self->_error('failed to create Query object');
+       $sth->execute() or return $self->_error('Failed to execute sth');
+       my $row  = $sth->fetchrow_arrayref() or return $self->_error('Failed to fetchrow');
 
-      my $sth = $query->execute(
-				sth_only => 1 # Don't want to create another resultset object
-			       ) or return $self->_error('failed to execute');
+       my $val = $row->[ $newfield->index ];
 
-      $sth->execute() or return $self->_error('Failed to execute sth');
-      my $row  = $sth->fetchrow_arrayref() or return $self->_error('Failed to fetchrow');
+       $self->_setlocalval($record,$field,$val) or return $self->_error('failed to _setlocalval');
 
-
-      my @out;
-      foreach (@old2new){
-	    my ($field,$newfield) = @{$_};
-	    my $val = $row->[ $newfield->index ];
-
-	    $self->_setlocalval($record,$field,$val) or return $self->_error('failed to _setlocalval');
-
-	    if(my $trans = $field->translator){
-		  push @out, $trans->forward($val);
-	    }else{
-		  push @out, $val;
-	    }
-
-	    $self->{scope}->addfield($field) or return $self->_error('Failed to add field to scope');
-      }
-
-      return \@out;
-
+       return $val;
 }
 
 sub _pk_where{
