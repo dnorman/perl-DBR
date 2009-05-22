@@ -15,7 +15,6 @@ sub new{
       my $field;
 
       my $self = {
-		  dbrh   => $params{dbrh},
 		  logger => $params{logger},
 		 };
 
@@ -24,8 +23,6 @@ sub new{
       my $table = $params{table};
 
       my $name = $params{name} or return $self->_error('name is required');
-
-      return $self->_error('dbrh object must be specified')   unless $self->{dbrh};
 
       my @parts = split(/\./,$name);
       if(scalar(@parts) == 1){
@@ -54,6 +51,19 @@ sub new{
 
 
       return $self;
+}
+
+sub clone{
+      my $self = shift;
+      return bless(
+		   {
+		    logger      => $self->{logger},
+		    field       => $self->{field},
+		    table_alias => $self->{table_alias},
+		    sql         => $self->{sql}
+		   },
+		   ref($self),
+	   );
 }
 
 sub name { $_[0]->{field} }

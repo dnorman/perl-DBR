@@ -61,6 +61,9 @@ sub load{
 
       my @trans_fids;
       foreach my $field (@$fields){
+	    # Consider adding another config param: is_readonly
+
+	    $field->{is_readonly} = 1 if $field->{is_pkey};
 
 	    DBR::Config::Table->_register_field(
 						table_id => $field->{table_id},
@@ -75,10 +78,10 @@ sub load{
       if (@trans_fids){
 
 	    DBR::Config::Trans->load(
-				   logger => $self->{logger},
-				   instance => $instance,
-				   field_id => \@trans_fids,
-				  ) or return $self->_error('failed to load translators');
+				     logger => $self->{logger},
+				     instance => $instance,
+				     field_id => \@trans_fids,
+				    ) or return $self->_error('failed to load translators');
 
       }
 
@@ -101,6 +104,17 @@ sub new {
       return( $self );
 }
 
+sub clone{
+      my $self = shift;
+      return bless(
+		   {
+		    logger => $self->{logger},
+		    field_id => $self->{field_id}
+		   },
+	    ref($self),
+	   );
+}
+
 sub makevalue{ # shortcut function?
       my $self = shift;
       my $value = shift;
@@ -115,9 +129,10 @@ sub makevalue{ # shortcut function?
 }
 
 sub field_id { $_[0]->{field_id} }
-sub table_id { $FIELDS_BY_ID{  $_[0]->{field_id} }->{table_id}    };
-sub name     { $FIELDS_BY_ID{  $_[0]->{field_id} }->{name}    };
+sub table_id { $FIELDS_BY_ID{  $_[0]->{field_id} }->{table_id}    }
+sub name     { $FIELDS_BY_ID{  $_[0]->{field_id} }->{name}    }
 sub is_pkey  { $FIELDS_BY_ID{  $_[0]->{field_id} }->{is_pkey} }
+sub is_readonly  { $FIELDS_BY_ID{  $_[0]->{field_id} }->{is_readonly} }
 sub table    {
       my $self = shift;
 

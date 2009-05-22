@@ -30,6 +30,8 @@ sub new {
 			lock    => $params{lock} ? 1:0,
 		       };
 
+      $self->{lastidx} = -1;
+
       $self->_tables( $params{tables} ) or return $self->_error('failed to prepare tables');
 
       if($params{where}){
@@ -147,7 +149,6 @@ sub _select{
       }elsif($params->{fields}){
 	    my $fields = $params->{fields};
 
-	    my $idx = -1;
 	    if (ref($fields) eq 'ARRAY') {
 		  my @fieldsql;
 		  foreach my $field (@{$fields}) {
@@ -160,7 +161,7 @@ sub _select{
 			}
 
 			push @fieldsql, $field->sql( $self->{dbrh} );
-			$field->index(++$idx);
+			$field->index( ++$self->{lastidx} ) or return $self->_error('failed to set field index');
 
 			$self->{flags}->{can_be_subquery} = 1 if scalar(@fieldsql) == 1;
 
@@ -180,6 +181,7 @@ sub _select{
       return 1;
 }
 
+sub lastidx{ $_[0]->{lastidx} }
 
 sub _update{
       my $self = shift;

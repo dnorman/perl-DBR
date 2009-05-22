@@ -89,7 +89,6 @@ sub op_hint  { return $_[0]->{op_hint}               }
 sub is_number{ return $_[0]->{is_number}             }
 sub count    { return scalar(  @{ $_[0]->{value} } ) }
 
-
 sub sql {
       my $self = shift;
       my $dbrh = shift or return $self->_error('dbrh is required');
@@ -129,6 +128,8 @@ sub quoted{
       }
 
 }
+
+sub raw{ wantarray?@{ $_[0]->{value} } : $_[0]->{value} }
 
 sub logger { $_[0]->{logger} }
 

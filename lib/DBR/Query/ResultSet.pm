@@ -155,7 +155,7 @@ sub _first{
 
       $self->_execute() or return $self->_error('failed to execute');
 
-      if ($self->{rows_hint} > 200) {
+      if ($self->{rows_hint} > 0){ #200) { HERE HERE HERE
 	    $self->{next} = *_fetch;
 	    return $self->_fetch();
       }else{
@@ -181,25 +181,25 @@ sub _nextmem{
 	    $self->{next} = *reset;
       }
 
-      return bless([$row],$self->{rc});
+      return bless($row,$self->{rc});
 }
 
 
 sub _fetch{
       my $self = shift;
 
-      my $row  = $self->{sth}->fetchrow_arrayref();
+      my @row  = $self->{sth}->fetchrow_array();
 
       $self->{record_idx}++;
 
       #$self->_logDebug('DID FETCH');
-      if (!$row){
+      if (!scalar(@row)){
 	    $self->{finished} = 1;
 	    $self->reset;
 	    return undef;
       }
 
-      return bless([$row],$self->{rc});
+      return bless(\@row,$self->{rc});
 }
 
 sub reset{

@@ -104,13 +104,14 @@ sub _prep{
 					      tablemap => \%tablemap,
 					      pkmap    => \%pkmap,
 					      flookup  => \%flookup,
-					      scope    => $self->{scope}
+					      scope    => $self->{scope},
+					      lastidx  => $self->{query}->lastidx,
 					     ) or return $self->_error('Failed to create RecHelper object');
 
       my $mode = 'rw';
       foreach my $field (@$fields){
 	    my $mymode = $mode;
-	    $mymode = 'ro' if $field->is_pkey;
+	    $mymode = 'ro' if $field->is_readonly;
 	    $self->_mk_accessor(
 				mode  => $mymode,
 				index => $field->index,
@@ -142,7 +143,7 @@ sub _mk_accessor{
       my $method = $field->name;
 
       my $obj      = '$_[0]';
-      my $record   = $obj . '[0]';
+      my $record   = $obj;
       my $setvalue = '$_[1]';
       my $value;
 
@@ -150,7 +151,7 @@ sub _mk_accessor{
       if(defined $idx){ #did we actually fetch this?
 	    $value = $record . '[' . $idx . ']';
       }else{
-	    $value = "\$h->getfield( $obj, \$f )";
+	    $value = "\$h->getfield( $record, \$f )";
       }
 
       my $code;
@@ -193,8 +194,8 @@ sub _mk_method{
       my $helper = $params{helper} or return $self->_error('helper is required');
       my $method = $params{method} or return $self->_error('method is required');
 
-      my $obj      = 'shift->';
-      my $record   = $obj . '[0]';
+      my $obj      = 'shift';
+      my $record   = $obj;
 
       my $code = "\$h->$method($record,\@_)";
 

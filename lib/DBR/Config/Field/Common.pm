@@ -7,6 +7,7 @@ package DBR::Config::Field::Common;
 
 use strict;
 use base 'DBR::Common';
+use Carp;
 
 sub makevalue{ undef }
 sub table_id { undef };
@@ -16,6 +17,7 @@ sub is_pkey  { undef }
 sub table    { undef }
 sub is_numeric{ undef }
 sub translator { undef }
+sub is_readonly  { 0 }
 
 sub table_alias{
       my $self = shift;
@@ -31,7 +33,12 @@ sub table_alias{
 sub index{
       my $self = shift;
       my $set = shift;
-      return $self->{index} = $set if defined($set);
+
+      if(defined($set)){
+	    croak "Cannot set the index on a field object twice" if defined($self->{index}); # I want this to fail obnoxiously
+	    $self->{index} = $set;
+	    return 1;
+      }
 
       return $self->{index};
 }
