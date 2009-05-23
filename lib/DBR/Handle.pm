@@ -33,13 +33,13 @@ sub new {
       # Temporary solution to interfaces
       $self->{dbrv1} = DBR::Interface::DBRv1->new(
 						  logger  => $self->{logger},
-						  dbrh    => $self,
+						  instance => $self->{instance},
 						 ) or return $self->_error('failed to create DBRv1 interface object');
 
       return( $self );
 }
 
-sub _conn   { $_[0]->{conn}    } # Connection object
+#sub _conn   { $_[0]->{conn}    } # Connection object
 
 sub select{ my $self = shift; return $self->{dbrv1}->select(@_) }
 sub insert{ my $self = shift; return $self->{dbrv1}->insert(@_) }
@@ -59,9 +59,9 @@ sub AUTOLOAD {
       my $table = $self->{schema}->get_table( $method ) or return $self->_error("no such table '$method' exists in this schema");
 
       my $object = DBR::Object->new(
-				    logger => $self->{logger},
-				    dbrh   => $self,
-				    table  => $table,
+				    logger   => $self->{logger},
+				    instance => $self->{instance},
+				    table    => $table,
 				   ) or return $self->_error('failed to create query object');
 
       return $object;

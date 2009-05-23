@@ -69,17 +69,16 @@ my $ct;
 	     #print "Status is " . $order->status . "\n"; # { handle => 'cancelled', }
 	     #print "Worked\n" if $order->status ne 'approved';
 	     #$order->status('shipped') or die 'failed to set status';
-	     
 # 	     $dbrh->_stopwatch();
-# 	      $order->set(status => 'shipped',
-#  			 type => 'phone',
-#  			 company_id => [1,2],
-#  			)  or die 'failed to set';
+ # 	      $order->set(status => 'shipped',
+#   			 type => 'phone',
+#   			 company_id => 1,
+#   			)  or die 'failed to set';
 
 # 	     $dbrh->_stopwatch('set');
-	     $dbrh->_stopwatch();
-	     my @fields = $order->get('status total prodtotal ship_method_id');
-	     $dbrh->_stopwatch('get');
+	     #$dbrh->_stopwatch();
+	     my @fields = $order->get('status total prodtotal ship_method_id duties type');
+	    # $dbrh->_stopwatch('get');
 
 	     print "fields are " . join(',',@fields) . "\n";
 	     #print "Status is now " . $order->status . "\n"; # { handle => 'cancelled', }
@@ -94,6 +93,7 @@ my $ct;
 	     print "\n\n";
        }
 
+$dbrh->_stopwatch('cycle');
 # }
 
 	     #       $order->status('approved') or die "failed to set status";

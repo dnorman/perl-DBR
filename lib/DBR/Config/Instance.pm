@@ -81,7 +81,7 @@ sub load_from_db{
       return $self->_error('Failed to select instances') unless
 	my $instrows = $dbh->select(
 				    -table => 'dbr_instances',
-				    -fields => 'instance_id schema_id class dbname username password host dbfile module handle'
+				    -fields => 'instance_id schema_id class dbname username password host dbfile module handle readonly'
 				   );
 
       my @instances;
@@ -183,6 +183,8 @@ sub connect{
 
       if (lc($flag) eq 'dbh') {
 	    return $conn->dbh;
+      }elsif (lc($flag) eq 'conn') {
+	    return $conn;
       } else {
 
 	    return $self->_error("Failed to create Handle object") unless
@@ -198,34 +200,24 @@ sub connect{
 sub _gethandle{
       my $self = shift;
 
-      #Ask the instance what it's handle and class are because it may have been gotten by an alias.
-      my $realname  = $self->handle;
-      my $realclass = $self->class;
-      my $guid      = $self->guid;
+      my $conn = $CONCACHE{ $self->{guid} };
 
-      $self->_logDebug2("Connecting to $realname, $realclass");
-      my $cache = \%CONCACHE;
+      return $conn if $conn && $conn->ping; # Most of the time, we are done right here
 
-      my $conn = $cache->{ $guid };
       if ($conn) {
-	    if (  $conn->ping  ) {
-		  $self->_logDebug2('Re-using existing connection');
-	    } else {
-		  $conn->disconnect();
-		  $conn = $cache->{ $guid } = undef;
-	    }
+	    $conn->disconnect();
+	    $conn = $CONCACHE{ $self->{guid} } = undef;
+	    $self->_logDebug('Handle went stale');
       }
 
-      if (!$conn) {
-	    $self->_logDebug2('getting a new connection');
-	    $conn = $self->_new_connection() or return $self->_error("Failed to connect to $realname, $realclass");
+      # if we are here, that means either the connection failed, or we never had one
 
-	    $cache->{ $guid } = $conn;
-	    $self->_logDebug2('Connected');
+      $self->_logDebug2('getting a new connection');
+      $conn = $self->_new_connection() or return $self->_error("Failed to connect to ${\$self->handle}, ${\$self->class}");
 
-      }
+      $self->_logDebug2('Connected');
 
-      return $conn;
+      return $CONCACHE{ $self->{guid} } = $conn;
 }
 
 sub _new_connection{
@@ -248,7 +240,7 @@ sub _new_connection{
       return $conn;
 }
 
-sub readonly      { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{readonly} }
+sub is_readonly   { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{readonly} }
 sub handle        { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{handle}   }
 sub class         { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{class}    }
 sub guid          { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{guid}     }

@@ -38,10 +38,12 @@ sub quote { my $self = shift;  return $self->{dbh}->quote(@_)  }
 sub ping {
       my $self = shift;
 
-      $self->_logDebug2('PING');
-      return 1 if $self->{lastping} + 5 > time; # only ping every 5 seconds
+      #$self->_logDebug3('PING'); # Logging is inefficient
+      return 1 if $self->{lastping} + 2 > time; # only ping every 5 seconds
+
+      #$self->_logDebug3('REAL PING'); # Logging is inefficient
       $self->{dbh}->ping or return undef;
-      $self->{lastping} + 5 > time;
+      $self->{lastping} = time;
       return 1;
 }
 

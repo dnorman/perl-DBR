@@ -91,11 +91,11 @@ sub count    { return scalar(  @{ $_[0]->{value} } ) }
 
 sub sql {
       my $self = shift;
-      my $dbrh = shift or return $self->_error('dbrh is required');
+      my $conn = shift or return $self->_error('conn is required');
 
       my $sql;
 
-      my $values = $self->quoted($dbrh);
+      my $values = $self->quoted($conn);
 
       if (@$values > 1) {
 	    $sql .= '(' . join(',',@{$values}) . ')';
@@ -117,9 +117,7 @@ sub is_null{
 
 sub quoted{
       my $self = shift;
-      my $dbrh = shift or return $self->_error('dbrh is required');
-
-      my $conn = $dbrh->_conn or return $self->_error('failed to retrieve connection object');
+      my $conn = shift or return $self->_error('conn is required');
 
       if ($self->is_number){
 	    return [ map { defined($_)?$_:'NULL' } @{$self->{value}} ];

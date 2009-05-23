@@ -10,26 +10,24 @@ sub new {
       my %params = @_;
       my $self = {
 		  logger   => $params{logger},
-		  dbrh     => $params{dbrh},
+		  instance => $params{instance},
 		  tablemap => $params{tablemap},
 		  flookup  => $params{flookup},
 		  pkmap    => $params{pkmap},
 		  scope    =>$params{scope},
-		  lastidx => $params{lastidx},
+		  lastidx  => $params{lastidx},
 		 };
 
       bless( $self, $package ); # BS object
 
       $self->{logger} or return $self->_error('logger is required');
-      $self->{dbrh} or return $self->_error('dbrh is required');
+      $self->{instance} or return $self->_error('instance is required');
       $self->{scope} or return $self->_error('scope is required');
 
       $self->{tablemap} or return $self->_error('tablemap is required');
       $self->{pkmap} or return $self->_error('pkmap is required');
       $self->{flookup} or return $self->_error('flookup is required');
       defined($self->{lastidx}) or return $self->_error('lastidx is required');
-
-      #$self->{conn} = $self->{dbrh}->_conn;
 
       return $self;
 }
@@ -53,15 +51,19 @@ sub set{
       }
       my $ct = scalar(keys %sets);
 
-      #HERE HERE HERE instance->connect
 
-      #$self->{dbrh}->begin if $ct > 1;
+      my $dbrh;
+      if($ct > 1){
+	    # create a new DBRH here to ensure proper transactional handling
+	    $dbrh = $self->{instance}->connect or return $self->_error('failed to connect');
+	    $dbrh->begin;
+      }
 
       foreach my $table_id (keys %sets){
 	    $self->_set($record, $table_id, $sets{$table_id}) or return $self->_error('failed to set');
       }
 
-      #$self->{dbrh}->commit if $ct > 1;
+      $dbrh->commit if $ct > 1;
 
       return 1;
 }
@@ -91,7 +93,7 @@ sub _set{
 
        my $query = DBR::Query->new(
 				   logger => $self->{logger},
-				   dbrh   => $self->{dbrh},
+				   instance => $self->{instance},
 				   tables => $tablename,
 				   where  => $outwhere,
 				   update => { set => $sets }
@@ -136,11 +138,11 @@ sub getfield{
        my $newfield = $field->clone;
 
        my $query = DBR::Query->new(
-				   logger => $self->{logger},
-				   dbrh   => $self->{dbrh},
-				   tables => $tablename,
-				   where  => $outwhere,
-				   select => { fields => [ $newfield ] } # use the new cloned field
+				   logger   => $self->{logger},
+				   instance => $self->{instance},
+				   tables   => $tablename,
+				   where    => $outwhere,
+				   select   => { fields => [ $newfield ] } # use the new cloned field
 				  ) or return $self->_error('failed to create Query object');
 
        my $sth = $query->execute(

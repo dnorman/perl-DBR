@@ -17,14 +17,14 @@ sub new {
       my %params = @_;
       my $self = {
 		  logger => $params{logger},
-		  dbrh   => $params{dbrh},
+		  instance   => $params{instance},
 		  table  => $params{table},
 		 };
 
       bless( $self, $package );
 
       return $self->_error('table object must be specified') unless ref($self->{table}) eq 'DBR::Config::Table';
-      return $self->_error('dbrh object must be specified')   unless $self->{dbrh};
+      return $self->_error('instance object must be specified')   unless $self->{instance};
 
       return( $self );
 }
@@ -48,7 +48,7 @@ sub all{
 
       my $query = DBR::Query->new(
 				  logger => $self->{logger},
-				  dbrh   => $self->{dbrh},
+				  instance   => $self->{instance},
 				  select => {
 					     fields => \@fields
 					    },
@@ -99,7 +99,7 @@ sub where{
 
       my $query = DBR::Query->new(
 				  logger => $self->{logger},
-				  dbrh   => $self->{dbrh},
+				  instance   => $self->{instance},
 				  select => {
 					     fields => \@fields
 					    },
@@ -132,7 +132,7 @@ sub insert {
 
 
       my $query = DBR::Query->new(
-				  dbrh   => $self->{dbrh},
+				  instance   => $self->{instance},
 				  logger => $self->{logger},
 				  insert => {
 					     set => \@sets,
@@ -156,7 +156,6 @@ sub get{
       my $field = $pk->[0];
 
       my $scope = DBR::Config::Scope->new(
-					  dbrh          => $self->{dbrh},
 					  logger        => $self->{logger},
 					  conf_instance => $table->conf_instance
 					 ) or return $self->_error('Failed to get calling scope');
@@ -172,7 +171,7 @@ sub get{
 
       my $query = DBR::Query->new(
 				  logger => $self->{logger},
-				  dbrh   => $self->{dbrh},
+				  instance => $self->{instance},
 				  select => { fields => \@fields },
 				  tables => $table->name,
 				  where  => $outwhere,

@@ -40,8 +40,7 @@ sub _get_scope_id{
 
       my @parts;
       while($offset < 100){
-	    my (undef,$file,$line) = caller($offset++);
-
+	    my (undef,$file,$line,$method) = caller($offset++);
 	    if($file =~ /^\//){ # starts with Slash
 		  $offset = 101; #everything is good
 	    }else{

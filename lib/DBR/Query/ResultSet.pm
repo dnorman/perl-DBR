@@ -10,7 +10,7 @@ sub new {
       my %params = @_;
       my $self = {
 		  logger   => $params{logger},
-		  dbrh     => $params{dbrh},
+		  instance => $params{instance},
 		  sth      => $params{sth},
 		  query    => $params{query},
 		  is_count => $params{is_count},
@@ -18,10 +18,10 @@ sub new {
 
       bless( $self, $package );
 
-      return $self->_error('sth object must be specified'   ) unless $self->{sth};
-      return $self->_error('query object must be specified' ) unless $self->{query};
-      return $self->_error('logger object must be specified') unless $self->{logger};
-      return $self->_error('dbrh object must be specified')   unless $self->{dbrh};
+      return $self->_error('sth object must be specified'   )   unless $self->{sth};
+      return $self->_error('query object must be specified' )   unless $self->{query};
+      return $self->_error('logger object must be specified')   unless $self->{logger};
+      return $self->_error('instance object must be specified') unless $self->{instance};
 
       #prime the pump
       $self->{next} = *_first;
@@ -142,9 +142,9 @@ sub _first{
       if(!$self->{record}){
 	    $self->_stopwatch();
 	    my $record = DBR::Query::RecMaker->new(
-						   dbrh   => $self->{dbrh},
-						   logger => $self->{logger},
-						   query  => $self->{query},
+						   instance => $self->{instance},
+						   logger   => $self->{logger},
+						   query    => $self->{query},
 						  ) or return $self->_error('failed to create record class');
 
 	    # need to keep this in scope, because it removes the dynamic class when DESTROY is called
@@ -177,7 +177,7 @@ sub _nextmem{
 
       my $row = $self->{rows}->[ $self->{record_idx}++ ];
 
-      $self->_logDebug3('DID NEXTMEM');
+      #$self->_logDebug3('DID NEXTMEM');
 
       if ($self->{record_idx} >= $self->{rowcount}){
 	    $self->{finished} = 1;

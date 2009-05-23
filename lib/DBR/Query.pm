@@ -17,14 +17,14 @@ sub new {
       my %params = @_;
 
       my $self = {
-		  dbrh   => $params{dbrh},
+		  instance   => $params{instance},
 		  logger => $params{logger},
 		  scope  => $params{scope},
 		 };
 
       bless( $self, $package );
 
-      return $self->_error('dbrh object is required') unless $self->{dbrh};
+      return $self->_error('instance object is required') unless $self->{instance};
 
       $self->{flags} = {
 			lock    => $params{lock} ? 1:0,
@@ -130,7 +130,9 @@ sub _where{
 
       $param->validate($self) or return $self->_error('Where clause validation failed');
 
-      my $where = $param->sql( $self->{dbrh} ) or return $self->_error('Failed to retrieve sql');
+      my $conn = $self->{instance}->connect('conn') or return $self->_error('failed to connect');
+
+      my $where = $param->sql( $conn ) or return $self->_error('Failed to retrieve sql');
 
       return $where || '';
 }
@@ -149,6 +151,7 @@ sub _select{
       }elsif($params->{fields}){
 	    my $fields = $params->{fields};
 
+	    my $conn = $self->{instance}->connect('conn') or return $self->_error('failed to connect');
 	    if (ref($fields) eq 'ARRAY') {
 		  my @fieldsql;
 		  foreach my $field (@{$fields}) {
@@ -160,7 +163,7 @@ sub _select{
 			      return $self->_error('invalid table alias "' . $field->table_alias . '" in -fields')        unless $self->{aliasmap}->{ $field->table_alias };
 			}
 
-			push @fieldsql, $field->sql( $self->{dbrh} );
+			push @fieldsql, $field->sql( $conn );
 			$field->index( ++$self->{lastidx} ) or return $self->_error('failed to set field index');
 
 			$self->{flags}->{can_be_subquery} = 1 if scalar(@fieldsql) == 1;
@@ -191,12 +194,14 @@ sub _update{
       my $sets = $params->{set};
       $sets = [$sets] unless ref($sets) eq 'ARRAY';
 
+      my $conn = $self->{instance}->connect('conn') or return $self->_error('failed to connect');
+
       my @sql;
       foreach my $set (@$sets) {
 	    ref($set) eq 'DBR::Query::Part::Set'
 	      or return $self->_error('Set parameter must contain only set objects');
 
-	    push @sql, $set->sql( $self->{dbrh} );
+	    push @sql, $set->sql( $conn );
       }
 
       $self->{main_sql} = join (', ', @sql);
@@ -210,14 +215,16 @@ sub _insert{
       my $sets = $params->{set};
       $sets = [$sets] unless ref($sets) eq 'ARRAY';
 
+      my $conn = $self->{instance}->connect('conn') or return $self->_error('failed to connect');
+
       my @fields;
       my @values;
       foreach my $set (@$sets) {
 	    ref($set) eq 'DBR::Query::Part::Set'
 	      or return $self->_error('Set parameter must contain only set objects');
 
-	    push @fields, $set->field->sql( $self->{dbrh} );
-	    push @values, $set->value->sql( $self->{dbrh} );
+	    push @fields, $set->field->sql( $conn );
+	    push @values, $set->value->sql( $conn );
       }
 
       $self->{main_sql} = '(' . join (', ', @fields) . ') values (' . join (', ', @values) . ')';
@@ -274,7 +281,7 @@ sub execute{
 
       $self->_logDebug2( $self->sql );
 
-      my $conn   = $self->{dbrh}->_conn  or return $self->_error('failed to fetch conn');
+      my $conn   = $self->{instance}->connect('conn') or return $self->_error('failed to connect');
 
       $conn->quiet_next_error if $self->{quiet_error};
 
@@ -289,7 +296,7 @@ sub execute{
 	    }else{
 		  my $resultset = DBR::Query::ResultSet->new(
 							     logger => $self->{logger},
-							     dbrh   => $self->{dbrh},
+							     instance => $self->{instance},
 							     sth    => $sth,
 							     query  => $self,
 							     is_count => $self->{flags}->{is_count} || 0,

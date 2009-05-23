@@ -16,9 +16,9 @@ sub new {
       my( $package ) = shift;
       my %params = @_;
       my $self = {
-		  logger => $params{logger},
-		  dbrh   => $params{dbrh},
-		  query  => $params{query},
+		  logger   => $params{logger},
+		  instance => $params{instance},
+		  query    => $params{query},
 		 };
 
       bless( $self, $package ); # BS object
@@ -26,7 +26,7 @@ sub new {
       $self->{query} or return $self->_error('query is required');
 
       $self->{scope} = $self->{query}->scope; # optional
-      $self->{dbrh} or return $self->_error('dbrh object must be specified');
+      $self->{instance} or return $self->_error('instance object must be specified');
 
       $self->{classidx} = (shift @IDPOOL) || ++$classidx;
       #print STDERR "PACKAGEID: $self->{classidx}\n";
@@ -63,7 +63,6 @@ sub _prep{
       foreach my $table_id ($self->_uniq( @table_ids )){
 
 	    my $table = DBR::Config::Table->new(
-						dbrh     => $self->{dbrh},
 						logger   => $self->{logger},
 						table_id => $table_id,
 					       ) or return $self->_error('Failed to create table object');
@@ -100,7 +99,7 @@ sub _prep{
 
       my $helper = DBR::Query::RecHelper->new(
 					      logger   => $self->{logger},
-					      dbrh     => $self->{dbrh},
+					      instance => $self->{instance},
 					      tablemap => \%tablemap,
 					      pkmap    => \%pkmap,
 					      flookup  => \%flookup,
@@ -111,7 +110,7 @@ sub _prep{
       my $mode = 'rw';
       foreach my $field (@$fields){
 	    my $mymode = $mode;
-	    $mymode = 'ro' if $field->is_readonly;
+	    $mymode = 'ro' if $field->is_readonly or $self->{instance}->is_readonly;
 	    $self->_mk_accessor(
 				mode  => $mymode,
 				index => $field->index,
@@ -156,11 +155,11 @@ sub _mk_accessor{
 
       my $code;
       my $trans;
-      if($mode eq 'rw' && $field){
-	    if ($trans = $field->translator){
-		  $value = "\$t->forward($value)";
-	    }
+      if ($trans = $field->translator){
+	    $value = "\$t->forward($value)";
+      }
 
+      if($mode eq 'rw' && $field){
 	    $code = "   exists( $setvalue ) ? \$h->setfield( $record, \$f, $setvalue ) : $value   ";
       }elsif($mode eq 'ro'){
 	    $code = "   $value   ";
