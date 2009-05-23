@@ -95,6 +95,19 @@ sub _logDebug2{
 	    print STDERR "DBR DEBUG2: $message\n";
       }
 }
+sub _logDebug3{
+      my $self = shift;
+      my $message = shift;
+      my ( $package, $filename, $line, $method) = caller(1);
+      if ($self->logger){
+	    $self->logger->logDebug3($message,$method);
+      }elsif($self->is_debug){
+	    print STDERR "DBR DEBUG3: $message\n";
+      }
+}
+
+#HERE HERE HERE - do some fancy stuff with dummy subroutines in the symbol table if nobody is in debug mode
+
 sub _log{
       my $self = shift;
       my $message = shift;
