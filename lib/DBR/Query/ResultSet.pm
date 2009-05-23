@@ -128,7 +128,7 @@ sub _execute{
 
       my $rv = $sth->execute();
       $self->{rows_hint} = $rv + 0;
-      $self->_logDebug("ROWS: $self->{rows_hint}");
+      $self->_logDebug2("ROWS: $self->{rows_hint}");
       return $self->_error('failed to execute statement') unless $rv;
       $self->{finished} = 0;
       $self->{record_idx} = 0;
@@ -177,7 +177,7 @@ sub _nextmem{
 
       my $row = $self->{rows}->[ $self->{record_idx}++ ];
 
-      $self->_logDebug('DID NEXTMEM');
+      $self->_logDebug3('DID NEXTMEM');
 
       if ($self->{record_idx} >= $self->{rowcount}){
 	    $self->{finished} = 1;
@@ -195,7 +195,7 @@ sub _fetch{
 
       $self->{record_idx}++;
 
-      #$self->_logDebug('DID FETCH');
+      #$self->_logDebug3('DID FETCH');
       if (!scalar(@row)){
 	    $self->{finished} = 1;
 	    $self->reset;
@@ -207,7 +207,7 @@ sub _fetch{
 
 sub reset{
       my $self = shift;
-      $self->_logDebug('DID RESET');
+      $self->_logDebug3('DID RESET');
       $self->{record_idx} = undef;
       $self->{finished} = $self->{sth}->finish();
 
