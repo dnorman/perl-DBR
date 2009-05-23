@@ -5,19 +5,28 @@
 
 package DBR::Util::ScanDB;
 
+use Data::Dumper;
 use strict;
 use base 'DBR::Common';
+use DBR::Config::Field;
+
 sub new {
       my( $package ) = shift;
       my %params = @_;
       my $self = {
 		  logger   => $params{logger},
-		  instance => $params{instance},
+		  conf_instance => $params{conf_instance},
+		  scan_instance => $params{scan_instance},
 		 };
 
       bless( $self, $package );
 
-      return $self->_error('dbr object must be specified')   unless $self->{dbrh};
+      return $self->_error('logger object must be specified')   unless $self->{logger};
+      return $self->_error('conf_instance object must be specified')   unless $self->{conf_instance};
+      return $self->_error('scan_instance object must be specified')   unless $self->{scan_instance};
+
+      $self->{schema_id} = $self->{scan_instance}->schema_id or
+	return $self->_error('Cannot scan an instance that has no schema');
 
       return( $self );
 }
@@ -28,36 +37,31 @@ sub scan{
       my %params;
       my $tables = $self->scan_tables() || die "failed to scan tables";
 
-      #use Data::Dumper;
-      #print STDERR Dumper($tables);
+      print STDERR Dumper($tables);
 
       foreach my $table (@{$tables}){
-	    my $desc = desc_table($dbr,$dbr,$table) || die "failed to describe table";
+       	    my $fields = $self->scan_fields($table) or return $self->_error( "failed to describe table" );
 
-	    $self->update_table($dbr,$dbr,$desc,$table)|| die "failed to update table" ;
-	    
+	    $self->update_table($fields,$table) or return $self->_error("failed to update table");
       }
 
+      return 1;
 }
 
 
 sub scan_tables{
       my $self = shift;
-      my $dbr = shift;
+      my $dbh = $self->{scan_instance}->connect('dbh') || die "failed to connect to scanned db";
 
-      my $dbh = $dbr->connect($scandb,'dbh') || die "failed to connect";
       return $self->_error('failed to prepare statement') unless
-	my $sth = $dbh->table_info();
-
-      $sth->fetchall_hashref
-      my $rowct = $sth->execute();
-
-      return $self->_error('failed to execute statement') unless defined($rowct);
+	my $sth = $dbh->table_info;
 
       my @tables;
-      if ($rowct) {
-	    while (my $row = $sth->fetchrow_arrayref()) {
-		  push @tables, $row->[0];
+      while (my $row = $sth->fetchrow_hashref()) {
+	    my $name = $row->{TABLE_NAME} or return $self->_error('Table entry has no name!');
+
+	    if($row->{TABLE_TYPE} eq 'TABLE'){
+		  push @tables, $name;
 	    }
       }
 
@@ -66,25 +70,18 @@ sub scan_tables{
       return \@tables;
 }
 
-sub desc_table{
+sub scan_fields{
       my $self = shift;
-      my $dbr = shift;
       my $table = shift;
 
-      my $dbh = $dbr->connect($scandb,'dbh') || die "failed to connect";
+      my $dbh = $self->{scan_instance}->connect('dbh') || die "failed to connect to scanned db";
 
       return $self->_error('failed to prepare statement') unless
-	my $sth = $dbh->prepare("describe $table");
-
-      my $rowct = $sth->execute();
-
-      return $self->_error('failed to execute statement') unless defined($rowct);
+	my $sth = $dbh->column_info( undef, undef, $table, undef );
 
       my @rows;
-      if ($rowct) {
-	    while (my $row = $sth->fetchrow_hashref()) {
-		  push @rows, $row;
-	    }
+      while (my $row = $sth->fetchrow_hashref()) {
+	    push @rows, $row;
       }
 
       $sth->finish();
@@ -93,40 +90,39 @@ sub desc_table{
 }
 
 sub update_table{
-      my $self = shift;
-      my $dbr = shift;
-      my $desc = shift;
-      my $name = shift;
+      my $self   = shift;
+      my $fields = shift;
+      my $name   = shift;
 
-      my $dbh = $dbr->connect($db) || die "failed to connect to DBRdb";
+      my $dbh = $self->{conf_instance}->connect || die "failed to connect to config db";
 
       return $self->_error('failed to select from dbr_tables') unless
-	my $tables = $dbh->select(
-				  -table  => 'dbr_tables',
-				  -fields => 'table_id schema_id name',
-				  -where  => {
-					      schema_id => ['d',$schema_id],
-					      name      => $name,
-					     }
-				 );
+ 	my $tables = $dbh->select(
+ 				  -table  => 'dbr_tables',
+ 				  -fields => 'table_id schema_id name',
+ 				  -where  => {
+ 					      schema_id => ['d',$self->{schema_id}],
+ 					      name      => $name,
+ 					     }
+ 				 );
 
       my $table = $tables->[0];
 
       my $table_id;
       if($table){ # update
-	    $table_id = $table->{table_id};
+ 	    $table_id = $table->{table_id};
       }else{
-	    return $self->_error('failed to insert into dbr_tables') unless
-	      $table_id = $dbh->insert(
-				       -table  => 'dbr_tables',
-				       -fields => {
-						   schema_id => ['d',$schema_id],
-						   name      => $name,
-						  }
-				      );
+ 	    return $self->_error('failed to insert into dbr_tables') unless
+ 	      $table_id = $dbh->insert(
+ 				       -table  => 'dbr_tables',
+ 				       -fields => {
+ 						   schema_id => ['d',$self->{schema_id}],
+ 						   name      => $name,
+ 						  }
+ 				      );
       }
 
-      update_fields($dbr,$dbr,$desc,$table_id) || return $self->_error('Failed to update fields');
+      $self->update_fields($fields,$table_id) or return $self->_error('Failed to update fields');
 
       return 1;
 }
@@ -134,109 +130,87 @@ sub update_table{
 
 sub update_fields{
       my $self = shift;
-      my $dbr = shift;
-      my $desc = shift;
+      my $fields = shift;
       my $table_id = shift;
 
-      my $dbh = $dbr->connect($db) || die "failed to connect to DBRdb";
+      my $dbh = $self->{conf_instance}->connect || die "failed to connect to config db";
 
       return $self->_error('failed to select from dbr_fields') unless
-	my $records = $dbh->select(
-				  -table  => 'dbr_fields',
-				  -fields => 'field_id table_id name field_type is_nullable is_signed max_value',
-				  -where  => {
-					      table_id  => ['d',$table_id]
-					     }
-				 );
+ 	my $records = $dbh->select(
+				   -table  => 'dbr_fields',
+				   -fields => 'field_id table_id name data_type is_nullable is_signed max_value',
+				   -where  => {
+					       table_id  => ['d',$table_id]
+					      }
+				  );
 
       my %fieldmap;
       map {$fieldmap{$_->{name}} = $_} @{$records};
 
-      my %datatypes = (
-		       bigint    => { id => 1, bits => 64},
-		       int       => { id => 2, bits => 32},
-		       mediumint => { id => 3, bits => 24},
-		       smallint  => { id => 4, bits => 16},
-		       tinyint   => { id => 5, bits => 8},
-		       bool      => { id => 6, bits => 1},
-		       float     => { id => 7, bits => 1},
-		       double    => { id => 8, bits => 1},
-		       varchar   => { id => 9 },
-		       char      => { id => 10 },
-		       text      => { id => 11 },
-		       mediumtext=> { id => 12 },
-		       blob      => { id => 13 },
-		       longblob  => { id => 14 },
-		       mediumblob=> { id => 15 },
-		       tinyblob  => { id => 16 },
-		       enum      => { id => 17 }, # I loathe mysql enums
-		      );
+      foreach my $field (@{$fields}) {
+ 	    my $name = $field->{'COLUMN_NAME'} or return $self->_error('No COLUMN_NAME is present');
+	    my $type = $field->{'TYPE_NAME'}   or return $self->_error('No TYPE_NAME is present'  );
+	    my $size = $field->{'COLUMN_SIZE'};
 
+	    my $nullable = $field->{'NULLABLE'};
+	    return $self->_error('No NULLABLE is present'  ) unless defined($nullable);
 
-      foreach my $field (@{$desc}){
-	    my $name     = $field->{Field};
-	    my $record = $fieldmap{$name};
+	    my $pkey = $field->{'mysql_is_pri_key'};
+	    my $extra = $field->{'mysql_type_name'};
 
-	    my $rawtype = $field->{Type};
-
-	    my ($type,$size,$other,$flags) = 
-	      #               type       (opt           size or other       opt)     flags
-	      $rawtype =~ /^([a-z]*) \s* (?:      \((?: (\d+) | (.*?) )\)      )? \s*([a-z\s]*)?$/ix;
-	    
-	    use Data::Dumper;
-	    print STDERR Dumper($field,[$type,$size,$other,$flags]);
-	    my $typeref = $datatypes{lc($type)} || return $self->_error("Unrecognized data type '$type'");
-
-	    my $ref = {
-		       is_nullable => ['d',  (uc($field->{Null}) eq 'YES')?1:0   ],
-		       is_signed   => ['d',  ($flags =~ /unsigned/i)?0:1         ],
-		       field_type  => ['d',  $typeref->{id}                      ],
-		       max_value   => ['d',  $size || 0                          ],
-		      };
-
-	    if($record){ # update
-		  return $self->_error('failed to insert into dbr_tables') unless
-		    $dbh->update(
-				 -table  => 'dbr_fields',
-				 -fields => $ref,
-				 -where  => { field_id => ['d',$record->{field_id}] },
-				);
-	    }else{
-		  $ref->{name}     = $name;
-		  $ref->{table_id} = ['d', $table_id ];
-
-		  return $self->_error('failed to insert into dbr_tables') unless
-		    my $field_id = $dbh->insert(
-						-table  => 'dbr_fields',
-						-fields => $ref,
-					       );
+	    my $is_signed = 0;
+	    if(defined $extra){
+		  $is_signed = ($extra =~ / unsigned/i)?0:1
 	    }
 
-	    delete $fieldmap{$name};
+	    my $typeid = DBR::Config::Field->get_type_id($type) or $self->_error( "Invalid type $type" );
+
+ 	    my $record = $fieldmap{$name};
+
+ 	    my $ref = {
+ 		       is_nullable => ['d',  $nullable ? 1:0 ],
+ 		       is_signed   => ['d',  $is_signed      ],
+ 		       data_type   => ['d',  $typeid         ],
+ 		       max_value   => ['d',  $size || 0      ],
+ 		      };
+
+	    if(defined($pkey)){
+		  $ref->{is_pkey} = ['d',  $pkey ? 1:0  ],
+	    }
+
+ 	    if ($record) {	# update
+ 		  return $self->_error('failed to insert into dbr_tables') unless
+ 		    $dbh->update(
+ 				 -table  => 'dbr_fields',
+ 				 -fields => $ref,
+ 				 -where  => { field_id => ['d',$record->{field_id}] },
+ 				);
+ 	    } else {
+ 		  $ref->{name}     = $name;
+ 		  $ref->{table_id} = ['d', $table_id ];
+
+ 		  return $self->_error('failed to insert into dbr_tables') unless
+ 		    my $field_id = $dbh->insert(
+ 						-table  => 'dbr_fields',
+ 						-fields => $ref,
+ 					       );
+ 	    }
+
+ 	    delete $fieldmap{$name};
 
       }
 
+      foreach my $name (keys %fieldmap) {
+ 	    my $record = $fieldmap{$name};
 
-      foreach my $name (keys %fieldmap){
-	    my $record = $fieldmap{$name};
-
-	    return $self->_error('failed to delete from dbr_tables') unless
-	      $dbh->delete(
-			   -table  => 'dbr_fields',
-			   -where  => { field_id => ['d',$record->{field_id}] },
-			  );
+ 	    return $self->_error('failed to delete from dbr_tables') unless
+ 	      $dbh->delete(
+ 			   -table  => 'dbr_fields',
+ 			   -where  => { field_id => ['d',$record->{field_id}] },
+ 			  );
       }
-
-#           {
-#             'Extra' => '',
-#             'Type' => 'int(10) unsigned',
-#             'Field' => 'giftcert_id',
-#             'Default' => undef,
-#             'Null' => 'YES',
-#             'Key' => ''
-#           },
-
-
 
       return 1;
 }
+
+1;

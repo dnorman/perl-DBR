@@ -29,6 +29,37 @@ sub new {
       return( $self );
 }
 
+sub all{
+      my $self = shift;
+      my %inwhere = @_;
+
+      my $table = $self->{table};
+      my $scope = DBR::Config::Scope->new(
+					  logger        => $self->{logger},
+					  conf_instance => $table->conf_instance,
+					  extra_ident   => $table->name,
+					 ) or return $self->_error('Failed to get calling scope');
+
+      my $pk = $table->primary_key or return $self->_error('Failed to fetch primary key');
+      my $prefields = $scope->fields or return $self->_error('Failed to determine fields to retrieve');
+
+      my %uniq;
+      my @fields = grep { !$uniq{ $_->field_id }++ } (@$pk, @$prefields);
+
+      my $query = DBR::Query->new(
+				  logger => $self->{logger},
+				  dbrh   => $self->{dbrh},
+				  select => {
+					     fields => \@fields
+					    },
+				  tables => $table->name,
+				  scope  => $scope,
+				 ) or return $self->_error('failed to create Query object');
+
+      my $resultset = $query->execute() or return $self->_error('failed to execute');
+
+      return $resultset;
+}
 
 sub where{
       my $self = shift;

@@ -203,14 +203,28 @@ sub _update{
 }
 
 sub _insert{
-  my $self = shift;
-  my $params = shift;
+      my $self = shift;
+      my $params = shift;
 
-  $self->_update($params) or return $self->_error('_update failed');
+      return $self->_error('No set parameter specified') unless $params->{set};
+      my $sets = $params->{set};
+      $sets = [$sets] unless ref($sets) eq 'ARRAY';
 
-  if($params->{quiet_error}){
-	$self->{quiet_error} = 1;
-  }
+      my @fields;
+      my @values;
+      foreach my $set (@$sets) {
+	    ref($set) eq 'DBR::Query::Part::Set'
+	      or return $self->_error('Set parameter must contain only set objects');
+
+	    push @fields, $set->field->sql( $self->{dbrh} );
+	    push @values, $set->value->sql( $self->{dbrh} );
+      }
+
+      $self->{main_sql} = '(' . join (', ', @fields) . ') values (' . join (', ', @values) . ')';
+
+      if($params->{quiet_error}){
+	    $self->{quiet_error} = 1;
+      }
 
   return 1;
 
@@ -231,7 +245,7 @@ sub sql{
 	    $sql .= "SELECT $self->{main_sql} FROM $tables";
 	    $sql .= " WHERE $self->{where_sql}" if $self->{where_sql};
       }elsif($type eq 'insert'){
-	    $sql .= "INSERT INTO $tables SET $self->{main_sql}";
+	    $sql .= "INSERT INTO $tables $self->{main_sql}";
       }elsif($type eq 'update'){
 	    $sql .= "UPDATE $tables SET $self->{main_sql} WHERE $self->{where_sql}";
       }elsif($type eq 'delete'){

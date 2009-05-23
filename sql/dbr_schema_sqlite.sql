@@ -57,7 +57,7 @@ CREATE TABLE dbr_tables (
   schema_id int(10)  NOT NULL,
   name varchar(250) NOT NULL,
   display_name varchar(250) default NULL,
-  is_cachable tinyint(1) NOT NULL
+  is_cachable tinyint(1)
 );
 CREATE TABLE enum (
   enum_id INTEGER PRIMARY KEY AUTOINCREMENT,

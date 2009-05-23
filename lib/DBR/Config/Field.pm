@@ -10,13 +10,17 @@ use base 'DBR::Config::Field::Common';
 use DBR::Query::Value;
 use DBR::Config::Table;
 use DBR::Config::Trans;
+use Clone;
 
 my %FIELDS_BY_ID;
 
 #HERE HERE HERE - This is ugly... clean it up
 my %datatypes = (
 		 bigint    => { id => 1, numeric => 1, bits => 64},
+
 		 int       => { id => 2, numeric => 1, bits => 32},
+		 integer   => { id => 2, numeric => 1, bits => 32}, # duplicate
+
 		 mediumint => { id => 3, numeric => 1, bits => 24},
 		 smallint  => { id => 4, numeric => 1, bits => 16},
 		 tinyint   => { id => 5, numeric => 1, bits => 8},
@@ -36,6 +40,13 @@ my %datatypes = (
 
 my %datatype_lookup = map { $datatypes{$_}->{id} => {%{$datatypes{$_}}, handle => $_ }} keys %datatypes;
 
+sub get_type_id{
+      my( $package ) = shift;
+      my $type = shift;
+      my $ref = $datatypes{lc($type)} || return undef;
+
+      return $ref->{id};
+}
 
 sub load{
       my( $package ) = shift;

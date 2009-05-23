@@ -29,7 +29,7 @@ sub new {
       $self->{dbrh} or return $self->_error('dbrh object must be specified');
 
       $self->{classidx} = (shift @IDPOOL) || ++$classidx;
-      print STDERR "PACKAGEID: $self->{classidx}\n";
+      #print STDERR "PACKAGEID: $self->{classidx}\n";
 
       $self->_prep or return $self->_error('prep failed');
 
@@ -221,7 +221,7 @@ sub DESTROY{ # clean up the temporary object from the symbol table
       push @IDPOOL, $self->{classidx};
 
       my $class = $self->{recordclass};
-      print STDERR "DESTROY $class, $self->{classidx}\n";
+      #print STDERR "DESTROY $class, $self->{classidx}\n";
       Symbol::delete_package($class);
 }
 

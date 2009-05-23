@@ -155,12 +155,15 @@ sub _first{
 
       $self->_execute() or return $self->_error('failed to execute');
 
-      if ($self->{rows_hint} > 0){ #200) { HERE HERE HERE
+      if ($self->{rows_hint} > 200) {
 	    $self->{next} = *_fetch;
 	    return $self->_fetch();
       }else{
 	    $self->{rows} = $self->{sth}->fetchall_arrayref();
 	    $self->{rowcount} = $self->{sth}->rows;
+
+	    return undef unless $self->{rowcount} > 0;
+
 	    $self->{sth}->finish();
 	    $self->{finished} = 1;
 	    $self->{next} = *_nextmem;
@@ -174,7 +177,7 @@ sub _nextmem{
 
       my $row = $self->{rows}->[ $self->{record_idx}++ ];
 
-      #$self->_logDebug('DID NEXTMEM');
+      $self->_logDebug('DID NEXTMEM');
 
       if ($self->{record_idx} >= $self->{rowcount}){
 	    $self->{finished} = 1;
@@ -214,7 +217,7 @@ sub reset{
 
 sub DESTROY{
       my $self = shift;
-      print STDERR "RS DESTROY\n";
+      #print STDERR "RS DESTROY\n";
       $self->{finished} || $self->{sth}->finish();
 
       return 1;

@@ -28,6 +28,7 @@ sub new {
       return $self;
 }
 
+sub dbh     { $_[0]->{dbh} }
 sub do      { my $self = shift;  return $self->_wrap($self->{dbh}->do(@_))       }
 sub prepare { my $self = shift;  return $self->_wrap($self->{dbh}->prepare(@_))  }
 sub execute { my $self = shift;  return $self->_wrap($self->{dbh}->execute(@_))  }
