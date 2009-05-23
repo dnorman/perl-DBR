@@ -3,6 +3,7 @@ package DBR::Util::Connection::Pg;
 use strict;
 use base 'DBR::Util::Connection';
 
+die "This module doesn't work yet";
 
 sub _prepareSequence{
       my $self = shift;

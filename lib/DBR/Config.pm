@@ -66,7 +66,7 @@ sub load_file{
 							   dbr    => $dbr,
 							   logger => $self->{logger},
 							   spec   => $instspec
-							  ) || $self->_error("failed to load DBR conf file '$file' (stanza #$count)") && next;
+							  ) or $self->_error("failed to load DBR conf file '$file' (stanza #$count)") && next;
 	    if($instance->dbr_bootstrap){
 		  #don't bail out here on error
 		  $self->load_dbconf(

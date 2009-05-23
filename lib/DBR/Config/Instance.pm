@@ -14,8 +14,9 @@ my $GUID = 1;
 
 #here is a list of the currently supported databases and their connect string formats
 my %connectstrings = (
-		      Mysql => 'dbi:mysql:database=-database-;host=-hostname-',
-		      Pg    => 'dbi:Pg:dbname=-database-;host=-hostname-',
+		      Mysql  => 'dbi:mysql:database=-database-;host=-hostname-',
+		      SQLite => 'dbi:SQLite:dbname=-dbfile-',
+		      Pg     => 'dbi:Pg:dbname=-database-;host=-hostname-',
 		     );
 
 my %CONCACHE;
@@ -79,9 +80,10 @@ sub load_from_db{
 
       return $self->_error('Failed to select instances') unless
 	my $instrows = $dbh->select(
-				     -table => 'dbr_instances',
-				     -fields => 'instance_id schema_id class dbname username password host module'
-				    );
+				    -table => 'dbr_instances',
+				    -fields => 'instance_id schema_id class dbname username password host dbfile module handle'
+				   );
+
       my @instances;
       foreach my $instrow (@$instrows){
 
@@ -112,24 +114,22 @@ sub register { # basically the same as a new
       my $spec = $params{spec} or return $self->_error( 'spec ref is required' );
 
       my $config = {
-		    handle      => $spec->{handle}   || $spec->{name} || $spec->{dbname},
+		    handle      => $spec->{handle}   || $spec->{name},
 		    module      => $spec->{module}   || $spec->{type},
 		    database    => $spec->{dbname}   || $spec->{database},
 		    hostname    => $spec->{hostname} || $spec->{host},
 		    user        => $spec->{username} || $spec->{user},
+		    dbfile      => $spec->{dbfile},
 		    password    => $spec->{password},
 		    class       => $spec->{class}       || 'master', # default to master
 		    instance_id => $spec->{instance_id} || '',
 		    schema_id   => $spec->{schema_id}   || '',
 		    allowquery  => $spec->{allowquery}  || 0,
+		    readonly    => $spec->{readonly}    || 0,
 		   };
 
-      return $self->_error( 'handle/name parameter is required'     ) unless $config->{handle};
       return $self->_error( 'module/type parameter is required'     ) unless $config->{module};
-      return $self->_error( 'database/dbname parameter is required' ) unless $config->{database};
-      return $self->_error( 'host[name] parameter is required'      ) unless $config->{hostname};
-      return $self->_error( 'user[name] parameter is required'      ) unless $config->{user};
-      return $self->_error( 'password parameter is required'        ) unless $config->{password};
+      return $self->_error( 'handle/name parameter is required'     ) unless $config->{handle};
 
       $config->{connectstring} = $connectstrings{$config->{module}} || return $self->_error("module '$config->{module}' is not a supported database type");
 
@@ -137,6 +137,12 @@ sub register { # basically the same as a new
       return $self->_error("Failed to Load $connclass ($@)") unless eval "require $connclass";
 
       $config->{connclass} = $connclass;
+
+      my $reqfields = $connclass->required_config_fields or return $self->_error('Failed to determine required config fields');
+
+      foreach my $name (@$reqfields){
+	    return $self->_error( $name . ' parameter is required' ) unless $config->{$name};
+      }
 
       $config->{dbr_bootstrap} = $spec->{dbr_bootstrap}? 1:0;
 
@@ -242,6 +248,7 @@ sub _new_connection{
       return $conn;
 }
 
+sub readonly      { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{readonly} }
 sub handle        { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{handle}   }
 sub class         { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{class}    }
 sub guid          { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{guid}     }

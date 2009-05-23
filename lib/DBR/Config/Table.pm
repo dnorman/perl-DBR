@@ -26,6 +26,8 @@ sub load{
       my $schema_ids = $params{schema_id} || return $self->_error('schema_id is required');
       $schema_ids = [$schema_ids] unless ref($schema_ids) eq 'ARRAY';
 
+      return 1 unless @$schema_ids;
+
       my $dbrh = $instance->connect || return $self->_error("Failed to connect to @{[$instance->name]}");
 
       return $self->_error('Failed to select instances') unless

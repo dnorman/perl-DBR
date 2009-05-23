@@ -57,6 +57,25 @@ sub connect {
       return $instance->connect($flag);
 
 }
+sub get_instance {
+      my $self = shift;
+      my $name = shift;
+      my $class = shift;
+      my $flag;
+
+      if ($class eq 'dbh') {	# legacy
+	    $flag = 'dbh';
+	    $class = undef;
+      }
+
+      my $instance = DBR::Config::Instance->lookup(
+						   dbr    => $self,
+						   logger => $self->{logger},
+						   handle => $name,
+						   class  => $class
+						  ) or return $self->_error("No config found for db '$name' class '$class'");
+      return $instance;
+}
 
 sub remap{
       my $self = shift;

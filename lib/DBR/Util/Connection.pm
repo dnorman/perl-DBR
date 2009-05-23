@@ -8,6 +8,7 @@ package DBR::Util::Connection;
 use strict;
 use base 'DBR::Common';
 
+sub required_config_fields { [qw(database hostname user password)] };
 
 sub new {
       my( $package ) = shift;

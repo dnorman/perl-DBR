@@ -49,6 +49,7 @@ sub load{
       my $table_ids = $params{table_id} || return $self->_error('table_id is required');
       $table_ids = [$table_ids] unless ref($table_ids) eq 'ARRAY';
 
+      return 1 unless @$table_ids;
 
       my $dbrh = $instance->connect || return $self->_error("Failed to connect to ${\$instance->name}");
 

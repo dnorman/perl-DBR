@@ -27,6 +27,8 @@ sub load{
       my $schema_ids = $params{schema_id} || return $self->_error('schema_id is required');
       $schema_ids = [$schema_ids] unless ref($schema_ids) eq 'ARRAY';
 
+      return 1 unless @$schema_ids;
+
       return $self->_error('Failed to select instances') unless
 	my $schemas = $dbrh->select(
 				    -table => 'dbr_schemas',
