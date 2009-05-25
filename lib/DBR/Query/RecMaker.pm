@@ -60,6 +60,7 @@ sub _prep{
       my %tablemap;
       my %pkmap;
       my %flookup;
+      my @allrelations;
       foreach my $table_id ($self->_uniq( @table_ids )){
 
 	    my $table = DBR::Config::Table->new(
@@ -93,6 +94,9 @@ sub _prep{
 
 	    $tablemap{$table_id} = $table;
 	    $pkmap{$table_id}    = \@pk;
+
+	    my $relations = $table->relations or return $self->_error('failed to retrieve relations for table');
+	    push @allrelations, @$relations;
 
       }
 

@@ -64,8 +64,9 @@ sub load{
 	      my $maps = $dbrh->select(
 				       -table => 'dbr_field_map',
 				       -fields => 'map_id relationship_id from_field_id to_field_id',
-				       -where  => { table_id => ['d in',@$table_ids] },
+				       -where  => { relationship_id => ['d in',@rel_ids] },
 				      );
+
 	    foreach my $map (@{$maps}){
 		  my $ref = $RELATIONS_BY_ID{ $map->{relationship_id} }->{maps} ||=[];
 		  push @$ref, $map;

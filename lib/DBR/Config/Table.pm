@@ -13,6 +13,7 @@ use DBR::Config::Relation;
 
 my %TABLES_BY_ID;
 my %FIELDS_BY_NAME;
+my %RELATIONS_BY_NAME;
 
 sub load{
       my( $package ) = shift;
@@ -51,18 +52,19 @@ sub load{
 	    push @table_ids, $table->{table_id};
       }
 
-      DBR::Config::Field->load(
-			       logger => $self->{logger},
-			       instance => $instance,
-			       table_id => \@table_ids,
-			      ) or return $self->_error('failed to load fields');
+      if(@table_ids){
+	    DBR::Config::Field->load(
+				     logger => $self->{logger},
+				     instance => $instance,
+				     table_id => \@table_ids,
+				    ) or return $self->_error('failed to load fields');
 
-      DBR::Config::Relation->load(
-				  logger => $self->{logger},
-				  instance => $instance,
-				  table_id => \@table_ids,
-				 ) or return $self->_error('failed to load relationships');
-
+	    DBR::Config::Relation->load(
+					logger => $self->{logger},
+					instance => $instance,
+					table_id => \@table_ids,
+				       ) or return $self->_error('failed to load relationships');
+      }
 
       return 1;
 }
@@ -72,12 +74,27 @@ sub _register_field{
       my %params = @_;
 
       my $table_id = $params{table_id} or return $package->_error('table_id is required');
-      $TABLES_BY_ID{ $table_id } or return $package->_error('invalid table_id');
+      $TABLES_BY_ID{ $table_id }       or return $package->_error('invalid table_id');
 
       my $name     = $params{name}     or return $package->_error('name is required');
       my $field_id = $params{field_id} or return $package->_error('field_id is required');
 
       $FIELDS_BY_NAME{ $table_id } -> { $name } = $field_id;
+
+      return 1;
+}
+
+sub _register_relation{
+      my $package = shift; # no dummy $self object here, for efficiency
+      my %params = @_;
+
+      my $table_id = $params{table_id} or return $package->_error('table_id is required');
+      $TABLES_BY_ID{ $table_id }       or return $package->_error('invalid table_id');
+
+      my $name        = $params{name}        or return $package->_error('name is required');
+      my $relation_id = $params{relation_id} or return $package->_error('relation_id is required');
+
+      $RELATIONS_BY_NAME{ $table_id } -> { $name } = $relation_id;
 
       return 1;
 }
@@ -122,7 +139,7 @@ sub fields{
 	    my $field = DBR::Config::Field->new(
 						logger   => $self->{logger},
 						field_id => $field_id,
-					       ) or return $self->_error('failed to create table object');
+					       ) or return $self->_error('failed to create field object');
 	    push @fields, $field;
       }
 
@@ -138,6 +155,26 @@ sub primary_key{ #HERE HERE HERE - Optimize this
 
       return $pk;
 }
+
+sub relations{
+      my $self  = shift;
+
+      my @relations;
+
+      foreach my $relation_id (    values %{$RELATIONS_BY_NAME{$self->{table_id}}}   ) {
+
+	    my $relation = DBR::Config::Relation->new(
+						      logger      => $self->{logger},
+						      relation_id => $relation_id,
+						      table_id    => $self->{table_id},
+						     ) or return $self->_error('failed to create relation object');
+	    push @relations, $relation;
+      }
+
+
+      return \@relations;
+}
+
 
 sub name { $TABLES_BY_ID{  $_[0]->{table_id} }->{name} };
 sub conf_instance {
