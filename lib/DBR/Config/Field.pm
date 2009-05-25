@@ -113,6 +113,8 @@ sub new {
 
       return $self->_error('field_id is required') unless $self->{field_id};
 
+      $FIELDS_BY_ID{ $self->{field_id} } or return $self->_error('invalid field_id');
+
       return( $self );
 }
 

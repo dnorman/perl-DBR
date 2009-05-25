@@ -9,7 +9,7 @@ use strict;
 use base 'DBR::Common';
 
 use DBR::Config::Field;
-
+use DBR::Config::Relation;
 
 my %TABLES_BY_ID;
 my %FIELDS_BY_NAME;
@@ -56,6 +56,13 @@ sub load{
 			       instance => $instance,
 			       table_id => \@table_ids,
 			      ) or return $self->_error('failed to load fields');
+
+      DBR::Config::Relation->load(
+				  logger => $self->{logger},
+				  instance => $instance,
+				  table_id => \@table_ids,
+				 ) or return $self->_error('failed to load relationships');
+
 
       return 1;
 }

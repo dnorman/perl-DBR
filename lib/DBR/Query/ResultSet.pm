@@ -113,14 +113,8 @@ sub map {
 sub _execute{
       my $self = shift;
 
-      if( defined($self->{record_idx}) ){ # already executed
-
-	    if ($self->{record_idx} == 0){
-		  return 1; # still at zero pointer
-	    }else{
-		  return $self->_error('cannot execute with a nonzero record pointer');
-	    };
-
+      if( $self->{active} ){ # already executed
+	    return $self->_error('You must call reset before executing');
       }
       # else Undef row pointer means we haven't executed yet
 
@@ -131,7 +125,7 @@ sub _execute{
       $self->_logDebug2("ROWS: $self->{rows_hint}");
       return $self->_error('failed to execute statement') unless $rv;
       $self->{finished} = 0;
-      $self->{record_idx} = 0;
+      $self->{active} = 1;
 
       return 1;
 }
@@ -149,70 +143,59 @@ sub _first{
 
 	    # need to keep this in scope, because it removes the dynamic class when DESTROY is called
 	    $self->{record} = $record;
-	    $self->{rc} = $record->class;
+
 	    $self->_stopwatch('recmaker');
       }
 
       $self->_execute() or return $self->_error('failed to execute');
 
-      if ($self->{rows_hint} > 200) {
-	    $self->{next} = *_fetch;
-	    return $self->_fetch();
-      }else{
-	    $self->{rows} = $self->{sth}->fetchall_arrayref();
-	    $self->{rowcount} = $self->{sth}->rows;
+      $self->_iterator_prep;
 
-	    return undef unless $self->{rowcount} > 0;
-
-	    $self->{sth}->finish();
-	    $self->{finished} = 1;
-	    $self->{next} = *_nextmem;
-
-	    return $self->_nextmem();
-      }
-}
-
-sub _nextmem{
-      my $self = shift;
-
-      my $row = $self->{rows}->[ $self->{record_idx}++ ];
-
-      #$self->_logDebug3('DID NEXTMEM');
-
-      if ($self->{record_idx} >= $self->{rowcount}){
-	    $self->{finished} = 1;
-	    $self->{next} = *reset;
-      }
-
-      return bless($row,$self->{rc});
+      return $self->next;
 }
 
 
-sub _fetch{
+sub _iterator_prep{
       my $self = shift;
 
-      my @row  = $self->{sth}->fetchrow_array();
+      my $rows  = $self->{rows} = [];
+      my $class = $self->{record}->class;
+      my $sth   = $self->{sth};
 
-      $self->{record_idx}++;
+      # use a closure to reduce hash lookups
+      # It's very important that this closure is fast.
+      # This one routine has more of an effect on speed than anything else in the rest of the code
+      $self->{next} = sub {
+	    my $row = (
+		       shift(@$rows) or # Shift from cache
+		       shift( @{$rows = $sth->fetchall_arrayref(undef,1000) or return $self->_end} ) # if cache is empty, fetch more
+		      );
 
-      #$self->_logDebug3('DID FETCH');
-      if (!scalar(@row)){
-	    $self->{finished} = 1;
-	    $self->reset;
-	    return undef;
-      }
+	    return bless($row,$class);
+      };
 
-      return bless(\@row,$self->{rc});
+      return 1;
+
+}
+
+sub _end{
+      my $self = shift;
+
+      $self->reset;
+      return undef;
 }
 
 sub reset{
       my $self = shift;
       $self->_logDebug3('DID RESET');
-      $self->{record_idx} = undef;
-      $self->{finished} = $self->{sth}->finish();
+
+      $self->{sth}->finish();
+      $self->{finished} = 1;
+      $self->{active} = 0;
 
       $self->{next} = *_first;
-      return undef;
+
+      return 1;
 }
 
 sub DESTROY{

@@ -18,7 +18,7 @@ my $dbr = new DBR(
 		 );
 
 
-my $dbrh = $dbr->connect('esrp_main','query') || die "failed to connect";
+my $dbrh = $dbr->connect('esrp_main','') || die "failed to connect";
 
 #my $ret =  $dbh->orders->where(cust_id => 902349);
 #my $ret =  $dbh->orders->get($order_ids);
@@ -90,7 +90,7 @@ my $ct;
 
 # 	     #print "Test passes \n" if $order->status->in('bar foo shipped');
 # 	     print "the ref is " . ref($order->status) . "\n";
-	     print "\n\n";
+	     #print "\n\n";
        }
 
 $dbrh->_stopwatch('cycle');
