@@ -202,6 +202,14 @@ sub getrel{
 
       my $resultset = $query->execute or return $self->_error('failed to execute');
 
+      # HERE HERE HERE
+      # we need cloned resultset objects, split by record
+      # automatic profiling of how many are accessed %
+      # store profiling info at the destroy
+      # iterate over these, and assign them to a slot in the result object
+      # no hash based caching
+
+
       return $resultset;
 }
 
