@@ -184,7 +184,6 @@ sub _iterator_prep{
 
 sub _end{
       my $self = shift;
-      print STDERR "END\n";
       $self->reset;
       return undef;
 }
