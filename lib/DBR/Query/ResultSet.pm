@@ -26,6 +26,8 @@ sub new {
       #prime the pump
       $self->{next} = *_first;
 
+      $self->{rowcache} = [];
+
       return( $self );
 }
 
@@ -139,6 +141,7 @@ sub _first{
 						   instance => $self->{instance},
 						   logger   => $self->{logger},
 						   query    => $self->{query},
+						   rowcache => $self->{rowcache}, # Would prefer to pass the resultset object itself, but that would cause a circular refrence
 						  ) or return $self->_error('failed to create record class');
 
 	    # need to keep this in scope, because it removes the dynamic class when DESTROY is called
@@ -158,7 +161,7 @@ sub _first{
 sub _iterator_prep{
       my $self = shift;
 
-      my $rows  = $self->{rows} = [];
+      my $rows  = $self->{rowcache};
       my $class = $self->{record}->class;
       my $sth   = $self->{sth};
 
@@ -168,7 +171,8 @@ sub _iterator_prep{
       $self->{next} = sub {
 	    my $row = (
 		       shift(@$rows) or # Shift from cache
-		       shift( @{$rows = $sth->fetchall_arrayref(undef,1000) or return $self->_end} ) # if cache is empty, fetch more
+		       shift( @{$rows = $sth->fetchall_arrayref(undef,1000) || [] } ) # if cache is empty, fetch more
+		       or return $self->_end
 		      );
 
 	    return bless($row,$class);
@@ -180,7 +184,7 @@ sub _iterator_prep{
 
 sub _end{
       my $self = shift;
-
+      print STDERR "END\n";
       $self->reset;
       return undef;
 }

@@ -78,9 +78,17 @@ my $ct;
 # 	     $dbrh->_stopwatch('set');
 	     #$dbrh->_stopwatch();
 	     my @fields = $order->get('status total prodtotal ship_method_id duties type');
+	     print "fields are " . join(',',@fields) . "\n";
+
+	     my $items = $order->items;
+	     while (my $item = $items->next){
+		   
+		   my @ifields = $item->get('status product_id price');
+		   print "\tITEM: fields are " . join(',',@ifields) . "\n";
+	     }
+
 	    # $dbrh->_stopwatch('get');
 
-	     print "fields are " . join(',',@fields) . "\n";
 	     #print "Status is now " . $order->status . "\n"; # { handle => 'cancelled', }
 
 # 	     print "Total is " . $order->total . " \n";

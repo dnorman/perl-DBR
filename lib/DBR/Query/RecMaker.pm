@@ -19,14 +19,17 @@ sub new {
 		  logger   => $params{logger},
 		  instance => $params{instance},
 		  query    => $params{query},
+		  rowcache => $params{rowcache},
 		 };
 
       bless( $self, $package ); # BS object
 
-      $self->{query} or return $self->_error('query is required');
-
-      $self->{scope} = $self->{query}->scope; # optional
+      $self->{logger}   or return $self->_error('logger is required');
       $self->{instance} or return $self->_error('instance object must be specified');
+      $self->{query}    or return $self->_error('query is required');
+      $self->{rowcache} or return $self->_error('rowcache is required');
+
+      $self->{scope} = $self->{query}->scope  or return $self->_error('failed to fetch scope object');
 
       $self->{classidx} = (shift @IDPOOL) || ++$classidx;
       #print STDERR "PACKAGEID: $self->{classidx}\n";
@@ -85,6 +88,7 @@ sub _prep{
 		  }else{
 			if(!$field){
 			      push @$fields, $checkfield; #not in the resultset, but we should still know about it
+			      $self->{fieldmap}->{ $checkfield->field_id } = $checkfield;
 			}
 		  }
 		  $field ||= $checkfield;
@@ -109,6 +113,7 @@ sub _prep{
 					      flookup  => \%flookup,
 					      scope    => $self->{scope},
 					      lastidx  => $self->{query}->lastidx,
+					      rowcache => $self->{rowcache},
 					     ) or return $self->_error('Failed to create RecHelper object');
 
       my $mode = 'rw';
@@ -121,6 +126,13 @@ sub _prep{
 				field => $field,
 				helper => $helper,
 			       ) or return $self->_error('Failed to create accessor');
+      }
+
+      foreach my $relation (@allrelations){
+	    $self->_mk_relation(
+				relation => $relation,
+				helper   => $helper,
+			       ) or return $self->_error('Failed to create relation');
       }
 
       $self->_mk_method(
@@ -190,6 +202,47 @@ sub _eval_accessor{
 }
 
 
+sub _mk_relation{
+      my $self = shift;
+      my %params = @_;
+
+      my $relation = $params{relation} or return $self->_error('relation is required');
+      my $helper = $params{helper} or return $self->_error('helper is required');
+
+      my $method = $relation->name;
+
+      my $obj      = '$_[0]';
+      my $record   = $obj;
+
+      my $fids = $relation->field_ids or return $self->_error('failed to retrieve field_ids');
+      return $self->_error('multifield mappings are not currently supported') if scalar(@$fids) > 1;
+
+      my $field = $self->{fieldmap}->{ $fids->[0] } or return $self->_error("field_id '$fids->[0]' is not valid");
+
+      my $code = "\$h->getrel( $record, \$r, \$f )";
+
+      $code = "sub {$code}";
+      $self->_logDebug2("$method = $code");
+
+      my $subref = _eval_relation($helper,$relation,$field,$code) or $self->_error('Failed to eval relation' . $@);
+
+      my $symbol = qualify_to_ref( $self->{recordclass} . '::' . $method );
+      *$symbol = $subref;
+
+      return 1;
+}
+
+#Seperate sub for scope cleanliness
+# This creates a blend of custom written perl code, and closure.
+sub _eval_relation{
+      my $h = shift;
+      my $r = shift;
+      my $f = shift;
+
+      return eval shift;
+}
+
+
 sub _mk_method{
       my $self = shift;
       my %params = @_;
@@ -205,7 +258,7 @@ sub _mk_method{
       $code = "sub {$code}";
       $self->_logDebug2($code);
 
-      my $subref = _eval_method($helper,$code) or $self->_error('Failed to eval accessor' . $@);
+      my $subref = _eval_method($helper,$code) or $self->_error('Failed to eval method' . $@);
       my $symbol = qualify_to_ref( $self->{recordclass} . '::' . $method );
       *$symbol = $subref;
 

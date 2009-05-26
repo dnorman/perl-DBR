@@ -16,6 +16,7 @@ sub new {
 		  pkmap    => $params{pkmap},
 		  scope    =>$params{scope},
 		  lastidx  => $params{lastidx},
+		  rowcache => $params{rowcache},
 		 };
 
       bless( $self, $package ); # BS object
@@ -28,6 +29,7 @@ sub new {
       $self->{pkmap} or return $self->_error('pkmap is required');
       $self->{flookup} or return $self->_error('flookup is required');
       defined($self->{lastidx}) or return $self->_error('lastidx is required');
+      $self->{rowcache} or return $self->_error('rowcache is required');
 
       return $self;
 }
@@ -157,6 +159,50 @@ sub getfield{
        $self->_setlocalval($record,$field,$val) or return $self->_error('failed to _setlocalval');
 
        return $val;
+}
+
+sub getrel{
+      my $self = shift;
+      my $record = shift;
+      my $relation = shift;
+      my $field  = shift;
+
+      my $idx = $field->index();
+      return $self->_error('no index!') unless defined($idx);
+      my @vals = $record->[ $idx ];
+
+      my $maptable  = $relation->maptable or return $self->_error('Failed to fetch maptable');
+
+      my $mapfields = $relation->mapfields or return $self->_error('Failed to fetch mapfields');
+      my $mapfield  = $mapfields->[0];
+
+      my $value = $mapfield->makevalue( \@vals ) or return $self->_error('failed to create value object');
+      my $outwhere = DBR::Query::Part::Compare->new( field => $mapfield, value => $value ) or return $self->_error('failed to create compare object');
+
+      my $scope = DBR::Config::Scope->new(
+					  logger        => $self->{logger},
+					  conf_instance => $maptable->conf_instance,
+					  extra_ident   => $maptable->name,
+					 ) or return $self->_error('Failed to get calling scope');
+
+      my $pk        = $maptable->primary_key or return $self->_error('Failed to fetch primary key');
+      my $prefields = $scope->fields or return $self->_error('Failed to determine fields to retrieve');
+
+      my %uniq;
+      my @fields = grep { !$uniq{ $_->field_id }++ } (@$pk, @$prefields);
+
+      my $query = DBR::Query->new(
+				  logger   => $self->{logger},
+				  instance => $self->{instance},
+				  tables   => $maptable->name,
+				  where    => $outwhere,
+				  select   => { fields => \@fields }, # use the new cloned field
+				  scope    => $scope,
+				 ) or return $self->_error('failed to create Query object');
+
+      my $resultset = $query->execute or return $self->_error('failed to execute');
+
+      return $resultset;
 }
 
 sub _pk_where{

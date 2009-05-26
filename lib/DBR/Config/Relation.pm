@@ -9,6 +9,7 @@ use strict;
 use base 'DBR::Common';
 use DBR::Query::Value;
 use DBR::Config::Table;
+use DBR::Config::Field;
 
 my %TYPES = (
 	     1 => {name => 'parent', opposite => 'child'},
@@ -83,20 +84,65 @@ sub new {
       my $self = {
 		  logger      => $params{logger},
 		  relation_id => $params{relation_id},
+		  table_id    => $params{table_id},
 		 };
 
       bless( $self, $package );
 
       return $self->_error('relation_id is required') unless $self->{relation_id};
+      return $self->_error('table_id is required')    unless $self->{table_id};
 
-      $RELATIONS_BY_ID{ $self->{relation_id} } or return $self->_error('invalid relation_id');
+
+      my $ref = $RELATIONS_BY_ID{ $self->{relation_id} } or return $self->_error('invalid relation_id');
+
+      if($ref->{from_table_id} == $self->{table_id}){
+	    $self->{mode} = 'from';
+	    $self->{mapmode} = 'to';
+      }elsif($ref->{to_table_id} == $self->{table_id}){
+	    $self->{mode} = 'to';
+	    $self->{mapmode} = 'from';
+      }else{
+	    return $self->_error("table_id $self->{table_id} is invalid for this relationship");
+      }
 
       return( $self );
 }
 
 sub relation_id { $_[0]->{relation_id} }
-#sub table_id { $FIELDS_BY_ID{  $_[0]->{field_id} }->{table_id}    }
-#sub name     { $FIELDS_BY_ID{  $_[0]->{field_id} }->{name}    }
+sub name     { $RELATIONS_BY_ID{  $_[0]->{relation_id} }->{ $_[0]->{mode}  . '_name' }    }
 
+sub field_ids {
+      my $self = shift;
+      my $maps = $RELATIONS_BY_ID{  $self->{relation_id} }->{maps} || [];
+
+      return [ map { $_->{$self->{mode}  . '_field_id' } } @{$maps} ];
+}
+
+sub mapfields {
+      my $self = shift;
+      my $maps = $RELATIONS_BY_ID{  $self->{relation_id} }->{maps} || [];
+
+      my @fields;
+      foreach my $map (  @$maps ) {
+	    my $field_id = $map->{ $self->{mapmode} . '_field_id' };
+	    my $field = DBR::Config::Field->new(
+						logger   => $self->{logger},
+						field_id => $field_id,
+					       ) or return $self->_error('failed to create field object');
+	    push @fields, $field;
+      }
+
+      return \@fields;
+}
+sub maptable {
+      my $self = shift;
+
+      return DBR::Config::Table->new(
+				     logger   => $self->{logger},
+				     table_id => $RELATIONS_BY_ID{  $self->{relation_id} }->{$self->{mapmode} . '_table_id'}
+				    );
+}
+
+#sub table_id { $FIELDS_BY_ID{  $_[0]->{field_id} }->{table_id}    }
 
 1;
