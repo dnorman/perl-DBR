@@ -13,6 +13,11 @@ my $dbr    = new DBR(
 		     -conf   => 'support/example_dbr.conf',
 		    );
 
+
+
+
+
+
 my $dbrh = $dbr->connect('example') || die "failed to connect";
 
 my $ret = $dbrh->select(

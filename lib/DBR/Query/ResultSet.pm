@@ -51,11 +51,14 @@ sub set{
 sub count{
       my $self = shift;
 
-      $self->_execute or return $self->_error('failed to execute');
-
       my $count;
       if ($self->{is_count}){
+	    return $self->{real_count} if $self->{real_count};
+
+	    $self->_execute or return $self->_error('failed to execute');
 	    ($count) = $self->{sth}->fetchrow_array();
+	    $self->{real_count} = $count;
+
 	    $self->reset();
       }else{
 	    return $self->{rowcount} || $self->{rows_hint}; # rowcount should be authoritative, but fail over to the hint
@@ -169,13 +172,14 @@ sub _iterator_prep{
       # It's very important that this closure is fast.
       # This one routine has more of an effect on speed than anything else in the rest of the code
       $self->{next} = sub {
-	    my $row = (
-		       shift(@$rows) or # Shift from cache
-		       shift( @{$rows = $sth->fetchall_arrayref(undef,1000) || [] } ) # if cache is empty, fetch more
-		       or return $self->_end
-		      );
-
-	    return bless($row,$class);
+	    bless(
+		  (
+		   shift(@$rows)# Shift from cache
+		   || shift( @{$rows = $sth->fetchall_arrayref(undef,1000) || [] } ) # if cache is empty, fetch more
+		   || return $self->_end
+		  ),
+		  $class
+		 );
       };
 
       return 1;
@@ -184,6 +188,7 @@ sub _iterator_prep{
 
 sub _end{
       my $self = shift;
+      $self->{rowcount} ||= $self->{sth}->rows; # Sqlite doesn't give any rowcount, so we have to use this as a fallback
       $self->reset;
       return undef;
 }

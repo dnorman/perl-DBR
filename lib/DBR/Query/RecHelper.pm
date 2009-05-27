@@ -173,8 +173,7 @@ sub getrel{
 
       my $maptable  = $relation->maptable or return $self->_error('Failed to fetch maptable');
 
-      my $mapfields = $relation->mapfields or return $self->_error('Failed to fetch mapfields');
-      my $mapfield  = $mapfields->[0];
+      my $mapfield = $relation->mapfield or return $self->_error('Failed to fetch mapfield');
 
       my $value = $mapfield->makevalue( \@vals ) or return $self->_error('failed to create value object');
       my $outwhere = DBR::Query::Part::Compare->new( field => $mapfield, value => $value ) or return $self->_error('failed to create compare object');

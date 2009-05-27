@@ -18,7 +18,7 @@ my $dbr = new DBR(
 		 );
 
 
-my $dbrh = $dbr->connect('esrp_main','') || die "failed to connect";
+my $dbrh = $dbr->connect('esrp_main') || die "failed to connect";
 
 #my $ret =  $dbh->orders->where(cust_id => 902349);
 #my $ret =  $dbh->orders->get($order_ids);
@@ -43,49 +43,69 @@ my $dbrh = $dbr->connect('esrp_main','') || die "failed to connect";
 # exit;
 
 
-# print "OPTIONS\n";
-# foreach my $option ( $dbrh->orders->enum('status') ){
-#       print "Handle: " . $option->handle . "\n";
-#       print "Concat: " . $option . "\n";
-#       print "Quoted: $option\n";
+#  print "OPTIONS\n";
+#  foreach my $option ( $dbrh->orders->enum('status') ){
+#        print "Handle: " . $option->handle . "\n";
+#        print "Concat: " . $option . "\n";
+#        print "Quoted: $option\n";
 
-#       print "IS EQ 'error'\n" if $option eq 'error';
-#       print "IS NE 'error'\n" if $option ne 'error';
-#       print "IS IN 'shipped settled'\n" if $option->in('shipped settled');
+#        print "IS EQ 'error'\n" if $option eq 'error';
+#        print "IS NE 'error'\n" if $option ne 'error';
+#        print "IS IN 'shipped settled'\n" if $option->in('shipped settled');
 
-#       print "\n\n";
-# }
-# exit;
+#        print "\n\n";
+#  }
+#  exit;
 
 $dbrh->_stopwatch();
 # for(1..10000){
 #my $orders = $dbrh->orders->get(163675);#where( cust_id => 902349, );
-my $orders = $dbrh->orders->where( cust_id => 902349, date_created => LT time );
+
+
+
+
+
+my $orders = $dbrh->orders->where(
+				  cust_id => 902349,
+				  date_created => LT time,
+				 );
 
 my $ct;
        while (my $order = $orders->next){
 
-	     #$order->status('settled') if !$ct++;
-	     #print "Status is " . $order->status . "\n"; # { handle => 'cancelled', }
-	     #print "Worked\n" if $order->status ne 'approved';
-	     #$order->status('shipped') or die 'failed to set status';
-# 	     $dbrh->_stopwatch();
- # 	      $order->set(status => 'shipped',
-#   			 type => 'phone',
-#   			 company_id => 1,
-#   			)  or die 'failed to set';
+	     print "order_id is " . $order->order_id . "\n";
+	     print "  Status is "   . $order->status . "\n";
 
-# 	     $dbrh->_stopwatch('set');
-	     #$dbrh->_stopwatch();
-	     my @fields = $order->get('status total prodtotal ship_method_id duties type');
-	     print "fields are " . join(',',@fields) . "\n";
+#	     $order->status('settled') if !$ct++;
 
-	     my $items = $order->items;
-	     while (my $item = $items->next){
-		   
-		   my @ifields = $item->get('status product_id price');
+# 	     #print "Worked\n" if $order->status ne 'approved';
+# 	     #$order->status('shipped') or die 'failed to set status';
+# # 	     $dbrh->_stopwatch();
+
+#   	      $order->set(status => 'shipped',
+#    			 type => 'phone',
+#    			 company_id => 1,
+#    			)  or die 'failed to set';
+
+# # 	     $dbrh->_stopwatch('set');
+# 	     #$dbrh->_stopwatch();
+
+
+	     
+
+ 	     my @fields = $order->get('status total prodtotal ship_method_id duties type');
+ 	     print "fields are " . join(',',@fields) . "\n";
+
+# 	     print "YES\n" if $order->status->in('ordered error shipped floobetyjoop');
+
+  	     my $items = $order->items;
+  	     while (my $item = $items->next){
+
+  		   my @ifields = $item->get('status product_id price');
 		   print "\tITEM: fields are " . join(',',@ifields) . "\n";
-	     }
+
+  	     }
+
 
 	    # $dbrh->_stopwatch('get');
 
@@ -98,7 +118,7 @@ my $ct;
 
 # 	     #print "Test passes \n" if $order->status->in('bar foo shipped');
 # 	     print "the ref is " . ref($order->status) . "\n";
-	     #print "\n\n";
+	     print "\n";
        }
 
 $dbrh->_stopwatch('cycle');
@@ -111,6 +131,8 @@ $dbrh->_stopwatch('cycle');
 
 	     #      #my $items = $order->items;#->set(something => 'foo');
 #$dbrh->orders->where( cust_id => 902349 )->set( status => 'approved' );
+
+
 
 #$dbrh->orders->insert(cust_id => 902349, status=>'ordered');
 

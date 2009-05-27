@@ -90,7 +90,7 @@ sub load_from_db{
 	    my $instance = $self->register(
 					   logger => $self->{logger},
 					   spec   => $instrow
-					  ) || $self->_error("failed to load instance from database (@{[$parent->handle]} @{[$parent->class]})") && next;
+					  ) || $self->_error("failed to load instance from database (@{[$parent->handle]} @{[$parent->class]})") or next;
 	    push @instances, $instance;
       }
 

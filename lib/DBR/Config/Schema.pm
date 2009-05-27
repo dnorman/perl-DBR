@@ -32,7 +32,7 @@ sub load{
       return $self->_error('Failed to select instances') unless
 	my $schemas = $dbrh->select(
 				    -table => 'dbr_schemas',
-				    -fields => 'schema_id handle display_name definition_mode',
+				    -fields => 'schema_id handle display_name',
 				    -where  => { schema_id => ['d in', @{$schema_ids}] },
 				   );
 

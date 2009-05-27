@@ -37,7 +37,7 @@ sub load{
       return $self->_error('Failed to select from dbr_relationships') unless
 	my $relations = $dbrh->select(
 				      -table => 'dbr_relationships',
-				      -fields => 'relationship_id to_name from_name from_table_id to_table_id type',
+				      -fields => 'relationship_id from_name from_table_id from_field_id to_name to_table_id to_field_id type',
 				      -where  => { from_table_id => ['d in',@$table_ids] },
 				     );
 
@@ -46,32 +46,18 @@ sub load{
 
 	    DBR::Config::Table->_register_relation(
 						   table_id    => $relation->{to_table_id},
-						   name        => $relation->{to_name},
+						   name        => $relation->{from_name}, #yes, this is kinda confusing
 						   relation_id => $relation->{relationship_id},
 						  ) or return $self->_error('failed to register to relationship');
 
 	    DBR::Config::Table->_register_relation(
 						   table_id    => $relation->{from_table_id},
-						   name        => $relation->{from_name},
+						   name        => $relation->{to_name}, #yes, this is kinda confusing
 						   relation_id => $relation->{relationship_id},
 						  ) or return $self->_error('failed to register from relationship');
 
 	    $RELATIONS_BY_ID{ $relation->{relationship_id} } = $relation;
 	    push @rel_ids, $relation->{relationship_id};
-      }
-
-      if(@rel_ids){
-	    return $self->_error('Failed to select from dbr_field_map') unless
-	      my $maps = $dbrh->select(
-				       -table => 'dbr_field_map',
-				       -fields => 'map_id relationship_id from_field_id to_field_id',
-				       -where  => { relationship_id => ['d in',@rel_ids] },
-				      );
-
-	    foreach my $map (@{$maps}){
-		  my $ref = $RELATIONS_BY_ID{ $map->{relationship_id} }->{maps} ||=[];
-		  push @$ref, $map;
-	    }
       }
 
       return 1;
@@ -96,11 +82,15 @@ sub new {
       my $ref = $RELATIONS_BY_ID{ $self->{relation_id} } or return $self->_error('invalid relation_id');
 
       if($ref->{from_table_id} == $self->{table_id}){
-	    $self->{mode} = 'from';
-	    $self->{mapmode} = 'to';
+
+	    $self->{forward} = 'from';
+	    $self->{reverse} = 'to';
+
       }elsif($ref->{to_table_id} == $self->{table_id}){
-	    $self->{mode} = 'to';
-	    $self->{mapmode} = 'from';
+
+	    $self->{forward} = 'to';
+	    $self->{reverse} = 'from';
+
       }else{
 	    return $self->_error("table_id $self->{table_id} is invalid for this relationship");
       }
@@ -109,40 +99,32 @@ sub new {
 }
 
 sub relation_id { $_[0]->{relation_id} }
-sub name     { $RELATIONS_BY_ID{  $_[0]->{relation_id} }->{ $_[0]->{mode}  . '_name' }    }
+sub name     { $RELATIONS_BY_ID{  $_[0]->{relation_id} }->{ $_[0]->{reverse}  . '_name' }    } # Name is always the opposite of everything else
 
-sub field_ids {
+sub field_id {
       my $self = shift;
-      my $maps = $RELATIONS_BY_ID{  $self->{relation_id} }->{maps} || [];
 
-      return [ map { $_->{$self->{mode}  . '_field_id' } } @{$maps} ];
+      return $RELATIONS_BY_ID{  $self->{relation_id} }->{ $self->{forward}  . '_field_id' };
 }
 
-sub mapfields {
+sub mapfield {
       my $self = shift;
-      my $maps = $RELATIONS_BY_ID{  $self->{relation_id} }->{maps} || [];
+      my $mapfield_id = $RELATIONS_BY_ID{  $self->{relation_id} }->{ $self->{reverse}  . '_field_id' };
 
-      my @fields;
-      foreach my $map (  @$maps ) {
-	    my $field_id = $map->{ $self->{mapmode} . '_field_id' };
-	    my $field = DBR::Config::Field->new(
-						logger   => $self->{logger},
-						field_id => $field_id,
-					       ) or return $self->_error('failed to create field object');
-	    push @fields, $field;
-      }
+      my $field = DBR::Config::Field->new(
+					  logger   => $self->{logger},
+					  field_id => $mapfield_id,
+					 ) or return $self->_error('failed to create field object');
 
-      return \@fields;
+      return $field;
 }
 sub maptable {
       my $self = shift;
 
       return DBR::Config::Table->new(
 				     logger   => $self->{logger},
-				     table_id => $RELATIONS_BY_ID{  $self->{relation_id} }->{$self->{mapmode} . '_table_id'}
+				     table_id => $RELATIONS_BY_ID{  $self->{relation_id} }->{$self->{reverse} . '_table_id'}
 				    );
 }
-
-#sub table_id { $FIELDS_BY_ID{  $_[0]->{field_id} }->{table_id}    }
 
 1;

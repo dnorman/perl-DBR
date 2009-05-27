@@ -72,7 +72,7 @@ sub _get_scope_id{
       while(++$try < 3){
 	    #Yeahhh... using the old way for now, Don't you like absurd recursion? perhaps change this?
 	    my $record = $dbrh->select(
-				       -table => 'dbr_scopes',
+				       -table => 'cache_scopes',
 				       -fields => 'scope_id',
 				       -where => {digest => $digest},
 				       -single => 1,
@@ -81,7 +81,7 @@ sub _get_scope_id{
 	    return $SCOPE_CACHE{$digest} = $record->{scope_id} if $record;
 
 	    my $scope_id = $dbrh->insert(
-					 -table => 'dbr_scopes',
+					 -table => 'cache_scopes',
 					 -fields => {
 						     digest => $digest
 						    },
@@ -109,10 +109,10 @@ sub fields{
 	    my $dbrh = $instance->connect or return $self->_error("Failed to connect to ${\$instance->name}");
 
 	    my $fields = $dbrh->select(
-				       -table => 'dbr_fielduse',
+				       -table => 'cache_fielduse',
 				       -fields => 'field_id',
 				       -where => { scope_id => ['d',$self->{scope_id}] },
-				      ) or return $self->_error('Failed to select from dbr_fielduse');
+				      ) or return $self->_error('Failed to select from cache_fielduse');
 	    $fids = [map { $_->{field_id} } @$fields];
 	    $cache->[0] = time;
 	    $cache->[1] = $fids;
@@ -151,7 +151,7 @@ sub addfield{ #HERE HERE HERE double check the caching logic
 
       # Don't check for failure, the unique index constraint will reject hte insert in case of a race condition
       my $row_id = $dbrh->insert(
-				 -table => 'dbr_fielduse',
+				 -table => 'cache_fielduse',
 				 -fields => {
 					     scope_id => ['d',$self->{scope_id}],
 					     field_id => ['d',$fid]

@@ -97,6 +97,7 @@ sub load_dbconf{
 							    dbr      => $dbr,
 							    parent_inst => $parent_inst
 							   );
+
       my %schema_ids;
       map {$schema_ids{ $_->schema_id } = 1 } @$instances;
 

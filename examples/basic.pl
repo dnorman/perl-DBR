@@ -18,20 +18,18 @@ my $dbr = new DBR(
 		 );
 
 
+
 my $dbrh = $dbr->connect('example') || die "failed to connect";
+
+
+
 
 my $artists = $dbrh->artist->all or die "failed to fetch artists";
 
+
+print "Artists:\n\n";
 while (my $artist = $artists->next){
-      print "The name of the artist is " . $artist->name . "\n";
 
-     #while (my $album = $artist->albums){ # This will work soon
-
-      # For now we have to do it like this :-(
-      my $albums = $dbrh->album->where(artist_id => $artist->artist_id) or die "Failed to retrieve albums";
-      while(my $album = $albums->next){
-
-	    print "\tThe name of the album is " . $album->name . "\n";
-      }
+      print $artist->name . "\n";
 
 }

@@ -8,13 +8,13 @@ use DBR::Util::ScanDB;
 use DBR;
 use strict;
 
+my ($conffile,$scandb) = @ARGV;
+
 my $logger = new DBR::Util::Logger(-logpath => '/tmp/dbr_loadmeta.log', -logLevel => 'debug3');
 my $dbr    = new DBR(
 		     -logger => $logger,
-		     -conf   => '/dj/tools/perl-dbr/examples/support/example_dbr.conf',
+		     -conf   => $conffile,
 		    );
-
-my $scandb = $ARGV[0];
 
 my $confdb = 'dbrconf';
 my $schema_id = 1;

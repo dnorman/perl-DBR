@@ -5,7 +5,6 @@
 
 package DBR::Util::ScanDB;
 
-use Data::Dumper;
 use strict;
 use base 'DBR::Common';
 use DBR::Config::Field;
@@ -37,8 +36,6 @@ sub scan{
       my %params;
       my $tables = $self->scan_tables() || die "failed to scan tables";
 
-      print STDERR Dumper($tables);
-
       foreach my $table (@{$tables}){
        	    my $fields = $self->scan_fields($table) or return $self->_error( "failed to describe table" );
 
@@ -59,6 +56,8 @@ sub scan_tables{
       my @tables;
       while (my $row = $sth->fetchrow_hashref()) {
 	    my $name = $row->{TABLE_NAME} or return $self->_error('Table entry has no name!');
+
+	    next if ($name eq 'sqlite_sequence'); # Ugly
 
 	    if($row->{TABLE_TYPE} eq 'TABLE'){
 		  push @tables, $name;

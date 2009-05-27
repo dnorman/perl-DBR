@@ -51,7 +51,7 @@ sub moduleload{
       my %VALUES_BY_ID;
       foreach my $value (@$values){
 	    my $enum_id = $value->{enum_id};
-	    my $id = $value->{override_id} or $enum_id;
+	    my $id = $value->{override_id} || $enum_id;
 
 	    $VALUES_BY_ID{ $enum_id } = [$id,$value->{handle},$value->{name}]; #
       }

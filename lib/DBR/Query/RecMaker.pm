@@ -183,7 +183,7 @@ sub _mk_accessor{
       $code = "sub {$code}";
       $self->_logDebug2($code);
 
-      my $subref = _eval_accessor($helper,$field,$trans,$code) or $self->_error('Failed to eval accessor' . $@);
+      my $subref = _eval_accessor($helper,$field,$trans,$code) or $self->_error('Failed to eval accessor ' . $@);
 
       my $symbol = qualify_to_ref( $self->{recordclass} . '::' . $method );
       *$symbol = $subref;
@@ -194,9 +194,9 @@ sub _mk_accessor{
 #Seperate sub for scope cleanliness
 # This creates a blend of custom written perl code, and closure.
 sub _eval_accessor{
-      my $h = shift;
-      my $f = shift;
-      my $t = shift;
+      my $h = shift; #helper
+      my $f = shift; #field
+      my $t = shift; #translator
 
       return eval shift;
 }
@@ -214,10 +214,9 @@ sub _mk_relation{
       my $obj      = '$_[0]';
       my $record   = $obj;
 
-      my $fids = $relation->field_ids or return $self->_error('failed to retrieve field_ids');
-      return $self->_error('multifield mappings are not currently supported') if scalar(@$fids) > 1;
+      my $field_id = $relation->field_id or return $self->_error('failed to retrieve field_id');
 
-      my $field = $self->{fieldmap}->{ $fids->[0] } or return $self->_error("field_id '$fids->[0]' is not valid");
+      my $field = $self->{fieldmap}->{ $field_id } or return $self->_error("field_id '$field_id' is not valid");
 
       my $code = "\$h->getrel( $record, \$r, \$f )";
 
