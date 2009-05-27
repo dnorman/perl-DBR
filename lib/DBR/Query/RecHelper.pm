@@ -168,8 +168,14 @@ sub getrel{
       my $field  = shift;
 
       my $idx = $field->index();
-      return $self->_error('no index!') unless defined($idx);
-      my @vals = $record->[ $idx ];
+      my @vals;
+
+      if( defined($idx)){
+	    push @vals, $record->[ $idx ];
+      }else{
+	    my $val = $self->getfield($record,$field) or return $self->_error("failed to fetch the value of ${\ $field->name }");
+	    push @vals, $val;
+      }
 
       my $maptable  = $relation->maptable or return $self->_error('Failed to fetch maptable');
 

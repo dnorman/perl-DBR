@@ -70,7 +70,7 @@ sub new{
       if( $self->{is_number} ){
 	    foreach my $val ( @{$value}) {
 		  if ($val !~ /^-?\d*\.?\d+$/) {
-			return $self->_error("value $val is not a legal number");
+			return $self->_error("value '$val' is not a legal number");
 		  }
 	    }
       }
@@ -99,8 +99,10 @@ sub sql {
 
       if (@$values > 1) {
 	    $sql .= '(' . join(',',@{$values}) . ')';
-      } else {
+      } elsif(@$values == 1){
 	    $sql = $values->[0];
+      }else{
+	    $sql = 'NULL';
       }
 
       return $sql;

@@ -22,7 +22,7 @@ my $dbrh = $dbr->connect('example') || die "failed to connect";
 
 
 print "\n\n";
-print "The choices for Genre are:\n";
+print "The choices for rating are:\n";
 foreach my $rating ($dbrh->album->enum('rating')){
       print "\t $rating \t ( ${\ $rating->handle } )\n";
 }
