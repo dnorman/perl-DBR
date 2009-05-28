@@ -34,6 +34,7 @@ my $artists = $dbrh->artist->all or die "failed to fetch artists";
 print "Artists:\n";
 my $ct;
 while (my $artist = $artists->next){
+
       print "\t" . $artist->name . "\n";
 
       my $albums = $artist->albums or die "failed to retrieve albums";

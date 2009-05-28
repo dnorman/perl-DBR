@@ -259,6 +259,11 @@ sub _where {
 		  if (ref($value) eq 'HASH') {
 			if($value->{-table} && ($value->{-field} || $value->{-fields})){ #does it smell like a subquery?
 
+			      my $field = DBR::Config::Field::Anon->new(
+									logger => $self->{logger},
+									name   => $key,
+								       ) or return $self->_error('Failed to create field object');
+
 			      my $compat = DBR::Interface::DBRv1->new(
 								      logger   => $self->{logger},
 								      instance => $self->{instance},
@@ -267,7 +272,7 @@ sub _where {
 			      my $query = $compat->select(%{$value}, -query => 1) or return $self->_error('failed to create query object');
 			      return $self->_error('invalid subquery') unless $query->can_be_subquery;
 
-			      push @out, DBR::Query::Part::Subquery->new($key, $query);
+			      push @out, DBR::Query::Part::Subquery->new($field, $query);
 
 			}else{ #if( $self->{aliasmap} ){ #not a subquery... are we doing a join?
 			      my $alias = $key;

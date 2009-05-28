@@ -58,7 +58,6 @@ sub _register_table{
       my $schema_id = $params{schema_id} or return $package->_error('schema_id is required');
       $SCHEMAS_BY_ID{ $schema_id } or return $package->_error('invalid schema_id');
 
-      my $schema_id = $params{schema_id} or return $package->_error('schema_id is required');
       my $name      = $params{name}      or return $package->_error('name is required');
       my $table_id  = $params{table_id}  or return $package->_error('table_id is required');
 

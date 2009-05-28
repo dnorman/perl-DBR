@@ -8,6 +8,7 @@ package DBR::Query::Part::AndOr;
 
 use strict;
 use base 'DBR::Query::Part';
+use Carp;
 
 sub new{
       my( $package ) = shift;
@@ -15,7 +16,7 @@ sub new{
       return $package->_error('cannot call new on DBR::Query::Part::AndOr directly') if $package eq 'DBR::Query::Part::AndOr';
 
       for (@_){
-	    ref($_) =~ /^DBR::Query::Part::/ || return $package->_error('arguments must be part objects')
+	    ref($_) =~ /^DBR::Query::Part::/ || return croak('arguments must be part objects')
       };
 
       my $self = [@_];

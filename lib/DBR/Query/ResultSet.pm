@@ -26,7 +26,8 @@ sub new {
       #prime the pump
       $self->{next} = *_first;
 
-      $self->{rowcache} = [];
+      my $cache = []; # Sacrificial arrayref. This arrayref is not preserved, but the scalar is.
+      $self->{rowcache} = \$cache; #Use the scalarref to $cache to be able to access this remotely
 
       return( $self );
 }
@@ -164,7 +165,8 @@ sub _first{
 sub _iterator_prep{
       my $self = shift;
 
-      my $rows  = $self->{rowcache};
+      my $ref  = $self->{rowcache};
+      my $rows = $$ref;
       my $class = $self->{record}->class;
       my $sth   = $self->{sth};
 
@@ -175,7 +177,7 @@ sub _iterator_prep{
 	    bless(
 		  (
 		   shift(@$rows)# Shift from cache
-		   || shift( @{$rows = $sth->fetchall_arrayref(undef,1000) || [] } ) # if cache is empty, fetch more
+		   || shift( @{$rows = $$ref = $sth->fetchall_arrayref(undef,1000) || [] } ) # if cache is empty, fetch more
 		   || return $self->_end
 		  ),
 		  $class

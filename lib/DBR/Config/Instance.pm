@@ -29,9 +29,11 @@ sub flush_all_handles {
       my $cache = \%CONCACHE;
 
       foreach my $guid (keys %INSTANCES_BY_GUID){
-		my $conn = $cache->{ $guid };
-		$conn->disconnect();
-		delete $cache->{ $guid };
+	    my $conn = $cache->{ $guid };
+	    if($conn){
+		  $conn->disconnect();
+		  delete $cache->{ $guid };
+	    }
       }
 
       return 1;

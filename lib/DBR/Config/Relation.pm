@@ -10,6 +10,7 @@ use base 'DBR::Common';
 use DBR::Query::Value;
 use DBR::Config::Table;
 use DBR::Config::Field;
+use Carp;
 
 my %TYPES = (
 	     1 => {name => 'parent', opposite => 'child'},
@@ -125,6 +126,22 @@ sub maptable {
 				     logger   => $self->{logger},
 				     table_id => $RELATIONS_BY_ID{  $self->{relation_id} }->{$self->{reverse} . '_table_id'}
 				    );
+}
+
+
+
+
+sub index{
+      my $self = shift;
+      my $set = shift;
+
+      if(defined($set)){
+	    croak "Cannot set the index on a relation object twice" if defined($self->{index}); # I want this to fail obnoxiously
+	    $self->{index} = $set;
+	    return 1;
+      }
+
+      return $self->{index};
 }
 
 1;

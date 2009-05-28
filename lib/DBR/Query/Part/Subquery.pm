@@ -7,13 +7,14 @@
 package DBR::Query::Part::Subquery;
 use strict;
 use base 'DBR::Query::Part';
+use Carp;
 
 sub new{
       my( $package ) = shift;
       my ($field,$query) = @_;
 
-      return $package->_error('field must be a Field object') unless ref($field) =~ /^DBR::Config::Field/; # Could be ::Anon
-      return $package->_error('value must be a Value object') unless ref($query) eq 'DBR::Query';
+      croak('field must be a Field object') unless ref($field) =~ /^DBR::Config::Field/; # Could be ::Anon
+      croak('value must be a Value object') unless ref($query) eq 'DBR::Query';
 
       my $self = [ $field, $query ];
 

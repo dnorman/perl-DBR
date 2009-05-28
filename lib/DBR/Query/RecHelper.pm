@@ -167,21 +167,32 @@ sub getrel{
       my $relation = shift;
       my $field  = shift;
 
-      my $idx = $field->index();
-      my @vals;
+      my $ridx = $relation->index;
+      # Check to see if this record has a cached version of the resultset
+      return $record->[$ridx] if defined($ridx) && exists($record->[$ridx]); # skip the rest if we have that
 
-      if( defined($idx)){
-	    push @vals, $record->[ $idx ];
+
+      my $fidx = $field->index();
+      my %vals; # For uniq-ing
+
+
+      #use Data::Dumper;
+      #print Dumper($self->{rowcache});
+      if( defined($fidx) && exists($record->[$fidx]) ){
+	    $vals { $record->[ $fidx ] } = 1; # My value
+	    map { $vals{ $_->[ $fidx ] } = 1 } @{${$self->{rowcache}}}; # look forward in the rowcache and add those too
       }else{
 	    my $val = $self->getfield($record,$field) or return $self->_error("failed to fetch the value of ${\ $field->name }");
-	    push @vals, $val;
+	    $vals{ $val } = 1;
       }
+
+      delete $vals{undef};
 
       my $maptable  = $relation->maptable or return $self->_error('Failed to fetch maptable');
 
       my $mapfield = $relation->mapfield or return $self->_error('Failed to fetch mapfield');
 
-      my $value = $mapfield->makevalue( \@vals ) or return $self->_error('failed to create value object');
+      my $value = $mapfield->makevalue( [ keys %vals ] ) or return $self->_error('failed to create value object');
       my $outwhere = DBR::Query::Part::Compare->new( field => $mapfield, value => $value ) or return $self->_error('failed to create compare object');
 
       my $scope = DBR::Config::Scope->new(
@@ -212,8 +223,9 @@ sub getrel{
       # automatic profiling of how many are accessed %
       # store profiling info at the destroy
       # iterate over these, and assign them to a slot in the result object
-      # no hash based caching
 
+      # Create a slot in the parent record and store the resultset there
+      $self->_setlocalval($record,$relation,$resultset) or return $self->_error('failed to _setlocalval');
 
       return $resultset;
 }
@@ -241,7 +253,7 @@ sub _pk_where{
 sub _setlocalval{
       my $self   = shift;
       my $record = shift;
-      my $field  = shift;
+      my $field  = shift; # Could also be a relationship
       my $val    = shift;
 
       my $idx = $field->index;
