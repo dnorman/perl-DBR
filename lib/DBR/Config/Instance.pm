@@ -152,13 +152,15 @@ sub register { # basically the same as a new
 	    $config->{connectstring} =~ s/-$key-/$config->{$key}/;
       }
 
-      my $guid = $GUID++;
+      #Reuse the guid if we are being reloaded
+      my $guid = $INSTANCE_MAP{ $config->{handle} }->{ $config->{class} } || $GUID++;
+
+      # Register this instance in the global repository
+      $INSTANCE_MAP{ $config->{handle}  }->{ $config->{class} } ||= $guid;
+
       $INSTANCES_BY_GUID{ $guid } = $config;
       $self->{guid} = $config->{guid} = $guid;
       # Now we are cool to start calling accessors
-
-      # Register this instance in the global repository
-      $INSTANCE_MAP{ $self->handle }->{ $self->class } = $guid;
 
       if ($spec->{alias}) {
 	    $INSTANCE_MAP{ $spec->{alias} }->{'*'} = $guid;

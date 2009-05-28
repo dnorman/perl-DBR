@@ -10,6 +10,7 @@ use base 'DBR::Common';
 use DBR::Config::Instance;
 use DBR::Config::Schema;
 
+my %LOADED_FILES;
 sub new {
   my( $package ) = shift;
   my %params = @_;
@@ -28,6 +29,11 @@ sub load_file{
 
       my $dbr   = $params{'dbr'}   or return $self->_error( 'dbr parameter is required'  );
       my $file  = $params{'file'}  or return $self->_error( 'file parameter is required' );
+      if ($LOADED_FILES{$file}){
+	    $self->_logDebug2("skipping already loaded config file '$file'");
+	    return 1;
+      }
+
       $self->_logDebug2("loading config file '$file'");
       my @conf;
       my $setcount = 0;
@@ -75,6 +81,8 @@ sub load_file{
 				    ) || $self->_error("failed to load DBR config tables") && next;
 	    }
       }
+
+      $LOADED_FILES{$file} = 1;
 
       return 1;
 

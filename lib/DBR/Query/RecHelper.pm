@@ -180,7 +180,7 @@ sub getrel{
       #print Dumper($self->{rowcache});
       if( defined($fidx) && exists($record->[$fidx]) ){
 	    $vals { $record->[ $fidx ] } = 1; # My value
-	    map { $vals{ $_->[ $fidx ] } = 1 } @{${$self->{rowcache}}}; # look forward in the rowcache and add those too
+	  #  map { $vals{ $_->[ $fidx ] } = 1 } @{${$self->{rowcache}}}; # look forward in the rowcache and add those too
       }else{
 	    my $val = $self->getfield($record,$field) or return $self->_error("failed to fetch the value of ${\ $field->name }");
 	    $vals{ $val } = 1;
