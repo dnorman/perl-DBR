@@ -30,8 +30,8 @@ sub new{
 	    return $self->_error('invalid field object') unless ref($field) eq 'DBR::Config::Field';
       }
 
+      return $self->_error('value must be specified') unless exists($params{value}); # undef and 0 are both legal, so cannot check for defined or truth
       my $value = $params{value};
-      return $self->_error('value must be specified') unless $value;
 
       if ( ref($value) eq 'DBR::Util::Operator' ) {
 	    my $wrapper = $value;
