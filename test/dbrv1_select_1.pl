@@ -22,34 +22,25 @@ my $dbr    = new DBR(
 my $dbrh = $dbr->connect('esrp_main') || die "failed to connect";
 
 my $ret = $dbrh->select(
-			'-table' => 'property_records',
+			'-table' => 'resource_locks',
 			'-where' => {
-				     'type_id' => [
+				     'cust_id' => [
 						   'd',
-						   2
+						   '902394'
 						  ],
-				     'prop_no' => {
-						   '-table' => 'property_lookup',
-						   '-where' => {
-								'class' => [
-									    'd in',
-									    1
-									   ]
-							       },
-						   '-field' => 'prop_no'
-						  },
-				     'item_id' => [
-						   'in d',
-						   '125668'
+				     'value' => [
+						 'd',
+						 '22461'
+						],
+				     'name' => 'invoice',
+				     'expires' => [
+						   'd >=',
+						   1243474231
 						  ]
 				    },
-			'-fields' => [
-				      'item_id',
-				      'prop_no',
-				      'value'
-				     ]
-
-		       ) or die 'failed to select from album';
+			'-fields' => 'row_id expires',
+			'-single' => 1
+		       );
 
 
 print Dumper($ret);

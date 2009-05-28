@@ -31,7 +31,7 @@ sub new{
       my $value = $params{value};
 
       return $package->_error('field must be a Field object') unless ref($field) =~ /^DBR::Config::Field/; # Could be ::Anon
-      return $package->_error('value must be a Value object') unless ref($value) eq 'DBR::Query::Value';
+      return $package->_error('value must be a Value object') unless ref($value) eq 'DBR::Query::Part::Value';
 
       my $ref = ref($value);
 

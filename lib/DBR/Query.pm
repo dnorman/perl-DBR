@@ -8,9 +8,6 @@ package DBR::Query;
 use strict;
 no strict 'subs';
 use base 'DBR::Common';
-my $VALUE_OBJECT = 'DBR::Query::Value';
-my $QUERY_OBJECT = _PACKAGE_;
-use DBR::Query::Part;
 
 sub new {
       my( $package ) = shift;

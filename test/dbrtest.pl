@@ -8,7 +8,7 @@ use ApolloUtils::Logger;
 use DBR;
 use DBR::Util::Operator; # Imports operator functions
 
-my $logger = new ApolloUtils::Logger(-logpath => '/dj/logs/dbr_test.log', -logLevel => 'debug3');
+my $logger = new ApolloUtils::Logger(-logpath => '/dj/logs/dbr_test.log', -logLevel => 'debug');
 
 #<STDIN>;
 
@@ -16,7 +16,6 @@ my $dbr = new DBR(
 		  -logger => $logger,
 		  -conf   => '/dj/data/DBR.conf',
 		 );
-
 
 my $dbrh = $dbr->connect('esrp_main') || die "failed to connect";
 
@@ -66,14 +65,14 @@ $dbrh->_stopwatch();
 
 
 my $orders = $dbrh->orders->where(
-				  cust_id => 902349,
-				  date_created => LT time,
+				  cust_id => LT 902349 + 100000,
+				  #date_created => LT time,
 				 );
 
 my $ct;
        while (my $order = $orders->next){
 
-	     print "order_id is " . $order->order_id . "\n";
+	     print "order_id is "   . $order->order_id . "\n";
 	     print "  Status is "   . $order->status . "\n";
 
 #	     $order->status('settled') if !$ct++;
@@ -146,4 +145,7 @@ $dbrh->_stopwatch('cycle');
 
 #$container->values('order_id');
 
-#<STDIN>;
+print "\n orders: ${\$orders->count}\n";
+
+print "\n\nPress a key to quit... \n";
+<STDIN>;

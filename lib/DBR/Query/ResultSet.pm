@@ -1,9 +1,10 @@
 package DBR::Query::ResultSet;
 
 use strict;
-use base 'DBR::Common';
+use base 'DBR::Query::ResultSet::Common';
 use DBR::Query::RecMaker;
 use Carp;
+use DBR::Query::ResultSet::Lite;
 
 sub new {
       my( $package ) = shift;
@@ -26,7 +27,7 @@ sub new {
       #prime the pump
       $self->{next} = *_first;
 
-      my $cache = []; # Sacrificial arrayref. This arrayref is not preserved, but the scalar is.
+      my $cache = []; # Sacrificial arrayref. This arrayref is not preserved, but the scalarref is.
       $self->{rowcache} = \$cache; #Use the scalarref to $cache to be able to access this remotely
 
       return( $self );
@@ -35,19 +36,6 @@ sub new {
 
 
 sub next { $_[0]->{next}->( $_[0] ) }
-sub delete {croak "Mass delete is not allowed. No cookie for you!"}
-
-
-sub set{
-      my $self = shift;
-      my %fields = @_;
-
-      
-   #    my $setvalue = $field->makevalue($value) or return $self->_error('failed to create setvalue object');
-    #   my $setobj   = DBR::Query::Part::Set->new( $field, $setvalue ) or return $self->_error('failed to create set object');
-
-
-};
 
 sub count{
       my $self = shift;
@@ -81,7 +69,44 @@ sub hashrefs{
 
 }
 
-sub arrayrefs{
+sub split{
+      my $self = shift;
+      my $field = shift;
+
+
+      my $idx = $field->index;
+      return $self->_error('field object must provide an index') unless defined($idx);
+
+      $self->_makerecord or return $self->_error('failed to make record class');
+
+      my $rows = $self->_allrows or return $self->_error('_allrows failed');
+      my $code = 'map { push @{$groupby{ $_->[' . $idx . '] }}, $_ } @{ $rows }';
+      $self->_logDebug3($code);
+
+      my %groupby;
+      eval $code;
+
+      my $class = ref($self) . '::Lite';
+      foreach my $key (keys %groupby){
+	    $groupby{$key} = DBR::Query::ResultSet::Lite->new(
+							      logger  => $self->{logger},
+							      rows    => $groupby{$key},
+							      query   => $self->{query},
+							      record  => $self->{record}, #keep RecMaker object in scope);
+							     ) or return $self->_error('failed to create resultset lite object');
+      }
+
+      return \%groupby;
+}
+
+
+
+
+###################################################
+### Utility #######################################
+###################################################
+
+sub _allrows{
       my $self = shift;
 
       $self->_execute or return $self->_error('failed to execute');
@@ -92,29 +117,6 @@ sub arrayrefs{
 
       return $ret;
 }
-
-sub map {
-      my $self = shift;
-      my @fields = shift;
-
-      $self->_execute or return $self->_error('failed to execute');
-
-      my $ret = $self->{sth}->fetchall_hashref(@fields);
-
-      $self->reset();
-
-      return $ret;
-}
-
-
-
-
-
-
-
-###################################################
-### Utility #######################################
-###################################################
 
 sub _execute{
       my $self = shift;
@@ -139,20 +141,7 @@ sub _execute{
 sub _first{
       my $self = shift;
 
-      if(!$self->{record}){
-	    $self->_stopwatch();
-	    my $record = DBR::Query::RecMaker->new(
-						   instance => $self->{instance},
-						   logger   => $self->{logger},
-						   query    => $self->{query},
-						   rowcache => $self->{rowcache}, # Would prefer to pass the resultset object itself, but that would cause a circular refrence
-						  ) or return $self->_error('failed to create record class');
-
-	    # need to keep this in scope, because it removes the dynamic class when DESTROY is called
-	    $self->{record} = $record;
-
-	    $self->_stopwatch('recmaker');
-      }
+      $self->_makerecord or return $self->_error('failed to make record class');
 
       $self->_execute() or return $self->_error('failed to execute');
 
@@ -193,6 +182,28 @@ sub _end{
       $self->{rowcount} ||= $self->{sth}->rows; # Sqlite doesn't give any rowcount, so we have to use this as a fallback
       $self->reset;
       return undef;
+}
+
+
+sub _makerecord{
+      my $self = shift;
+
+      if(!$self->{record}){
+	    $self->_stopwatch();
+	    my $record = DBR::Query::RecMaker->new(
+						   instance => $self->{instance},
+						   logger   => $self->{logger},
+						   query    => $self->{query},
+						   rowcache => $self->{rowcache}, # Would prefer to pass the resultset object itself, but that would cause a circular refrence
+						  ) or return $self->_error('failed to create record class');
+
+	    # need to keep this in scope, because it removes the dynamic class when DESTROY is called
+	    $self->{record} = $record;
+
+	    $self->_stopwatch('recmaker');
+      }
+
+      return 1;
 }
 
 sub reset{

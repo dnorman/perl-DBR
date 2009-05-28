@@ -41,8 +41,8 @@ while (my $artist = $artists->next){
 
       while (my $album = $albums->next){
 
-	    print "\t\t Album: '" . $album->name . "'\n";
-	    print "\t\t Rating: " . $album->rating . " (" . $album->rating->handle .")\n"; # rating is an enum. Enums and other translators are "magic" objects
+ 	    print "\t\t Album: '" . $album->name . "'\n";
+ 	    print "\t\t Rating: " . $album->rating . " (" . $album->rating->handle .")\n"; # rating is an enum. Enums and other translators are "magic" objects
 
       }
 

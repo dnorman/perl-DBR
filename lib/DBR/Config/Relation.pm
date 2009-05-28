@@ -7,7 +7,6 @@ package DBR::Config::Relation;
 
 use strict;
 use base 'DBR::Common';
-use DBR::Query::Value;
 use DBR::Config::Table;
 use DBR::Config::Field;
 use Carp;

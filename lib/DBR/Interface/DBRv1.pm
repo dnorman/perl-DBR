@@ -9,7 +9,7 @@ use strict;
 use base 'DBR::Common';
 use DBR::Query;
 use DBR::Config::Field::Anon;
-use DBR::Query::Value;
+use DBR::Query::Part::Value;
 use DBR::Query::Part;
 
 sub new {
@@ -379,11 +379,11 @@ sub _value {
 
       if($flags =~ /d/){  $is_number = 1 }
 
-      my $valobj = DBR::Query::Value->new(
-					  is_number => $is_number,
-					  value     => $value,
-					  logger    => $self->{logger}
-					 ) or return $self->_error('failed to create value object');
+      my $valobj = DBR::Query::Part::Value->new(
+						is_number => $is_number,
+						value     => $value,
+						logger    => $self->{logger}
+					       ) or return $self->_error('failed to create value object');
       return $valobj;
 
 }

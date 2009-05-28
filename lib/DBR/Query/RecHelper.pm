@@ -3,6 +3,7 @@ package DBR::Query::RecHelper;
 use strict;
 use base 'DBR::Common';
 use DBR::Query::Part;
+use DBR::Query::ResultSet::Lite;
 use Carp;
 
 sub new {
@@ -173,26 +174,26 @@ sub getrel{
 
 
       my $fidx = $field->index();
-      my %vals; # For uniq-ing
+      my $val;
+      my %allvals; # For uniq-ing
 
-
-      #use Data::Dumper;
-      #print Dumper($self->{rowcache});
       if( defined($fidx) && exists($record->[$fidx]) ){
-	    $vals { $record->[ $fidx ] } = 1; # My value
-	  #  map { $vals{ $_->[ $fidx ] } = 1 } @{${$self->{rowcache}}}; # look forward in the rowcache and add those too
+	    $val = $record->[ $fidx ]; # My value
+	    map { $allvals{ $_->[ $fidx ] } = 1 } @${$self->{rowcache}}; # look forward in the rowcache and add those too
       }else{
-	    my $val = $self->getfield($record,$field) or return $self->_error("failed to fetch the value of ${\ $field->name }");
-	    $vals{ $val } = 1;
+	    $val = $self->getfield($record,$field) or return $self->_error("failed to fetch the value of ${\ $field->name }");
+	    $fidx ||= $field->index;
+	    return $self->_error('field object STILL does not have an index') unless defined($fidx);
       }
 
-      delete $vals{undef};
+      $allvals{$val} = 1;
+      delete $allvals{undef};
 
       my $maptable  = $relation->maptable or return $self->_error('Failed to fetch maptable');
 
       my $mapfield = $relation->mapfield or return $self->_error('Failed to fetch mapfield');
 
-      my $value = $mapfield->makevalue( [ keys %vals ] ) or return $self->_error('failed to create value object');
+      my $value = $mapfield->makevalue( [ keys %allvals ] ) or return $self->_error('failed to create value object');
       my $outwhere = DBR::Query::Part::Compare->new( field => $mapfield, value => $value ) or return $self->_error('failed to create compare object');
 
       my $scope = DBR::Config::Scope->new(
@@ -205,29 +206,34 @@ sub getrel{
       my $prefields = $scope->fields or return $self->_error('Failed to determine fields to retrieve');
 
       my %uniq;
-      my @fields = grep { !$uniq{ $_->field_id }++ } (@$pk, @$prefields);
+      my @fields = grep { !$uniq{ $_->field_id }++ } (@$pk, @$prefields, $mapfield );
 
       my $query = DBR::Query->new(
 				  logger   => $self->{logger},
 				  instance => $self->{instance},
 				  tables   => $maptable->name,
 				  where    => $outwhere,
-				  select   => { fields => \@fields }, # use the new cloned field
+				  select   => { fields => \@fields },
 				  scope    => $scope,
 				 ) or return $self->_error('failed to create Query object');
 
       my $resultset = $query->execute or return $self->_error('failed to execute');
 
-      # HERE HERE HERE
-      # we need cloned resultset objects, split by record
-      # automatic profiling of how many are accessed %
-      # store profiling info at the destroy
-      # iterate over these, and assign them to a slot in the result object
+      my $setmap = $resultset->split( $mapfield ) or return $self->_error('failed to split resultset');
+      my $myresultset = $setmap->{$val};
 
-      # Create a slot in the parent record and store the resultset there
-      $self->_setlocalval($record,$relation,$resultset) or return $self->_error('failed to _setlocalval');
+      $self->_setlocalval($record,$relation,$myresultset) or return $self->_error('failed to _setlocalval');
 
-      return $resultset;
+      # look forward in the rowcache and assign the resultsets for whatever we find
+      foreach my $row (@${$self->{rowcache}}){
+	    my $rs = $setmap->{ $row->[$fidx] } ||
+	      DBR::Query::ResultSet::Lite->new(  logger  => $self->{logger}, query => $query) # Empty resultset
+ 		  or return $self->_error('failed to create resultset lite object');
+
+	    $self->_setlocalval($row,$relation,$rs) or return $self->_error('failed to _setlocalval');
+      }
+
+      return $myresultset;
 }
 
 sub _pk_where{

@@ -7,7 +7,7 @@ package DBR::Config::Field;
 
 use strict;
 use base 'DBR::Config::Field::Common';
-use DBR::Query::Value;
+use DBR::Query::Part::Value;
 use DBR::Config::Table;
 use DBR::Config::Trans;
 use Clone;
@@ -133,12 +133,12 @@ sub makevalue{ # shortcut function?
       my $self = shift;
       my $value = shift;
 
-      return DBR::Query::Value->new(
-				    logger => $self->{logger},
-				    value  => $value,
-				    is_number => $self->is_numeric,
-				    field  => $self,
-				   );# or return $self->_error('failed to create value object');
+      return DBR::Query::Part::Value->new(
+					  logger => $self->{logger},
+					  value  => $value,
+					  is_number => $self->is_numeric,
+					  field  => $self,
+					 );# or return $self->_error('failed to create value object');
 
 }
 

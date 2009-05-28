@@ -55,7 +55,7 @@ sub _stopwatch{
       if($label){
 	    my $elapsed = Time::HiRes::time() - $TIMERS{$method};
 	    my $seconds = sprintf('%.8f',$elapsed);
-	    $self->_logDebug( "$m ($label) took $seconds seconds");
+	    $self->_logDebug2( "$m ($label) took $seconds seconds");
       }
 
       $TIMERS{ $method } = Time::HiRes::time(); # Logger could be slow
