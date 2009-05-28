@@ -98,8 +98,9 @@ sub select {
 	    } elsif ($params{-keycol}) {
 		  return $resultset->map($params{-keycol})
 	    } elsif ($params{-single}) {
-		  my $ret = $resultset->hashrefs() or return undef;
-		  return $ret->[0];
+		  my $rows = $resultset->hashrefs() or return undef;
+		  return 0 unless @{$rows};
+		  return $rows->[0];
 	    } else {
 		  return $resultset->hashrefs;
 	    }
