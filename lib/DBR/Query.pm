@@ -123,7 +123,7 @@ sub _where{
       my $self = shift;
       my $param = shift;
 
-      return $self->_error('param must be an AND/OR/COMPARE object') unless ref($param) =~ /^DBR::Query::Part::(And|Or|Compare)$/;
+      return $self->_error('param must be an AND/OR/COMPARE/SUBQUERY object') unless ref($param) =~ /^DBR::Query::Part::(And|Or|Compare|Subquery)$/;
 
       $param->validate($self) or return $self->_error('Where clause validation failed');
 
