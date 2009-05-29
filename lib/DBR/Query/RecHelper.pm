@@ -112,15 +112,6 @@ sub _set{
       return $rv;
 }
 
-
-#HERE HERE HERE -> move this directly to the record class
-# This version of get is less efficient for fields that aren't prefetched, but much faster overall I think
-sub get{
-      my $self = shift;
-      my $record = shift;
-      map { ($record->$_) } map { split(/\s+/,$_) } @_;
-}
-
 # Fetch a field ONLY if it was not prefetched
 sub getfield{
        my $self = shift;

@@ -56,7 +56,7 @@ sub count{
       return $count;
 }
 
-sub hashrefs{
+sub raw_hashrefs{
       my $self = shift;
 
       $self->_execute or return $self->_error('failed to execute');

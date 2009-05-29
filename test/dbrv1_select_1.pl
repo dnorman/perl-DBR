@@ -21,26 +21,44 @@ my $dbr    = new DBR(
 
 my $dbrh = $dbr->connect('esrp_main') || die "failed to connect";
 
+# my $ret = $dbrh->select(
+# 			'-table' => 'resource_locks',
+# 			'-where' => {
+# 				     'cust_id' => [
+# 						   'd',
+# 						   '902394'
+# 						  ],
+# 				     'value' => [
+# 						 'd',
+# 						 '22461'
+# 						],
+# 				     'name' => 'invoice',
+# 				     'expires' => [
+# 						   'd >=',
+# 						   1243474231
+# 						  ]
+# 				    },
+# 			'-fields' => 'row_id expires',
+# 			'-single' => 1
+# 		       );
+
 my $ret = $dbrh->select(
-			'-table' => 'resource_locks',
+			'-table' => 'receive_unit',
 			'-where' => {
-				     'cust_id' => [
-						   'd',
-						   '902394'
-						  ],
-				     'value' => [
-						 'd',
-						 '22461'
-						],
-				     'name' => 'invoice',
-				     'expires' => [
-						   'd >=',
-						   1243474231
-						  ]
+				     'receive_unit_id' => {
+							   '-table' => 'receive_lot',
+							   '-where' => {
+									'receive_lot_id' => [
+											     'd in',
+											     '659583'
+											    ]
+								       },
+							   '-field' => 'receive_unit_id'
+							  }
 				    },
-			'-fields' => 'row_id expires',
-			'-single' => 1
+			'-fields' => [
+				      'product_id'
+				     ]
+
 		       );
-
-
 print Dumper($ret);

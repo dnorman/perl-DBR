@@ -5,6 +5,7 @@ use base 'DBR::Common';
 use Symbol qw( qualify_to_ref delete_package);
 use DBR::Query::RecHelper;
 use DBR::Query::Part;
+use DBR::Query::Record;
 
 #IDPOOL is a revolving door of package ids... we do this to guard against memory leaks... juuust in case
 my @IDPOOL = (1..200);
@@ -135,15 +136,14 @@ sub _prep{
 			       ) or return $self->_error('Failed to create relation');
       }
 
+      my $isa = qualify_to_ref( $self->{recordclass} . '::ISA');
+      @{ *$isa } = ('DBR::Query::Record');
+
       $self->_mk_method(
 			method => 'set',
 			helper => $helper,
 		       ) or $self->_error('Failed to create set method');
 
-      $self->_mk_method(
-			method => 'get',
-			helper => $helper,
-		       ) or $self->_error('Failed to create get method');
       return 1;
 }
 

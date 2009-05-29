@@ -8,7 +8,7 @@ use ApolloUtils::Logger;
 use DBR;
 use DBR::Util::Operator; # Imports operator functions
 
-my $logger = new ApolloUtils::Logger(-logpath => '/dj/logs/dbr_test.log', -logLevel => 'debug');
+my $logger = new ApolloUtils::Logger(-logpath => '/dj/logs/dbr_test.log', -logLevel => 'debug3');
 
 #<STDIN>;
 
@@ -65,7 +65,7 @@ $dbrh->_stopwatch();
 
 
 my $orders = $dbrh->orders->where(
-				  cust_id => LT 902349 + 100000,
+				  cust_id => 902349,# + 100000,
 				  #date_created => LT time,
 				 );
 
@@ -90,10 +90,9 @@ my $ct;
 # 	     #$dbrh->_stopwatch();
 
 
-	     
 
- 	     my @fields = $order->get('status total prodtotal ship_method_id duties type');
- 	     print "fields are " . join(',',@fields) . "\n";
+ 	     my %fields = $order->gethash('status total prodtotal ship_method_id duties type');
+ 	     print "fields are " . join(', ', map { "$_ => $fields{$_}" } keys %fields) . "\n";
 
 # 	     print "YES\n" if $order->status->in('ordered error shipped floobetyjoop');
 

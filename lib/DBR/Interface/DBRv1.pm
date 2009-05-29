@@ -94,15 +94,15 @@ sub select {
 	    } elsif ($params{-count}) {
 		  return $resultset->count();
 	    } elsif ($params{-arrayref}) {
-		  return $resultset->arrayrefs;
+		  return $resultset->raw_arrayrefs;
 	    } elsif ($params{-keycol}) {
 		  return $resultset->map($params{-keycol})
 	    } elsif ($params{-single}) {
-		  my $rows = $resultset->hashrefs() or return undef;
+		  my $rows = $resultset->raw_hashrefs() or return undef;
 		  return 0 unless @{$rows};
 		  return $rows->[0];
 	    } else {
-		  return $resultset->hashrefs;
+		  return $resultset->raw_hashrefs;
 	    }
       }
 

@@ -6,7 +6,7 @@ use Carp;
 
 sub delete {croak "Mass delete is not allowed. No cookie for you!"}
 
-sub arrayrefs{ $_[0]->_allrows }
+sub raw_arrayrefs{ $_[0]->_allrows }
 
 #HERE HERE HERE this is broken for fields that aren't in the resultset
 # Consider adding a method to Query.pm to provide an overlayed list of fields selected, AND possible
