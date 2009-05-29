@@ -38,7 +38,7 @@ sub load{
 
       my @schema_ids; # track the schema ids from this request seperately from the global cache
       foreach my $schema (@$schemas){
-	    $SCHEMAS_BY_ID{ $schema->{schema_id} } = $schemas;
+	    $SCHEMAS_BY_ID{ $schema->{schema_id} } = $schema;
 	    push @schema_ids, $schema->{schema_id};
       }
 
