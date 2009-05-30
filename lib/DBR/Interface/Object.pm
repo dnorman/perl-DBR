@@ -3,7 +3,7 @@
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation.
 
-package DBR::Object;
+package DBR::Interface::Object;
 
 use strict;
 use base 'DBR::Common';

@@ -8,7 +8,7 @@ package DBR::Handle;
 use strict;
 use base 'DBR::Common';
 use DBR::Query;
-use DBR::Object;
+use DBR::Interface::Object;
 use DBR::Interface::DBRv1;
 our $AUTOLOAD;
 
@@ -39,8 +39,6 @@ sub new {
       return( $self );
 }
 
-#sub _conn   { $_[0]->{conn}    } # Connection object
-
 sub select{ my $self = shift; return $self->{dbrv1}->select(@_) }
 sub insert{ my $self = shift; return $self->{dbrv1}->insert(@_) }
 sub update{ my $self = shift; return $self->{dbrv1}->update(@_) }
@@ -58,11 +56,11 @@ sub AUTOLOAD {
 
       my $table = $self->{schema}->get_table( $method ) or return $self->_error("no such table '$method' exists in this schema");
 
-      my $object = DBR::Object->new(
-				    logger   => $self->{logger},
-				    instance => $self->{instance},
-				    table    => $table,
-				   ) or return $self->_error('failed to create query object');
+      my $object = DBR::Interface::Object->new(
+					       logger   => $self->{logger},
+					       instance => $self->{instance},
+					       table    => $table,
+					      ) or return $self->_error('failed to create query object');
 
       return $object;
 }
