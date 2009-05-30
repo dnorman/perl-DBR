@@ -81,6 +81,7 @@ sub load{
 						table_id => $field->{table_id},
 						name     => $field->{name},
 						field_id => $field->{field_id},
+						is_pkey  => $field->{is_pkey} ? 1 : 0,
 					       ) or return $self->_error('failed to register field');
 	    $FIELDS_BY_ID{ $field->{field_id} } = $field;
 	    push @trans_fids, $field->{field_id} if $field->{trans_id};

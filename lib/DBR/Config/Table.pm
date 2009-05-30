@@ -10,10 +10,12 @@ use base 'DBR::Common';
 
 use DBR::Config::Field;
 use DBR::Config::Relation;
+use Carp;
 
 my %TABLES_BY_ID;
 my %FIELDS_BY_NAME;
 my %RELATIONS_BY_NAME;
+my %PK_FIELDS;
 
 sub load{
       my( $package ) = shift;
@@ -50,6 +52,10 @@ sub load{
 
 	    $TABLES_BY_ID{ $table->{table_id} } = $table;
 	    push @table_ids, $table->{table_id};
+
+	    #Purge in case this is a reload
+	    $FIELDS_BY_NAME{  $table->{table_id} } = {};
+	    $PK_FIELDS{       $table->{table_id} } = [];
       }
 
       if(@table_ids){
@@ -73,13 +79,18 @@ sub _register_field{
       my $package = shift; # no dummy $self object here, for efficiency
       my %params = @_;
 
-      my $table_id = $params{table_id} or return $package->_error('table_id is required');
-      $TABLES_BY_ID{ $table_id }       or return $package->_error('invalid table_id');
+      my $table_id = $params{table_id} or croak('table_id is required');
+      $TABLES_BY_ID{ $table_id }       or croak('invalid table_id');
 
-      my $name     = $params{name}     or return $package->_error('name is required');
-      my $field_id = $params{field_id} or return $package->_error('field_id is required');
+      my $name     = $params{name}     or croak('name is required');
+      my $field_id = $params{field_id} or croak('field_id is required');
+      defined($params{is_pkey})        or croak('is_pkey is required');
 
       $FIELDS_BY_NAME{ $table_id } -> { $name } = $field_id;
+
+      if($params{is_pkey}){
+	    push @{$PK_FIELDS{ $table_id }}, $field_id;
+      }
 
       return 1;
 }
@@ -88,11 +99,11 @@ sub _register_relation{
       my $package = shift; # no dummy $self object here, for efficiency
       my %params = @_;
 
-      my $table_id = $params{table_id} or return $package->_error('table_id is required');
-      $TABLES_BY_ID{ $table_id }       or return $package->_error('invalid table_id');
+      my $table_id = $params{table_id} or croak ('table_id is required');
+      $TABLES_BY_ID{ $table_id }       or croak('invalid table_id');
 
-      my $name        = $params{name}        or return $package->_error('name is required');
-      my $relation_id = $params{relation_id} or return $package->_error('relation_id is required');
+      my $name        = $params{name}        or croak('name is required');
+      my $relation_id = $params{relation_id} or croak('relation_id is required');
 
       $RELATIONS_BY_NAME{ $table_id } -> { $name } = $relation_id;
 
@@ -147,13 +158,15 @@ sub fields{
       return \@fields;
 }
 
-sub primary_key{ #HERE HERE HERE - Optimize this
+sub primary_key{
       my $self = shift;
+      [
+       map {
+	     DBR::Config::Field->new(logger   => $self->{logger}, field_id => $_ )
+		 or return $self->_error('failed to create field object')
+	   } @{ $PK_FIELDS{ $self->{table_id} } }
+      ];
 
-      # cache ||= figure it out
-      my $pk = $self->{pkey} ||= [ grep { $_->is_pkey } @{$self->fields || [] } ];
-
-      return $pk;
 }
 
 sub relations{
