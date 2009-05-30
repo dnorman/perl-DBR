@@ -96,7 +96,7 @@ sub select {
 	    } elsif ($params{-arrayref}) {
 		  return $resultset->raw_arrayrefs;
 	    } elsif ($params{-keycol}) {
-		  return $resultset->map($params{-keycol})
+		  return $resultset->raw_keycol($params{-keycol});
 	    } elsif ($params{-single}) {
 		  my $rows = $resultset->raw_hashrefs() or return undef;
 		  return 0 unless @{$rows};

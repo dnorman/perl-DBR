@@ -69,6 +69,19 @@ sub raw_hashrefs{
 
 }
 
+sub raw_keycol{
+      my $self = shift;
+      my $keycol = shift;
+
+      $self->_execute or return $self->_error('failed to execute');
+
+      my $ret = $self->{sth}->fetchall_hashref($keycol);
+
+      $self->reset();
+
+      return $ret;
+}
+
 sub split{
       my $self = shift;
       my $field = shift;
