@@ -3,7 +3,7 @@ package DBR::Query::RecHelper;
 use strict;
 use base 'DBR::Common';
 use DBR::Query::Part;
-use DBR::Query::ResultSet::Lite;
+use DBR::Query::ResultSet::Empty;
 use Carp;
 
 sub new {
@@ -15,20 +15,20 @@ sub new {
 		  tablemap => $params{tablemap},
 		  flookup  => $params{flookup},
 		  pkmap    => $params{pkmap},
-		  scope    =>$params{scope},
+		  scope    => $params{scope},
 		  lastidx  => $params{lastidx},
 		  rowcache => $params{rowcache},
 		 };
 
       bless( $self, $package ); # BS object
 
-      $self->{logger} or return $self->_error('logger is required');
+      $self->{logger}   or return $self->_error('logger is required');
       $self->{instance} or return $self->_error('instance is required');
-      $self->{scope} or return $self->_error('scope is required');
+      $self->{scope}    or return $self->_error('scope is required');
 
       $self->{tablemap} or return $self->_error('tablemap is required');
-      $self->{pkmap} or return $self->_error('pkmap is required');
-      $self->{flookup} or return $self->_error('flookup is required');
+      $self->{pkmap}    or return $self->_error('pkmap is required');           # X
+      $self->{flookup}  or return $self->_error('flookup is required');         # X
       defined($self->{lastidx}) or return $self->_error('lastidx is required');
       $self->{rowcache} or return $self->_error('rowcache is required');
 
@@ -139,9 +139,7 @@ sub getfield{
 				   select   => { fields => [ $newfield ] } # use the new cloned field
 				  ) or return $self->_error('failed to create Query object');
 
-       my $sth = $query->execute(
-				 sth_only => 1 # Don't want to create another resultset object
-				) or return $self->_error('failed to execute');
+       my $sth = $query->prepare or return $self->_error('failed to execute');
 
        $sth->execute() or return $self->_error('Failed to execute sth');
        my $row  = $sth->fetchrow_arrayref() or return $self->_error('Failed to fetchrow');
@@ -178,15 +176,15 @@ sub getrel{
       }
 
       $allvals{$val} = 1;
-      delete $allvals{undef};
+      delete $allvals{undef}; # equivalent to grep { $_ }
 
-      my $maptable  = $relation->maptable or return $self->_error('Failed to fetch maptable');
-
+      my $maptable = $relation->maptable or return $self->_error('Failed to fetch maptable');
       my $mapfield = $relation->mapfield or return $self->_error('Failed to fetch mapfield');
 
       my $value = $mapfield->makevalue( [ keys %allvals ] ) or return $self->_error('failed to create value object');
       my $outwhere = DBR::Query::Part::Compare->new( field => $mapfield, value => $value ) or return $self->_error('failed to create compare object');
 
+      #HERER HERE HERE - scope probably needs an offset here
       my $scope = DBR::Config::Scope->new(
 					  logger        => $self->{logger},
 					  conf_instance => $maptable->conf_instance,
@@ -197,7 +195,7 @@ sub getrel{
       my $prefields = $scope->fields or return $self->_error('Failed to determine fields to retrieve');
 
       my %uniq;
-      my @fields = grep { !$uniq{ $_->field_id }++ } (@$pk, @$prefields, $mapfield );
+      my @fields = grep { !$uniq{ $_->field_id }++ } ($mapfield, @$pk, @$prefields );
 
       my $query = DBR::Query->new(
 				  logger   => $self->{logger},
@@ -208,23 +206,50 @@ sub getrel{
 				  scope    => $scope,
 				 ) or return $self->_error('failed to create Query object');
 
-      my $resultset = $query->execute or return $self->_error('failed to execute');
+      my $resultset = $query->resultset or return $self->_error('failed to retrieve resultset');
 
-      my $setmap = $resultset->split( $mapfield ) or return $self->_error('failed to split resultset');
-      my $myresultset = $setmap->{$val};
+      my $to1 = $relation->is_to_one;
+      print STDERR "To1: $to1\n";
 
-      $self->_setlocalval($record,$relation,$myresultset) or return $self->_error('failed to _setlocalval');
+      if(scalar(keys %allvals) > 1){
+	    print STDERR "MARK 2\n";
+	    my $resultmap;
+	    my $myresult;
+	    if($to1){
+		  print STDERR "MARK 3\n";
+		  $resultmap = $resultset->lookup_hash(  $mapfield->name ) or return $self->_error('failed to split resultset');
 
-      # look forward in the rowcache and assign the resultsets for whatever we find
-      foreach my $row (@${$self->{rowcache}}){
-	    my $rs = $setmap->{ $row->[$fidx] } ||
-	      DBR::Query::ResultSet::Lite->new(  logger  => $self->{logger}, query => $query) # Empty resultset
- 		  or return $self->_error('failed to create resultset lite object');
+		  $myresult = $resultmap->{$val};
+	    }else{
+		  $resultmap = $resultset->split( $mapfield ) or return $self->_error('failed to split resultset');
 
-	    $self->_setlocalval($row,$relation,$rs) or return $self->_error('failed to _setlocalval');
+		  $myresult = $resultmap->{$val} || DBR::Query::ResultSet::Empty->new() # Empty resultset
+		    or return $self->_error('failed to create ResultSet::Empty object');
+	    }
+
+	    $self->_setlocalval($record,$relation,$myresult) or return $self->_error('failed to _setlocalval');
+
+	    # look forward in the rowcache and assign the resultsets for whatever we find
+	    foreach my $row (@${$self->{rowcache}}) {
+
+		  my $rs = $resultmap->{ $row->[$fidx] } || DBR::Query::ResultSet::Empty->new() # Empty resultset
+			or return $self->_error('failed to create ResultSet::Empty object');
+
+		  $self->_setlocalval($row,$relation,$rs) or return $self->_error('failed to _setlocalval');
+	    }
+
+	    return $myresult;
+
+      }else{
+	    my $result = $resultset;
+	    if($to1){
+		  $result = $resultset->next;
+	    }
+
+	    $self->_setlocalval($record,$relation,$result) or return $self->_error('failed to _setlocalval');
+
+	    return $result;
       }
-
-      return $myresultset;
 }
 
 sub _pk_where{

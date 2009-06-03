@@ -10,13 +10,22 @@ use base 'DBR::Common';
 use DBR::Config::Table;
 use DBR::Config::Field;
 use Carp;
+use Clone 'clone';
 
 my %TYPES = (
-	     1 => {name => 'parent', opposite => 'child'},
-	     2 => {name => 'child',  opposite => 'parent'},
-	     3 => {name => 'assoc'},
-	     4 => {name => 'other'},
+	     1 => { name => 'parentof', mode => '1toM', opposite => 2 }, #reciprocal
+	     2 => { name => 'childof',  mode => 'Mto1', opposite => 1 },
+	     3 => { name => 'assoc',    mode => 'MtoM' },
+	     4 => { name => 'other',    mode => 'MtoM' },
 	    );
+
+map { $TYPES{$_}{type_id} = $_ } keys %TYPES;
+
+sub list_types{
+      return clone( [ sort {$a->{type_id} <=> $b->{type_id} } values %TYPES ] );
+}
+
+
 my %RELATIONS_BY_ID;
 sub load{
       my( $package ) = shift;
@@ -80,16 +89,18 @@ sub new {
 
 
       my $ref = $RELATIONS_BY_ID{ $self->{relation_id} } or return $self->_error('invalid relation_id');
+      return $self->_error("Invalid type_id $ref->{type}") unless $TYPES{ $ref->{type} };
 
       if($ref->{from_table_id} == $self->{table_id}){
 
 	    $self->{forward} = 'from';
 	    $self->{reverse} = 'to';
-
+	    $self->{type_id} = $ref->{type};
       }elsif($ref->{to_table_id} == $self->{table_id}){
 
 	    $self->{forward} = 'to';
 	    $self->{reverse} = 'from';
+	    $self->{type_id} = $TYPES{ $ref->{type} }->{opposite} || $ref->{type};
 
       }else{
 	    return $self->_error("table_id $self->{table_id} is invalid for this relationship");
@@ -127,6 +138,14 @@ sub maptable {
 				    );
 }
 
+sub is_to_one{
+      my $mode = $TYPES{ $_[0]->{type_id} }->{mode};
+
+      return 1 if $mode eq 'Mto1';
+      return 1 if $mode eq '1to1';
+
+      return 0;
+}
 
 
 

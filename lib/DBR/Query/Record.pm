@@ -4,6 +4,7 @@
 
 package DBR::Query::Record;
 use strict;
+use Carp;
 
 ###################
 #
@@ -26,5 +27,7 @@ sub gethash{
       @ret{@fields} =  map { ($self->$_) } @fields;
       wantarray?( %ret ) : \%ret;
 }
+
+sub next { croak "Can not call next on a record" }
 
 1;

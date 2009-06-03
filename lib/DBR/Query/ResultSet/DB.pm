@@ -4,70 +4,70 @@ use strict;
 use base 'DBR::Query::ResultSet';
 use DBR::Query::RecMaker;
 use Carp;
+use constant { CLEAN => 1, ACTIVE => 2  };
 
-use constant {
-        LOGGER   => 0,
-	QUERY    => 1,
-	STH      => 2,
-        CACHE    => 3,
-	NEXT     => 4,
-	RECORD   => 5,
-	STATE    => 6,
-	COUNT    => 7
-
-	clean    => 1,
-	active   => 2,
-	finished => 3,
-};
 sub new {
       my( $package ) = shift;
       my %params = @_;
+      my $self = {
+		  logger   => $params{logger},
+		  query    => $params{query},
+		 };
 
-      my $self = [ (undef)x8 ];
+      bless( $self, $package );
 
-      $self->[QUERY]  = $params{query}  or return $self->_error('query object must be specified' );
-      $self->[LOGGER] = $params{logger} or return $self->_error('logger object must be specified');
-
-      my $cache = []; # Sacrificial arrayref. This arrayref is not preserved, but the scalarref is.
-      $self->[CACHE] = \$cache; #Use the scalarref to $cache to be able to access this remotely
+      return $self->_error('query object must be specified' )   unless $self->{query};
+      return $self->_error('logger object must be specified')   unless $self->{logger};
 
       #prime the pump
-      $self->[NEXT] = \&_first; # Arrgh... can't do a closure containing $self here. Would be a circular reference.
+      $self->{next} = \&_first;
 
-      $self->[STATE] = clean;
-      bless( $self, $package );
+      my $cache = []; # Sacrificial arrayref. This arrayref is not preserved, but the scalarref is.
+      $self->{rowcache} = \$cache; #Use the scalarref to $cache to be able to access this remotely
+
+      $self->{state} = CLEAN;
 
       return( $self );
 }
 
-sub next    { $_[0][NEXT]->( $_[0] ) }
-sub _logger {$_->[LOGGER]} # For DBR::Common
 
-sub _first{
-      my $self = shift;
 
-      $self->_create_iterator or return $self->_error('_create_iterator failed');
-
-      return $self->next;
-}
+sub next { $_[0]->{next}->( $_[0] ) }
 
 sub count{
       my $self = shift;
 
-      my $count;
-      if ($self->_query->is_count){
-	    return $self->{real_count} if $self->{real_count};
+      return $self->{real_count} if $self->{real_count};
 
+      my $count;
+      if ($self->{query}->is_count){
 	    $self->_execute or return $self->_error('failed to execute');
 	    ($count) = $self->{sth}->fetchrow_array();
 	    $self->{real_count} = $count;
 
 	    $self->reset();
       }else{
-	    return $self->{rowcount} || $self->{rows_hint}; # rowcount should be authoritative, but fail over to the hint
+	    return $self->{rows_hint}; #If we've gotten here, all we have is the rows_hint
       }
 
       return $count;
+}
+
+
+###################################################
+### Direct methods for DBRv1 ######################
+###################################################
+
+sub raw_arrayrefs{
+      my $self = shift;
+
+      $self->_execute or return $self->_error('failed to execute');
+
+      my $ret = $self->{sth}->fetchall_arrayref();
+
+      $self->reset();
+
+      return $ret;
 }
 
 sub raw_hashrefs{
@@ -75,7 +75,7 @@ sub raw_hashrefs{
 
       $self->_execute or return $self->_error('failed to execute');
 
-      my $ret = $self->_sth->fetchall_arrayref( {} );
+      my $ret = $self->{sth}->fetchall_arrayref( {} );
 
       $self->reset();
 
@@ -96,60 +96,64 @@ sub raw_keycol{
       return $ret;
 }
 
-sub groupby{
-      
-}
-###################################################
-### Accessors #####################################
-###################################################
-
-
 ###################################################
 ### Utility #######################################
 ###################################################
 
-sub _allrows{
+sub _fetch_all{
       my $self = shift;
 
       $self->_execute or return $self->_error('failed to execute');
 
-      my $ret = $self->{sth}->fetchall_arrayref();
+      $self->_makerecord or return $self->_error('failed to make record class');
 
-      $self->reset();
+      ${$self->{rowcache}} = $self->{sth}->fetchall_arrayref();
 
-      return $ret;
+      $self->_end();
+      $self->_mem_iterator(); # everything is in memory now, so use _mem_iterator
+
+      return ${$self->{rowcache}};
 }
 
 sub _execute{
       my $self = shift;
 
-      if( $self->[STATE] != clean ){ # already executed
+      if( $self->{state} != CLEAN){ # already executed
 	    return $self->_error('You must call reset before executing');
       }
       # else Undef row pointer means we haven't executed yet
 
-      $self->[STH] ||= $self->_query->prepare;
+      $self->{sth} ||= $self->{query}->prepare or croak "Failed to prepare query"; # only prepare once
 
-      my $rv = $sth->execute();
+      my $rv = $self->{sth}->execute();
       $self->{rows_hint} = $rv + 0;
       $self->_logDebug2("ROWS: $self->{rows_hint}");
       return $self->_error('failed to execute statement') unless $rv;
-
-      $self->[STATE] = active;
+      $self->{state} = ACTIVE;
 
       return 1;
 }
 
-sub _create_iterator{
+sub _first{
       my $self = shift;
 
       $self->_execute() or return $self->_error('failed to execute');
 
-      my $record = $self->_query->makerecord(rowcache => )
-      my $class  = $self->_query;
-      my $ref   = $self->_rowcache;
+      $self->_makerecord or return $self->_error('failed to make record class');
+
+      $self->_dbfetch_iterator;
+
+      return $self->next;
+}
+
+
+sub _dbfetch_iterator{
+      my $self = shift;
+
+      my $ref   = $self->{rowcache};
+      my $class = $self->{record}->class;
       my $rows  = $$ref;
-      my $sth   = $self->_sth;
+      my $sth   = $self->{sth};
 
       # use a closure to reduce hash lookups
       # It's very important that this closure is fast.
@@ -171,17 +175,19 @@ sub _create_iterator{
 
 sub _end{
       my $self = shift;
-      $self->{rowcount} ||= $self->_sth->rows; # Sqlite doesn't give any rowcount, so we have to use this as a fallback
+      $self->{real_count} ||= $self->{sth}->rows; # Sqlite doesn't give any rowcount, so we have to use this as a fallback
       $self->reset;
       return undef;
 }
+
+
 
 sub reset{
       my $self = shift;
       $self->_logDebug3('DID RESET');
 
-      $self->[STH]->finish();
-      $self->[STATE] = finished;
+      $self->{sth}->finish();
+      $self->{state} = CLEAN;
 
       $self->{next} = *_first;
 
@@ -191,9 +197,21 @@ sub reset{
 sub DESTROY{
       my $self = shift;
       #print STDERR "RS DESTROY\n";
-      $self->[STATE] == finished || $self->_sth->finish();
+      $self->{state} == CLEAN || $self->{sth}->finish();
 
       return 1;
+}
+
+
+
+
+sub _makerecord{
+      my $self = shift;
+
+      $self->{record} ||= $self->{query}->makerecord(
+						     rowcache => $self->{rowcache}
+						    ) or return $self->_error('failed to setup record');
+
 }
 
 1;

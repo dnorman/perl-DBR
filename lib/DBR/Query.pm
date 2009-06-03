@@ -8,6 +8,7 @@ package DBR::Query;
 use strict;
 no strict 'subs';
 use base 'DBR::Common';
+use DBR::Query::ResultSet::DB;
 
 sub new {
       my( $package ) = shift;
@@ -272,6 +273,45 @@ sub can_be_subquery {
 
 sub fields{ $_[0]->{fields} }
 
+sub prepare {
+      my $self = shift;
+
+      return $self->_error('can only call resultset on a select') unless $self->{type} eq 'select';
+
+      my $conn   = $self->{instance}->connect('conn') or return $self->_error('failed to connect');
+
+      my $sql = $self->sql;
+
+      $self->_logDebug2( $sql );
+
+      return $self->_error('failed to prepare statement') unless
+	my $sth = $conn->prepare($sql);
+
+      return $sth;
+
+}
+
+
+sub resultset{
+      my $self = shift;
+
+      return $self->_error('can only call resultset on a select') unless $self->{type} eq 'select';
+
+      my $resultset = DBR::Query::ResultSet::DB->new(
+						     logger   => $self->{logger},
+						     query    => $self,
+						     #instance => $self->{instance},
+						    ) or return $self->_error('Failed to create resultset');
+
+      return $resultset;
+
+}
+
+sub is_count{
+      my $self = shift;
+      return $self->{flags}->{is_count} || 0,
+}
+
 sub execute{
       my $self = shift;
       my %params = @_;
@@ -282,26 +322,7 @@ sub execute{
 
       $conn->quiet_next_error if $self->{quiet_error};
 
-      if($self->{type} eq 'select'){
-
-	    return $self->_error('failed to prepare statement') unless
-	      my $sth = $conn->prepare($self->sql);
-
-	    if($params{sth_only}){
-		  return $sth;
-
-	    }else{
-		  my $resultset = DBR::Query::ResultSet->new(
-							     logger => $self->{logger},
-							     instance => $self->{instance},
-							     sth    => $sth,
-							     query  => $self,
-							     is_count => $self->{flags}->{is_count} || 0,
-							    ) or return $self->_error('Failed to create resultset');
-
-		  return $resultset;
-	    }
-      }elsif($self->{type} eq 'insert'){
+      if($self->{type} eq 'insert'){
 
 	    $conn->prepSequence() or return $self->_error('Failed to prepare sequence');
 
@@ -324,9 +345,32 @@ sub execute{
 
 	    return $rows || 0;
 
+      }elsif($self->{type} eq 'select'){
+	    return $self->_error('cannot call execute on a select');
       }
 
       return $self->_error('unknown query type')
+}
+
+sub makerecord{
+      my $self = shift;
+      my %params = @_;
+      return $self->_error('rowcache is required') unless $params{rowcache};
+
+      $self->_stopwatch();
+
+      my $handle = DBR::Query::RecMaker->new(
+					     instance => $self->{instance},
+					     logger   => $self->{logger},
+					     query    => $self,
+					     rowcache => $params{rowcache},
+					    ) or return $self->_error('failed to create record class');
+
+      # need to keep this in scope, because it removes the dynamic class when DESTROY is called
+      $self->_stopwatch('recmaker');
+
+      return $handle;
+
 }
 
 1;

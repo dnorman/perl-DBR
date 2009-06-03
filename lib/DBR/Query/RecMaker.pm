@@ -65,6 +65,7 @@ sub _prep{
       my %pkmap;
       my %flookup;
       my @allrelations;
+      my @tablenames;
       foreach my $table_id ($self->_uniq( @table_ids )){
 
 	    my $table = DBR::Config::Table->new(
@@ -102,19 +103,19 @@ sub _prep{
 
 	    my $relations = $table->relations or return $self->_error('failed to retrieve relations for table');
 	    push @allrelations, @$relations;
-
+	    push @tablenames, $table->name;
       }
-
+      $self->{name} = join('/',@tablenames);
 
       my $helper = DBR::Query::RecHelper->new(
 					      logger   => $self->{logger},
 					      instance => $self->{instance},
-					      tablemap => \%tablemap,
-					      pkmap    => \%pkmap,
-					      flookup  => \%flookup,
-					      scope    => $self->{scope},
-					      lastidx  => $self->{query}->lastidx,
-					      rowcache => $self->{rowcache},
+					      tablemap => \%tablemap,     # V
+					      pkmap    => \%pkmap,        # V
+					      flookup  => \%flookup,      # V
+					      scope    => $self->{scope}, # V
+					      lastidx  => $self->{query}->lastidx,# V
+					      rowcache => $self->{rowcache}, #X
 					     ) or return $self->_error('Failed to create RecHelper object');
 
       my $mode = 'rw';
@@ -123,7 +124,6 @@ sub _prep{
 	    $mymode = 'ro' if $field->is_readonly or $self->{instance}->is_readonly;
 	    $self->_mk_accessor(
 				mode  => $mymode,
-				index => $field->index,
 				field => $field,
 				helper => $helper,
 			       ) or return $self->_error('Failed to create accessor');
@@ -162,7 +162,7 @@ sub _mk_accessor{
       my $setvalue = '$_[1]';
       my $value;
 
-      my $idx = $params{index};
+      my $idx = $field->index;
       if(defined $idx){ #did we actually fetch this?
 	    $value = $record . '[' . $idx . ']';
       }else{
@@ -181,7 +181,8 @@ sub _mk_accessor{
 	    $code = "   $value   ";
       }
       $code = "sub {$code}";
-      $self->_logDebug2($code);
+
+      $self->_logDebug2("$method = $code");
 
       my $subref = _eval_accessor($helper,$field,$trans,$code) or $self->_error('Failed to eval accessor ' . $@);
 
@@ -255,7 +256,7 @@ sub _mk_method{
       my $code = "\$h->$method($record,\@_)";
 
       $code = "sub {$code}";
-      $self->_logDebug2($code);
+      $self->_logDebug2("$method = $code");
 
       my $subref = _eval_method($helper,$code) or $self->_error('Failed to eval method' . $@);
       my $symbol = qualify_to_ref( $self->{recordclass} . '::' . $method );
@@ -272,10 +273,10 @@ sub _eval_method{
 
 sub DESTROY{ # clean up the temporary object from the symbol table
       my $self = shift;
-      $self->_logDebug2('Destroy');
+      my $class = $self->{recordclass};
+      $self->_logDebug2("Destroy $self->{name} ($class)");
       push @IDPOOL, $self->{classidx};
 
-      my $class = $self->{recordclass};
       #print STDERR "DESTROY $class, $self->{classidx}\n";
       Symbol::delete_package($class);
 }

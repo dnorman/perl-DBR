@@ -7,7 +7,6 @@ package DBR::Interface::Object;
 
 use strict;
 use base 'DBR::Common';
-use DBR::Query::ResultSet;
 use DBR::Query::Part;
 use DBR::Config::Scope;
 
@@ -56,7 +55,7 @@ sub all{
 				  scope  => $scope,
 				 ) or return $self->_error('failed to create Query object');
 
-      my $resultset = $query->execute() or return $self->_error('failed to execute');
+      my $resultset = $query->resultset or return $self->_error('failed to get resultset');
 
       return $resultset;
 }
@@ -108,7 +107,7 @@ sub where{
 				  scope  => $scope,
 				 ) or return $self->_error('failed to create Query object');
 
-      my $resultset = $query->execute() or return $self->_error('failed to execute');
+      my $resultset = $query->resultset or return $self->_error('failed to get resultset');
 
       return $resultset;
 }
@@ -178,7 +177,7 @@ sub get{
 				  scope  => $scope,
 				 ) or return $self->_error('failed to create Query object');
 
-      my $resultset = $query->execute() or return $self->_error('failed to execute');
+      my $resultset = $query->resultset or return $self->_error('failed to get resultset');
 
       return $resultset;
 

@@ -81,13 +81,13 @@ sub select {
 
       }elsif ($params{-rawsth}) {
 
-	    my $sth = $query->execute( sth_only => 1 ) or return $self->_error('failed to execute');
+	    my $sth = $query->prepare or return $self->_error('failed to prepare');
 	    $sth->execute() or return $self->_error('failed to execute sth');
 
 	    return $sth;
 
       } else {
-	    my $resultset = $query->execute() or return $self->_error('failed to execute');
+	    my $resultset = $query->resultset or return $self->_error('failed to get resultset');
 
 	    if ($params{'-object'}) { # new way - hybrid
 		  return $resultset;
