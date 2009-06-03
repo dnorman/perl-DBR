@@ -151,7 +151,7 @@ sub getfield{
        return $val;
 }
 
-sub getrel{
+sub getrelation{
       my $self = shift;
       my $record = shift;
       my $relation = shift;
@@ -207,6 +207,26 @@ sub getrel{
 				 ) or return $self->_error('failed to create Query object');
 
       my $resultset = $query->resultset or return $self->_error('failed to retrieve resultset');
+
+      # HERE HERE HERE ########################################################################
+      # This is a >>> VERY <<< lazy way to solve the problem, but....
+      #
+      # Just straight up save a copy of the resultset into this helper object
+      # Don't do anything with it... just save it so it doesn't go out of scope
+      # This will prevent it's generated class from poofing out of existance because
+      # the contained recmaker object will stay in scope by association.
+      # >> Theoretically << when MY outer resultset goes out of scope, it's recmaker object
+      # will go out of scope, which will make ME go out of scope, and then cascade to
+      # these resultsets, and so on, ad infinitum. Ideally the generated class wouldn't poof until
+      # the last record went out of scope. Presumably this would be done by including the recmaker
+      # or rechelper object in each record object itself, not the generated class.
+      # ...but much like a junkie stealing your TV, I did it for the speeeeed %-)
+
+      push @{ $self->{EVIL_MEMLEAK} }, $resultset;
+
+      ########################################################################################
+      ########################################################################################
+
 
       my $to1 = $relation->is_to_one;
       print STDERR "To1: $to1\n";
