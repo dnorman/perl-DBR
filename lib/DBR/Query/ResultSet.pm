@@ -55,9 +55,8 @@ sub lookup_hash {
       scalar(@fieldnames) or croak('Must provide a list of field names');
 
       my $rows = $self->_fetch_all or return $self->_error('Failed to retrieve rows');
-      print "FOO 1\n";
+
       return {} unless $self->count > 0;
-      print "FOO 2\n";
 
       my $qfields = $self->{query}->fields or return $self->_error('failed to retrieve query fields');
 

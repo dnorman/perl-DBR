@@ -229,14 +229,11 @@ sub getrelation{
 
 
       my $to1 = $relation->is_to_one;
-      print STDERR "To1: $to1\n";
 
       if(scalar(keys %allvals) > 1){
-	    print STDERR "MARK 2\n";
 	    my $resultmap;
 	    my $myresult;
 	    if($to1){
-		  print STDERR "MARK 3\n";
 		  $resultmap = $resultset->lookup_hash(  $mapfield->name ) or return $self->_error('failed to split resultset');
 
 		  $myresult = $resultmap->{$val};
