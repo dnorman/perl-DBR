@@ -161,6 +161,7 @@ sub getrelation{
       # Check to see if this record has a cached version of the resultset
       return $record->[$ridx] if defined($ridx) && exists($record->[$ridx]); # skip the rest if we have that
 
+      #print STDERR "ROWCACHE  getrelation $self->{rowcache} ${$self->{rowcache}}\n";
 
       my $fidx = $field->index();
       my $val;
@@ -208,36 +209,17 @@ sub getrelation{
 
       my $resultset = $query->resultset or return $self->_error('failed to retrieve resultset');
 
-      # HERE HERE HERE ########################################################################
-      # This is a >>> VERY <<< lazy way to solve the problem, but....
-      #
-      # Just straight up save a copy of the resultset into this helper object
-      # Don't do anything with it... just save it so it doesn't go out of scope
-      # This will prevent it's generated class from poofing out of existance because
-      # the contained recmaker object will stay in scope by association.
-      # >> Theoretically << when MY outer resultset goes out of scope, it's recmaker object
-      # will go out of scope, which will make ME go out of scope, and then cascade to
-      # these resultsets, and so on, ad infinitum. Ideally the generated class wouldn't poof until
-      # the last record went out of scope. Presumably this would be done by including the recmaker
-      # or rechelper object in each record object itself, not the generated class.
-      # ...but much like a junkie stealing your TV, I did it for the speeeeed %-)
-
-      push @{ $self->{EVIL_MEMLEAK} }, $resultset;
-
-      ########################################################################################
-      ########################################################################################
-
-
       my $to1 = $relation->is_to_one;
-
       if(scalar(keys %allvals) > 1){
 	    my $resultmap;
 	    my $myresult;
 	    if($to1){
-		  $resultmap = $resultset->lookup_hash(  $mapfield->name ) or return $self->_error('failed to split resultset');
+		  $self->_logDebug2('mapping to individual records');
+		  $resultmap = $resultset->hashmap_single(  $mapfield->name  ) or return $self->_error('failed to split resultset');
 
 		  $myresult = $resultmap->{$val};
 	    }else{
+		  $self->_logDebug2('splitting into resultsets');
 		  $resultmap = $resultset->split( $mapfield ) or return $self->_error('failed to split resultset');
 
 		  $myresult = $resultmap->{$val} || DBR::Query::ResultSet::Empty->new() # Empty resultset

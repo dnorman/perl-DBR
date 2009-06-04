@@ -23,13 +23,12 @@ my $dbrh = $dbr->connect('example') || die "failed to connect";
 my $albums = $dbrh->album->where(name => LIKE '%T%') or die "failed to fetch albums";
 
 
+my $record;
 print "Albums:\n";
 while (my $album = $albums->next){
-      #print "\t" . $album->name . "\n";
+      print "\t" . $album->name . "\n";
 
-      my $artists = $album->artist or die "failed to retrieve artists";
-      my $artist = $artists->next;
-
+      my $artist = $album->artist or die "failed to retrieve artist";
       if($artist){
 	    print "\t\t Artist: " . $artist->name
       }

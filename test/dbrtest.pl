@@ -8,7 +8,7 @@ use ApolloUtils::Logger;
 use DBR;
 use DBR::Util::Operator; # Imports operator functions
 
-my $logger = new ApolloUtils::Logger(-logpath => '/dj/logs/dbr_test.log', -logLevel => 'debug3');
+my $logger = new ApolloUtils::Logger(-logpath => '/dj/logs/dbr_test.log', -logLevel => 'debug2');
 
 #<STDIN>;
 
@@ -64,11 +64,14 @@ $dbrh->_stopwatch();
 
 
 
-my $orders = $dbrh->orders->where(
-				  cust_id => 902349,# + 100000,
-				  #date_created => LT time,
-				 );
+my $orders = $dbrh->orders->all(
+				#cust_id => 902349,# + 100000,
+				#date_created => LT time,
+			       ) or die "where failed";
 
+#my $lookup = $orders->lookup_hash('status ship_method_id');
+#use Data::Dumper;
+#print Dumper($lookup);
 my $ct;
        while (my $order = $orders->next){
 
@@ -90,12 +93,12 @@ my $ct;
 # 	     #$dbrh->_stopwatch();
 
 
+ 	     #my %fields = $order->gethash('status total prodtotal ship_method_id duties type');
+ 	     #print "fields are " . join(', ', map { "$_ => $fields{$_}" } keys %fields) . "\n";
 
- 	     my %fields = $order->gethash('status total prodtotal ship_method_id duties type');
- 	     print "fields are " . join(', ', map { "$_ => $fields{$_}" } keys %fields) . "\n";
+ 	     #print "YES\n" if $order->status->in('ordered error shipped');
 
-# 	     print "YES\n" if $order->status->in('ordered error shipped floobetyjoop');
-
+	     print "\tItems:\n";
   	     my $items = $order->items;
   	     while (my $item = $items->next){
 
@@ -146,5 +149,5 @@ $dbrh->_stopwatch('cycle');
 
 print "\n orders: ${\$orders->count}\n";
 
-print "\n\nPress a key to quit... \n";
-<STDIN>;
+#print "\n\nPress a key to quit... \n";
+#<STDIN>;

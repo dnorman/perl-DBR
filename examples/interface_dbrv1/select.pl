@@ -1,5 +1,6 @@
 #!/usr/bin/perl
 
+use lib '/dj/tools/perl-dbr/lib';
 use DBR::Util::Logger;
 use DBR;
 use strict;

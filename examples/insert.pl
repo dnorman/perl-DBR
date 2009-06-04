@@ -32,9 +32,19 @@ while (my $artist = $artists->next){
 
       print $artist->name . "\n";
 
-      $dbrh->album->insert(
-			   artist_id => $artist->artist_id,
-			   name      => 'Test Album ' . int(rand(100000)),
-			   rating    => 'fair'
-			  ) or die "failed to insert"
+#       $dbrh->track->insert(
+# 			   artist_id => $artist->artist_id,
+# 			   name      => 'Test Album ' . int(rand(100000)),
+# 			   rating    => 'fair'
+# 			  ) or die "failed to insert";
+
+      while (my $album = $artist->albums->next){
+
+	    print "\tAlbum " . $album->name . "\n";
+
+	    $dbrh->track->insert(
+				 album_id => $album->album_id,
+				 name     => 'Test Track ' . int(rand(100000)),
+				) or die "failed to insert";
+      }
 }

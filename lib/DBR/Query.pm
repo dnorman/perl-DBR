@@ -111,6 +111,13 @@ sub _tables{
       return 1;
 }
 
+sub get_field {
+      my $self = shift;
+      my $fieldname = shift;
+
+      return $self->{fieldmap}->{ $fieldname } || undef;
+
+}
 
 sub scope { $_[0]->{scope} }
 sub check_table{
@@ -160,6 +167,8 @@ sub _select{
 			      return $self->_error("table alias is invalid without a join") unless $self->{aliasmap};
 			      return $self->_error('invalid table alias "' . $field->table_alias . '" in -fields')        unless $self->{aliasmap}->{ $field->table_alias };
 			}
+
+			$self->{fieldmap}->{ $field->name } = $field;
 
 			push @fieldsql, $field->sql( $conn );
 			$field->index( ++$self->{lastidx} ) or return $self->_error('failed to set field index');
@@ -372,5 +381,6 @@ sub makerecord{
       return $handle;
 
 }
+
 
 1;

@@ -54,6 +54,12 @@ sub count{
 }
 
 
+sub groupby{
+      my $self = shift;
+      $self->{query};
+}
+
+
 ###################################################
 ### Direct methods for DBRv1 ######################
 ###################################################
@@ -105,7 +111,7 @@ sub _fetch_all{
 
       $self->_execute or return $self->_error('failed to execute');
 
-      $self->_makerecord or return $self->_error('failed to make record class');
+      $self->_makerecord or return $self->_error('_makerecord failed');
 
       ${$self->{rowcache}} = $self->{sth}->fetchall_arrayref();
 
@@ -139,8 +145,6 @@ sub _first{
 
       $self->_execute() or return $self->_error('failed to execute');
 
-      $self->_makerecord or return $self->_error('failed to make record class');
-
       $self->_dbfetch_iterator;
 
       return $self->next;
@@ -150,8 +154,10 @@ sub _first{
 sub _dbfetch_iterator{
       my $self = shift;
 
+      $self->_makerecord or return $self->_error('_makerecord failed');
       my $ref   = $self->{rowcache};
       my $class = $self->{record}->class;
+      my $buddy = $self->{buddy} or confess "No buddy object present";
       my $rows  = $$ref;
       my $sth   = $self->{sth};
 
@@ -161,13 +167,19 @@ sub _dbfetch_iterator{
       $self->{next} = sub {
 	    bless(
 		  (
-		   shift(@$rows)# Shift from cache
+		   [
+		   (
+		    shift(@$rows)# Shift from cache
 		   || shift( @{$rows = $$ref = $sth->fetchall_arrayref(undef,1000) || [] } ) # if cache is empty, fetch more
 		   || return $self->_end
+		   ),
+		    $buddy
+		   ]
 		  ),
 		  $class
 		 );
       };
+      #    return bless ( [ fetchrow() ,$payload ], $class)
 
       return 1;
 
@@ -199,19 +211,7 @@ sub DESTROY{
       #print STDERR "RS DESTROY\n";
       $self->{state} == CLEAN || $self->{sth}->finish();
 
-      return 1;
-}
-
-
-
-
-sub _makerecord{
-      my $self = shift;
-
-      $self->{record} ||= $self->{query}->makerecord(
-						     rowcache => $self->{rowcache}
-						    ) or return $self->_error('failed to setup record');
-
+      return $self->SUPER::DESTROY();
 }
 
 1;

@@ -17,11 +17,9 @@ my $dbr = new DBR(
 		  -conf => 'support/example_dbr.conf'
 		 );
 
-
 my $dbrh = $dbr->connect('example') || die "failed to connect";
 
 
-print "\n\n";
 print "The choices for rating are:\n";
 foreach my $rating ($dbrh->album->enum('rating')){
       print "\t $rating \t ( ${\ $rating->handle } )\n";
@@ -43,6 +41,14 @@ while (my $artist = $artists->next){
 
  	    print "\t\t Album: '" . $album->name . "'\n";
  	    print "\t\t Rating: " . $album->rating . " (" . $album->rating->handle .")\n"; # rating is an enum. Enums and other translators are "magic" objects
+
+	    my $tracks = $album->tracks or die "failed to retrieve tracks";
+	    while (my $track = $tracks->next){
+
+		  print "\t\t\t Track: '" . $track->name . "'\n";
+	    }
+	    print "\t\t ( No tracks )\n" unless $tracks->count;
+	    print "\n";
 
       }
 

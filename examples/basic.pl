@@ -17,19 +17,26 @@ my $dbr = new DBR(
 		  -conf => 'support/example_dbr.conf'
 		 );
 
+sub foo{
+
+      my $dbrh = $dbr->connect('example') || die "failed to connect";
 
 
-my $dbrh = $dbr->connect('example') || die "failed to connect";
 
 
+      my $artists = $dbrh->artist->all or die "failed to fetch artists";
 
 
-my $artists = $dbrh->artist->all or die "failed to fetch artists";
+      print "Artists:\n\n";
+      while (my $artist = $artists->next) {
 
+	    print $artist->name . "\n";
+	    return $artist;
 
-print "Artists:\n\n";
-while (my $artist = $artists->next){
-
-      print $artist->name . "\n";
+      }
 
 }
+
+
+
+my $artist = foo()

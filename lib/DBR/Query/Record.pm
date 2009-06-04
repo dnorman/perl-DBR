@@ -28,6 +28,11 @@ sub gethash{
       wantarray?( %ret ) : \%ret;
 }
 
+# sub set {
+#       # helper     $self, args
+#       $_[0][1]->set($_[0],@_);
+# }
+
 sub next { croak "Can not call next on a record" }
 
 1;

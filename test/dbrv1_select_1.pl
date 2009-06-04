@@ -21,6 +21,16 @@ my $dbr    = new DBR(
 
 my $dbrh = $dbr->connect('esrp_main') || die "failed to connect";
 
+my $ret = $dbrh->select(
+  '-table' => 'offices',
+          '-keycol' => 'office_id',
+          '-fields' => 'office_id tz_id'
+
+
+
+		       );
+print Dumper($ret);
+
 # my $ret = $dbrh->select(
 # 			'-table' => 'resource_locks',
 # 			'-where' => {
@@ -42,23 +52,20 @@ my $dbrh = $dbr->connect('esrp_main') || die "failed to connect";
 # 			'-single' => 1
 # 		       );
 
-my $ret = $dbrh->select(
-			'-table' => 'receive_unit',
-			'-where' => {
-				     'receive_unit_id' => {
-							   '-table' => 'receive_lot',
-							   '-where' => {
-									'receive_lot_id' => [
-											     'd in',
-											     '659583'
-											    ]
-								       },
-							   '-field' => 'receive_unit_id'
-							  }
-				    },
-			'-fields' => [
-				      'product_id'
-				     ]
 
-		       );
-print Dumper($ret);
+# 			'-table' => 'receive_unit',
+# 			'-where' => {
+# 				     'receive_unit_id' => {
+# 							   '-table' => 'receive_lot',
+# 							   '-where' => {
+# 									'receive_lot_id' => [
+# 											     'd in',
+# 											     '659583'
+# 											    ]
+# 								       },
+# 							   '-field' => 'receive_unit_id'
+# 							  }
+# 				    },
+# 			'-fields' => [
+# 				      'product_id'
+# 				     ]

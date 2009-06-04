@@ -28,7 +28,11 @@ sub split{
       my $idx = $field->index;
       return $self->_error('field object must provide an index') unless defined($idx);
 
+      #print STDERR "ROWCACHE before $self->{rowcache} ${$self->{rowcache}}\n";
       my $rows = $self->_fetch_all or return $self->_error('_fetch_all failed');
+
+      #print STDERR "ROWCACHE  after $self->{rowcache} ${$self->{rowcache}}\n";
+
       my $code = 'map { push @{$groupby{ $_->[' . $idx . '] }}, $_ } @{ $rows }';
       $self->_logDebug3($code);
 
@@ -39,17 +43,25 @@ sub split{
 	    $groupby{$key} = DBR::Query::ResultSet::Mem->new(
 							     logger  => $self->{logger},
 							     rows    => $groupby{$key},
-							     record  => $self->{record}, #keep RecMaker object in scope);
+							     record  => $self->{record},
+							     buddy   => $self->{buddy}, # use the same record buddy object
+							     query   => $self->{query},
 							    ) or return $self->_error('failed to create resultset lite object');
       }
 
       return \%groupby;
 }
 
-#HERE HERE HERE this is broken for fields that aren't in the resultset
-# Consider adding a method to Query.pm to provide an overlayed list of fields selected, AND possible
-sub lookup_hash {
+sub get_one {
+      # HERE HERE HERE = get all one value?
+}
+
+sub hashmap_multi { shift->_lookuphash('multi', @_) }
+sub hashmap_single{ shift->_lookuphash('single',@_) }
+
+sub _lookuphash{
       my $self = shift;
+      my $mode = shift;
       my @fieldnames = map { split(/\s+/,$_) } @_;
 
       scalar(@fieldnames) or croak('Must provide a list of field names');
@@ -58,31 +70,28 @@ sub lookup_hash {
 
       return {} unless $self->count > 0;
 
-      my $qfields = $self->{query}->fields or return $self->_error('failed to retrieve query fields');
-
-
-      my %fieldmap;
-      map {$fieldmap{$_->name} = $_} @{$qfields};
-
       my $class = $self->{record}->class;
+      my $buddy = $self->{buddy} or confess "No buddy object present";
 
       my $code;
       foreach my $fieldname (@fieldnames){
-	    my $field = $fieldmap{$fieldname} or return $self->_error('invalid field ' . $fieldname);
-	    my $idx = $field->index;
-	    return $self->_error('fields must have indexes') unless defined $idx;
-
 	    $code .= "{ \$_->$fieldname }";
       }
-      $code = 'map {  $lookup' . $code . ' = bless($_,$class)  } @{$rows}';
+      my $part = ' map {  bless([$_,$buddy],$class)  } @{$rows}';
 
+      if($mode eq 'multi'){
+	    $code = 'map {  push @{ $lookup' . $code . ' }, $_ }' . $part;
+      }else{
+	    $code = 'map {  $lookup' . $code . ' = $_ }' . $part;
+      }
       $self->_logDebug3($code);
+
       my %lookup;
       eval $code;
+      croak "hashmap_$mode failed ($@)" if $@;
 
       return \%lookup;
 }
-
 
 # sub map {
 #       my $self = shift;
@@ -124,6 +133,8 @@ sub _mem_iterator{
       my $self = shift;
 
       my $class = $self->{record}->class;
+      my $buddy = $self->{buddy} or confess "No buddy object present";
+
       my $rows  = ${$self->{rowcache}};
       my $ct;
 
@@ -131,12 +142,40 @@ sub _mem_iterator{
       # It's very important that this closure is fast.
       # This one routine has more of an effect on speed than anything else in the rest of the code
       $self->{next} = sub {
-	    bless( ( $rows->[$ct++ || 0] or return $ct = undef ),	$class );
+	    bless( (
+		    [
+		     ($rows->[$ct++ || 0] or return $ct = undef),
+		     $buddy # buddy object comes aling for the ride - to keep my recmaker in scope
+		    ]
+		   ),	$class );
       };
 
       return 1;
 
 }
 
+
+sub _makerecord{
+      my $self = shift;
+
+      $self->{record} ||= $self->{query}->makerecord(
+						     rowcache => $self->{rowcache} # Consider passing rowcache only to the record buddy object
+						    ) or return $self->_error('failed to setup record');
+
+      $self->{buddy} ||= $self->{record}->buddy(
+						rowcache => $self->{rowcache}
+					       ) or return $self->_error('Failed to make buddy object');
+
+      return 1;
+}
+
+
+sub DESTROY{
+      my $self = shift;
+
+      # DON'T Purge my rowcache!, cus other objects might still have a copy of it
+
+      return 1;
+}
 
 1;

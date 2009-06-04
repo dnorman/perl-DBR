@@ -10,16 +10,20 @@ sub new {
       my $self = {
 		  logger   => $params{logger},
 		  record   => $params{record},
+		  query    => $params{query},
+		  buddy    => $params{buddy},
 		 };
 
       bless( $self, $package );
 
-      $self->_error('record object is required') unless $self->{record};
+      return $self->_error('logger object must be specified') unless $self->{logger};
+      return $self->_error('record object must be specified') unless $self->{record};
+      return $self->_error('query object must be specified')  unless $self->{query};
 
       my $rows = $params{rows};
       $self->{rowcache} = \$rows;
 
-      return $self->_error('logger object must be specified')   unless $self->{logger};
+      $self->_makerecord or return $self->_error('_makerecord failed');
       $self->_mem_iterator;
 
       return( $self );

@@ -42,6 +42,19 @@ sub new {
 
 sub class { $_[0]->{recordclass} }
 
+
+# This is just a stub to return some sort of buddy object, with the
+# idea of keeping the recmaker object in scope, and possibley also
+# for providing rowcache
+sub buddy {
+      my $self = shift;
+      my %params = @_;
+
+      $params{rowcache} or return $self->_error('rowcache is required');
+
+      return $self; # Just use the recmaker for now
+}
+
 sub _prep{
       my $self = shift;
 
@@ -141,8 +154,8 @@ sub _prep{
 
       $self->_mk_method(
 			method => 'set',
-			helper => $helper,
-		       ) or $self->_error('Failed to create set method');
+ 			helper => $helper,
+ 		       ) or $self->_error('Failed to create set method');
 
       return 1;
 }
@@ -158,7 +171,8 @@ sub _mk_accessor{
       my $method = $field->name;
 
       my $obj      = '$_[0]';
-      my $record   = $obj;
+      my $record   = $obj . '[0]';
+
       my $setvalue = '$_[1]';
       my $value;
 
@@ -213,7 +227,7 @@ sub _mk_relation{
       my $method = $relation->name;
 
       my $obj      = '$_[0]';
-      my $record   = $obj;
+      my $record   = $obj . '[0]';
 
       my $field_id = $relation->field_id or return $self->_error('failed to retrieve field_id');
 
@@ -251,7 +265,7 @@ sub _mk_method{
       my $method = $params{method} or return $self->_error('method is required');
 
       my $obj      = 'shift';
-      my $record   = $obj;
+      my $record   = $obj . '->[0]';
 
       my $code = "\$h->$method($record,\@_)";
 
