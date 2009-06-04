@@ -190,6 +190,7 @@ sub getrelation{
 					  logger        => $self->{logger},
 					  conf_instance => $maptable->conf_instance,
 					  extra_ident   => $maptable->name,
+					  offset        => 2,
 					 ) or return $self->_error('Failed to get calling scope');
 
       my $pk        = $maptable->primary_key or return $self->_error('Failed to fetch primary key');
