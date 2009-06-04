@@ -35,16 +35,36 @@ sub scan{
 
       my %params;
       my $tables = $self->scan_tables() || die "failed to scan tables";
+      my $pkeys = $self->scan_pkeys() || die "failed to scan primary keys";
 
       foreach my $table (@{$tables}){
        	    my $fields = $self->scan_fields($table) or return $self->_error( "failed to describe table" );
+            my $pkey = $pkeys->{$table};
 
-	    $self->update_table($fields,$table) or return $self->_error("failed to update table");
+	    $self->update_table($fields,$table,$pkey) or return $self->_error("failed to update table");
       }
 
       return 1;
 }
 
+
+sub scan_pkeys {
+      my $self = shift;
+      my $dbh = $self->{scan_instance}->connect('dbh') || die "failed to connect to scanned db";
+
+      return $self->_error('failed call to primary_key_info') unless
+	my $sth = $dbh->primary_key_info(undef,undef,undef);
+
+      my %map = ();
+      while (my $row = $sth->fetchrow_hashref()) {
+            next unless $row->{PK_NAME} eq 'PRIMARY KEY';
+	    my $table = $row->{TABLE_NAME} or return $self->_error('no TABLE_NAME!');
+	    my $field = $row->{COLUMN_NAME} or return $self->_error('no COLUMN_NAME!');
+            $map{$table}->{$field} = 1;
+      }
+
+      return \%map;
+}
 
 sub scan_tables{
       my $self = shift;
@@ -92,6 +112,7 @@ sub update_table{
       my $self   = shift;
       my $fields = shift;
       my $name   = shift;
+      my $pkey   = shift;
 
       my $dbh = $self->{conf_instance}->connect || die "failed to connect to config db";
 
@@ -121,7 +142,7 @@ sub update_table{
  				      );
       }
 
-      $self->update_fields($fields,$table_id) or return $self->_error('Failed to update fields');
+      $self->update_fields($fields,$table_id,$pkey) or return $self->_error('Failed to update fields');
 
       return 1;
 }
@@ -131,6 +152,7 @@ sub update_fields{
       my $self = shift;
       my $fields = shift;
       my $table_id = shift;
+      my $pkey_map = shift;
 
       my $dbh = $self->{conf_instance}->connect || die "failed to connect to config db";
 
@@ -154,7 +176,7 @@ sub update_fields{
 	    my $nullable = $field->{'NULLABLE'};
 	    return $self->_error('No NULLABLE is present'  ) unless defined($nullable);
 
-	    my $pkey = $field->{'mysql_is_pri_key'};
+	    my $pkey = $field->{'mysql_is_pri_key'} || $pkey_map->{$name};
 	    my $extra = $field->{'mysql_type_name'};
 
 	    my $is_signed = 0;
