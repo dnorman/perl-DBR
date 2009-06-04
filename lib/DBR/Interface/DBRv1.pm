@@ -116,7 +116,7 @@ sub insert {
       my $table = $params{-table} || $params{-insert};
       my $fields = $params{-fields};
 
-      return $self->_error('No -table parameter specified') unless $table =~ /^[A-Za-z0-9_-]+$/;
+      return $self->_error('No -table parameter specified') unless $table && $table =~ /^[A-Za-z0-9_-]+$/;
       return $self->_error('No proper -fields parameter specified') unless ref($fields) eq 'HASH';
 
       my @sets;
@@ -324,7 +324,7 @@ sub _processfield{
 	    $flags = $value->[0];
       }
 
-      if ($flags =~ /j/) {	# join
+      if ($flags && $flags =~ /j/) {	# join
 
 	    my $tofield = DBR::Config::Field::Anon->new(
 							logger => $self->{logger},
@@ -340,16 +340,18 @@ sub _processfield{
 	    my $is_number = 0;
 	    my $operator;
 
-	    if ( $flags =~ /like/ ) {
-		  $operator = 'like';# like
-		  #return $self->_error('LIKE flag disabled without the allowquery flag') unless $self->{config}->{allowquery};
-	    } elsif ( $flags =~ /!/    ) { $operator = 'ne'; # Not
-	    } elsif ( $flags =~ /\<\>/ ) { $operator = 'ne'; $is_number = 1; # greater than less than
-	    } elsif ( $flags =~ /\>=/  ) { $operator = 'ge'; $is_number = 1; # greater than eq
-	    } elsif ( $flags =~ /\<=/  ) { $operator = 'le'; $is_number = 1; # less than eq
-	    } elsif ( $flags =~ /\>/   ) { $operator = 'gt'; $is_number = 1; # greater than
-	    } elsif ( $flags =~ /\</   ) { $operator = 'lt'; $is_number = 1; # less than
-	    }
+            if ($flags) {
+                  if ( $flags =~ /like/ ) {
+                        $operator = 'like';# like
+                        #return $self->_error('LIKE flag disabled without the allowquery flag') unless $self->{config}->{allowquery};
+                  } elsif ( $flags =~ /!/    ) { $operator = 'ne'; # Not
+	          } elsif ( $flags =~ /\<\>/ ) { $operator = 'ne'; $is_number = 1; # greater than less than
+	          } elsif ( $flags =~ /\>=/  ) { $operator = 'ge'; $is_number = 1; # greater than eq
+	          } elsif ( $flags =~ /\<=/  ) { $operator = 'le'; $is_number = 1; # less than eq
+	          } elsif ( $flags =~ /\>/   ) { $operator = 'gt'; $is_number = 1; # greater than
+	          } elsif ( $flags =~ /\</   ) { $operator = 'lt'; $is_number = 1; # less than
+	          }
+            }
 
 	    $operator ||= 'eq';
 
@@ -377,7 +379,7 @@ sub _value {
 	    $flags = shift @$value;
       }
 
-      if($flags =~ /d/){  $is_number = 1 }
+      if($flags && $flags =~ /d/){  $is_number = 1 }
 
       my $valobj = DBR::Query::Part::Value->new(
 						is_number => $is_number,

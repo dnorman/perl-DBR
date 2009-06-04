@@ -42,7 +42,7 @@ sub connect {
       my $class = shift;
       my $flag;
 
-      if ($class eq 'dbh') {	# legacy
+      if ($class && $class eq 'dbh') {	# legacy
 	    $flag = 'dbh';
 	    $class = undef;
       }

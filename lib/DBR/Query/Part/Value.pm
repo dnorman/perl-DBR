@@ -69,6 +69,7 @@ sub new{
 
       if( $self->{is_number} ){
 	    foreach my $val ( @{$value}) {
+                  $val = '' unless defined $val;
 		  if ($val !~ /^-?\d*\.?\d+$/) {
 			return $self->_error("value '$val' is not a legal number");
 		  }
