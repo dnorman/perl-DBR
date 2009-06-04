@@ -1,4 +1,4 @@
-package DBR::Config::Trans::Date;
+package DBR::Config::Trans::UnixDate;
 
 use strict;
 use base 'DBR::Config::Trans';

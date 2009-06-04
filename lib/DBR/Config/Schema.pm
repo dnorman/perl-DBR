@@ -97,5 +97,23 @@ sub get_table{
       return $table;
 }
 
+sub tables{
+      my $self  = shift;
+
+      my @tables;
+
+      foreach my $table_id (    values %{$TABLES_BY_NAME{ $self->{schema_id}} }   ) {
+
+	    my $table = DBR::Config::Table->new(
+						logger   => $self->{logger},
+						table_id => $table_id,
+					       ) or return $self->_error('failed to create fieldWtable object');
+	    push @tables, $table;
+      }
+
+
+      return \@tables;
+}
+
 
 1;
