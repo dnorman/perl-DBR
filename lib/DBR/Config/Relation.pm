@@ -31,7 +31,7 @@ sub load{
       my( $package ) = shift;
       my %params = @_;
 
-      my $self = { logger => $params{logger} };
+      my $self = { session => $params{session} };
       bless( $self, $package ); # Dummy object
 
       my $instance = $params{instance} || return $self->_error('instance is required');
@@ -77,7 +77,7 @@ sub new {
       my $package = shift;
       my %params = @_;
       my $self = {
-		  logger      => $params{logger},
+		  session      => $params{session},
 		  relation_id => $params{relation_id},
 		  table_id    => $params{table_id},
 		 };
@@ -123,7 +123,7 @@ sub mapfield {
       my $mapfield_id = $RELATIONS_BY_ID{  $self->{relation_id} }->{ $self->{reverse}  . '_field_id' };
 
       my $field = DBR::Config::Field->new(
-					  logger   => $self->{logger},
+					  session   => $self->{session},
 					  field_id => $mapfield_id,
 					 ) or return $self->_error('failed to create field object');
 
@@ -133,7 +133,7 @@ sub maptable {
       my $self = shift;
 
       return DBR::Config::Table->new(
-				     logger   => $self->{logger},
+				     session   => $self->{session},
 				     table_id => $RELATIONS_BY_ID{  $self->{relation_id} }->{$self->{reverse} . '_table_id'}
 				    );
 }

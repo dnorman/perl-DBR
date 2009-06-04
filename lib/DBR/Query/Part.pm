@@ -13,13 +13,14 @@ use DBR::Query::Part::Compare;
 use DBR::Query::Part::Join;
 use DBR::Query::Part::Set;
 use DBR::Query::Part::Subquery;
-
+use Carp;
 
 sub validate{
       my $self = shift;
       my $query = shift;
 
-      return $self->_error('Query object is required') unless ref($query) =~/^DBR::Query$/;
+      croak('Query object is required') unless ref($query) =~/^DBR::Query$/;
+
       $self->_validate_self($query) or return $self->_error('Failed to validate ' . ref($self) );
 
       for ($self->children){
@@ -29,7 +30,7 @@ sub validate{
       return 1;
 }
 
-sub logger { undef }
+sub _session { undef }
 
 sub children{ return () }
 

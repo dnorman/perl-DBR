@@ -17,7 +17,7 @@ sub load{
       my( $package ) = shift;
       my %params = @_;
 
-      my $self = { logger => $params{logger} };
+      my $self = { session => $params{session} };
       bless( $self, $package ); # Dummy object
 
       my $instance = $params{instance} || return $self->_error('instance is required');
@@ -43,7 +43,7 @@ sub load{
       }
 
       DBR::Config::Table->load(
-			       logger => $self->{logger},
+			       session => $self->{session},
 			       instance => $instance,
 			       schema_id => \@schema_ids,
 			      ) or return $package->_error('failed to load tables');
@@ -72,7 +72,7 @@ sub new {
   my( $package ) = shift;
   my %params = @_;
   my $self = {
-	      logger    => $params{logger},
+	      session    => $params{session},
 	      schema_id => $params{schema_id}
 	     };
 
@@ -91,7 +91,7 @@ sub get_table{
       my $table_id = $TABLES_BY_NAME{ $self->{schema_id} } -> { $tname } || return $self->_error("table $tname does not exist");
 
       my $table = DBR::Config::Table->new(
-					  logger   => $self->{logger},
+					  session   => $self->{session},
 					  table_id => $table_id,
 					 ) or return $self->_error('failed to create table object');
       return $table;
@@ -105,9 +105,9 @@ sub tables{
       foreach my $table_id (    values %{$TABLES_BY_NAME{ $self->{schema_id}} }   ) {
 
 	    my $table = DBR::Config::Table->new(
-						logger   => $self->{logger},
+						session   => $self->{session},
 						table_id => $table_id,
-					       ) or return $self->_error('failed to create fieldWtable object');
+					       ) or return $self->_error('failed to create table object');
 	    push @tables, $table;
       }
 

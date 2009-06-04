@@ -1,4 +1,4 @@
-package DBR::Config::Trans::UnixDate;
+package DBR::Config::Trans::UnixTime;
 
 use strict;
 use base 'DBR::Config::Trans';
@@ -6,10 +6,37 @@ use base 'DBR::Config::Trans';
 sub new { die "Should not get here" }
 
 
+use POSIX qw(strftime tzset);
+use strict;
+use DateTime::TimeZone;
+my $now_string;
+
+sub setup {
+      my $tz = shift;
+
+      if(!$tz){
+	    my $tzobj = DateTime::TimeZone->new( name => 'local');
+	    $tz = $tzobj->name;
+      }
+
+      print STDERR "TZ '$tz'\n";
+      die "Invalid Timezone '$tz'" unless DateTime::TimeZone->is_valid_name( $tz );
+
+      my $func = sub {
+	    local($ENV{TZ}) = $tz;
+	    tzset();
+	    #return strftime ("%a %b %e %H:%M:%S %Y", localtime(shift));
+	    return strftime ("%D %H:%M:%S", localtime(shift));
+      }
+
+}
+
+
+
 sub forward{
       my $self = shift;
-      my $cents = shift;
-      return bless( [$cents] , 'DBR::_DATE');
+      my $unixtime = shift;
+      return bless( [$unixtime] , 'DBR::_UXTIME');
 }
 
 sub backward{
@@ -22,7 +49,7 @@ sub backward{
       return sprintf("%.0f", ($prettymoney * 100) );
 }
 
-package DBR::_DATE;
+package DBR::_UXTIME;
 
 use strict;
 use Carp;

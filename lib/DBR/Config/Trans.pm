@@ -11,14 +11,14 @@ use base 'DBR::Common';
 
 use DBR::Config::Trans::Enum;
 use DBR::Config::Trans::Dollars;
-use DBR::Config::Trans::UnixDate;
+use DBR::Config::Trans::UnixTime;
 
 
 
 my %MODULES = (
 	       1 => 'Enum',
 	       2 => 'Dollars',
-	       3 => 'UnixDate',
+	       3 => 'UnixTime',
 	      );
 
 sub list_translators{
@@ -29,7 +29,7 @@ sub load{
       my( $package ) = shift;
       my %params = @_;
 
-      my $self = { logger => $params{logger} };
+      my $self = { session => $params{session} };
       bless( $self, $package ); # Dummy object
 
       my $instance = $params{instance} || return $self->_error('instance is required');
@@ -45,7 +45,7 @@ sub load{
 	    #eval "require $pkg" or $self->_error('failed to load package ' . $pkg) or next;
 
 	    $pkg->moduleload(
-			     logger => $self->{logger},
+			     session => $self->{session},
 			     instance => $instance,
 			     field_id => $field_ids,
 			    ) or return $self->_error('failed to load translator' . $module);
@@ -63,7 +63,7 @@ sub new {
       my $package = shift;
       my %params = @_;
       my $self = {
-		  logger   => $params{logger},
+		  session   => $params{session},
 		  trans_id => $params{trans_id},
 		  field_id => $params{field_id},
 		 };

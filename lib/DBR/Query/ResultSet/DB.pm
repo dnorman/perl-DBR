@@ -10,14 +10,14 @@ sub new {
       my( $package ) = shift;
       my %params = @_;
       my $self = {
-		  logger   => $params{logger},
+		  session   => $params{session},
 		  query    => $params{query},
 		 };
 
       bless( $self, $package );
 
       return $self->_error('query object must be specified' )   unless $self->{query};
-      return $self->_error('logger object must be specified')   unless $self->{logger};
+      return $self->_error('session object must be specified')   unless $self->{session};
 
       #prime the pump
       $self->{next} = \&_first;

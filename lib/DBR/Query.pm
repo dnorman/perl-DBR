@@ -16,7 +16,7 @@ sub new {
 
       my $self = {
 		  instance   => $params{instance},
-		  logger => $params{logger},
+		  session => $params{session},
 		  scope  => $params{scope},
 		 };
 
@@ -307,7 +307,7 @@ sub resultset{
       return $self->_error('can only call resultset on a select') unless $self->{type} eq 'select';
 
       my $resultset = DBR::Query::ResultSet::DB->new(
-						     logger   => $self->{logger},
+						     session   => $self->{session},
 						     query    => $self,
 						     #instance => $self->{instance},
 						    ) or return $self->_error('Failed to create resultset');
@@ -370,7 +370,7 @@ sub makerecord{
 
       my $handle = DBR::Query::RecMaker->new(
 					     instance => $self->{instance},
-					     logger   => $self->{logger},
+					     session   => $self->{session},
 					     query    => $self,
 					     rowcache => $params{rowcache},
 					    ) or return $self->_error('failed to create record class');

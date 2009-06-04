@@ -19,7 +19,7 @@ sub new{
 
 
       my $self = {
-		  logger => $params{logger},
+		  session => $params{session},
 		  field  => $field
 		 };
 
@@ -132,6 +132,6 @@ sub quoted{
 
 sub raw{ wantarray?@{ $_[0]->{value} } : $_[0]->{value} }
 
-sub logger { $_[0]->{logger} }
+sub _session { $_[0]->{session} }
 
 

@@ -56,7 +56,7 @@ sub load{
       my( $package ) = shift;
       my %params = @_;
 
-      my $self = { logger => $params{logger} };
+      my $self = { session => $params{session} };
       bless( $self, $package ); # Dummy object
 
       my $instance = $params{instance} || return $self->_error('instance is required');
@@ -95,7 +95,7 @@ sub load{
       if (@trans_fids){
 
 	    DBR::Config::Trans->load(
-				     logger => $self->{logger},
+				     session => $self->{session},
 				     instance => $instance,
 				     field_id => \@trans_fids,
 				    ) or return $self->_error('failed to load translators');
@@ -110,7 +110,7 @@ sub new {
       my $package = shift;
       my %params = @_;
       my $self = {
-		  logger   => $params{logger},
+		  session   => $params{session},
 		  field_id => $params{field_id},
 		 };
 
@@ -127,7 +127,7 @@ sub clone{
       my $self = shift;
       return bless(
 		   {
-		    logger => $self->{logger},
+		    session => $self->{session},
 		    field_id => $self->{field_id}
 		   },
 	    ref($self),
@@ -139,7 +139,7 @@ sub makevalue{ # shortcut function?
       my $value = shift;
 
       return DBR::Query::Part::Value->new(
-					  logger => $self->{logger},
+					  session => $self->{session},
 					  value  => $value,
 					  is_number => $self->is_numeric,
 					  field  => $self,
@@ -156,7 +156,7 @@ sub table    {
       my $self = shift;
 
       return DBR::Config::Table->new(
-				     logger   => $self->{logger},
+				     session   => $self->{session},
 				     table_id => $FIELDS_BY_ID{  $_[0]->{field_id} }->{table_id}
 				    );
 }
@@ -172,7 +172,7 @@ sub translator{
       my $trans_id = $FIELDS_BY_ID{ $self->{field_id} }->{trans_id} or return undef;
 
       return DBR::Config::Trans->new(
-				     logger   => $self->{logger},
+				     session   => $self->{session},
 				     trans_id => $trans_id,
 				     field_id => $self->{field_id},
 				    );

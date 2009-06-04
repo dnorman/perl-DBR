@@ -2,6 +2,8 @@ package DBR::Common;
 
 use strict;
 use Time::HiRes;
+use Carp;
+
 my %TIMERS;
 
 sub _uniq{
@@ -62,65 +64,101 @@ sub _stopwatch{
 
       return 1;
 }
-sub _error {
-      my $self = shift;
-      my $message = shift;
 
-      my ( $package, $filename, $line, $method) = caller(1);
-      if ($self->logger){
-	    $self->logger->logErr($message,$method);
+sub _log       {
+      my $s = shift->_session or return 1;
+      $s->_log( shift, 'INFO'  );
+      return 1
+}
+sub _logDebug  {
+      my $s = shift->_session or return 1;
+      $s->_log( shift, 'DEBUG'  );
+      return 1
+}
+sub _logDebug2  {
+      my $s = shift->_session or return 1;
+      $s->_log( shift, 'DEBUG2'  );
+      return 1
+}
+sub _logDebug3  {
+      my $s = shift->_session or return 1;
+      $s->_log( shift, 'DEBUG3'  );
+      return 1
+}
+
+sub _error     {
+      my $s = shift->_session;
+      if($s){
+	    $s->_log( shift, 'ERROR' )
       }else{
-	    print STDERR "DBR ERROR: $message ($method, line $line)\n";
+	    print STDERR "DBR ERROR: " . shift() . "\n";
       }
       return undef;
 }
 
-sub _logDebug{
-      my $self = shift;
-      my $message = shift;
-      my ( $package, $filename, $line, $method) = caller(1);
-      if ($self->logger){
-	    $self->logger->logDebug($message,$method);
-      }elsif($self->is_debug){
-	    print STDERR "DBR DEBUG: $message\n";
-      }
-}
-sub _logDebug2{
-      my $self = shift;
-      my $message = shift;
-      my ( $package, $filename, $line, $method) = caller(1);
-      if ($self->logger){
-	    $self->logger->logDebug2($message,$method);
-      }elsif($self->is_debug){
-	    print STDERR "DBR DEBUG2: $message\n";
-      }
-}
-sub _logDebug3{
-      my $self = shift;
-      my $message = shift;
-      my ( $package, $filename, $line, $method) = caller(1);
-      if ($self->logger){
-	    $self->logger->logDebug3($message,$method);
-      }elsif($self->is_debug){
-	    print STDERR "DBR DEBUG3: $message\n";
-      }
-}
-
-#HERE HERE HERE - do some fancy stuff with dummy subroutines in the symbol table if nobody is in debug mode
-
-sub _log{
-      my $self = shift;
-      my $message = shift;
-      my ( $package, $filename, $line, $method) = caller(1);
-      if ($self->logger){
-	    $self->logger->log($message,$method);
-      }else{
-	    print STDERR "DBR: $message\n";
-      }
-      return 1;
-}
-
-sub logger   { $_[0]->{logger} }
+sub _session { $_[0]->{session} }
 sub is_debug { $_[0]->{debug}  }
+
+package DBR::Common::DummySession;
+
+
+# sub _error {
+#       my $self = shift;
+#       my $message = shift;
+
+#       my ( $package, $filename, $line, $method) = caller(1);
+#       if ($self->session){
+# 	    $self->session->logErr($message,$method);
+#       }else{
+# 	    print STDERR "DBR ERROR: $message ($method, line $line)\n";
+#       }
+#       return undef;
+# }
+
+# sub _logDebug{
+#       my $self = shift;
+#       my $message = shift;
+#       my ( $package, $filename, $line, $method) = caller(1);
+#       if ($self->session){
+# 	    $self->session->logDebug($message,$method);
+#       }elsif($self->is_debug){
+# 	    print STDERR "DBR DEBUG: $message\n";
+#       }
+# }
+# sub _logDebug2{
+#       my $self = shift;
+#       my $message = shift;
+#       my ( $package, $filename, $line, $method) = caller(1);
+#       if ($self->session){
+# 	    $self->session->logDebug2($message,$method);
+#       }elsif($self->is_debug){
+# 	    print STDERR "DBR DEBUG2: $message\n";
+#       }
+# }
+# sub _logDebug3{
+#       my $self = shift;
+#       my $message = shift;
+#       my ( $package, $filename, $line, $method) = caller(1);
+#       if ($self->session){
+# 	    $self->session->logDebug3($message,$method);
+#       }elsif($self->is_debug){
+# 	    print STDERR "DBR DEBUG3: $message\n";
+#       }
+
+# }
+
+# #HERE HERE HERE - do some fancy stuff with dummy subroutines in the symbol table if nobody is in debug mode
+
+# sub _log{
+#       my $self = shift;
+#       my $message = shift;
+#       my ( $package, $filename, $line, $method) = caller(1);
+#       if ($self->session){
+# 	    $self->session->log($message,$method,'INFO');
+#       }else{
+# 	    print STDERR "DBR: $message\n";
+#       }
+#       return 1;
+# }
 
 1;

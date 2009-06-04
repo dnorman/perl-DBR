@@ -10,7 +10,7 @@ sub new {
       my( $package ) = shift;
       my %params = @_;
       my $self = {
-		  logger   => $params{logger},
+		  session  => $params{session},
 		  instance => $params{instance},
 		  tablemap => $params{tablemap},
 		  flookup  => $params{flookup},
@@ -22,7 +22,7 @@ sub new {
 
       bless( $self, $package ); # BS object
 
-      $self->{logger}   or return $self->_error('logger is required');
+      $self->{session}  or return $self->_error('session is required');
       $self->{instance} or return $self->_error('instance is required');
       $self->{scope}    or return $self->_error('scope is required');
 
@@ -95,7 +95,7 @@ sub _set{
       my ($outwhere,$tablename) = $self->_pk_where($record,$table_id) or return $self->_error('failed to create where tree');
 
        my $query = DBR::Query->new(
-				   logger => $self->{logger},
+				   session => $self->{session},
 				   instance => $self->{instance},
 				   tables => $tablename,
 				   where  => $outwhere,
@@ -132,7 +132,7 @@ sub getfield{
        my $newfield = $field->clone;
 
        my $query = DBR::Query->new(
-				   logger   => $self->{logger},
+				   session  => $self->{session},
 				   instance => $self->{instance},
 				   tables   => $tablename,
 				   where    => $outwhere,
@@ -187,7 +187,7 @@ sub getrelation{
 
       #HERER HERE HERE - scope probably needs an offset here
       my $scope = DBR::Config::Scope->new(
-					  logger        => $self->{logger},
+					  session       => $self->{session},
 					  conf_instance => $maptable->conf_instance,
 					  extra_ident   => $maptable->name,
 					  offset        => 2,
@@ -200,7 +200,7 @@ sub getrelation{
       my @fields = grep { !$uniq{ $_->field_id }++ } ($mapfield, @$pk, @$prefields );
 
       my $query = DBR::Query->new(
-				  logger   => $self->{logger},
+				  session  => $self->{session},
 				  instance => $self->{instance},
 				  tables   => $maptable->name,
 				  where    => $outwhere,

@@ -8,7 +8,7 @@ sub new {
       my( $package ) = shift;
       my %params = @_;
       my $self = {
-		  logger   => $params{logger},
+		  session   => $params{session},
 		  record   => $params{record},
 		  query    => $params{query},
 		  buddy    => $params{buddy},
@@ -16,7 +16,7 @@ sub new {
 
       bless( $self, $package );
 
-      return $self->_error('logger object must be specified') unless $self->{logger};
+      return $self->_error('session object must be specified') unless $self->{session};
       return $self->_error('record object must be specified') unless $self->{record};
       return $self->_error('query object must be specified')  unless $self->{query};
 

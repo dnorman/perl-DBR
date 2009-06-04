@@ -22,7 +22,7 @@ sub moduleload{
       my( $package ) = shift;
       my %params = @_;
 
-      my $self = { logger => $params{logger} };
+      my $self = { session => $params{session} };
       bless( $self, $package ); # Dummy object
 
       my $instance  = $params{instance}    || return $self->_error('instance is required');

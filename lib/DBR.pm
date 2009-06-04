@@ -8,6 +8,7 @@ package DBR;
 use strict;
 use DBR::Handle;
 use DBR::Config;
+use DBR::Util::Session;
 use base 'DBR::Common';
 
 sub new {
@@ -19,13 +20,21 @@ sub new {
 
       return $self->_error("Error: -conf must be specified") unless $params{-conf};
 
-      return $self->_error("Failed to create DBR::Config object") unless
-	$self->{config} = DBR::Config->new( logger => $self->{logger} );
+      return $self->_error("Failed to create DBR::Util::Session object") unless
+	$self->{session} = DBR::Util::Session->new(
+						   logger => $self->{logger}
+						  );
 
-      $self->{config} -> load_file(
-				   dbr  => $self,
-				   file => $params{-conf}
-				  ) or return $self->_error("Failed to load DBR conf file");
+      return $self->_error("Failed to create DBR::Config object") unless
+	my $config = DBR::Config->new( session => $self->{session} );
+
+      $config -> load_file(
+			   dbr  => $self,
+			   file => $params{-conf}
+			  ) or return $self->_error("Failed to load DBR conf file");
+
+
+
 
       return( $self );
 }
@@ -49,7 +58,7 @@ sub connect {
 
       my $instance = DBR::Config::Instance->lookup(
 						   dbr    => $self,
-						   logger => $self->{logger},
+						   session => $self->{session},
 						   handle => $name,
 						   class  => $class
 						  ) or return $self->_error("No config found for db '$name' class '$class'");
@@ -57,6 +66,7 @@ sub connect {
       return $instance->connect($flag);
 
 }
+
 sub get_instance {
       my $self = shift;
       my $name = shift;
@@ -70,11 +80,17 @@ sub get_instance {
 
       my $instance = DBR::Config::Instance->lookup(
 						   dbr    => $self,
-						   logger => $self->{logger},
+						   session => $self->{session},
 						   handle => $name,
 						   class  => $class
 						  ) or return $self->_error("No config found for db '$name' class '$class'");
       return $instance;
+}
+
+sub timezone{
+      my $self = shift;
+      my $tz   = shift;
+      $self->{session}->timezone($tz) or return $self->_error('Failed to set timezone');
 }
 
 sub remap{

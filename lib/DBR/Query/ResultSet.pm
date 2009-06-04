@@ -41,7 +41,7 @@ sub split{
 
       foreach my $key (keys %groupby){
 	    $groupby{$key} = DBR::Query::ResultSet::Mem->new(
-							     logger  => $self->{logger},
+							     session  => $self->{session},
 							     rows    => $groupby{$key},
 							     record  => $self->{record},
 							     buddy   => $self->{buddy}, # use the same record buddy object

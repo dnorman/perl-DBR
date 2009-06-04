@@ -17,7 +17,7 @@ sub new {
       my( $package ) = shift;
       my %params = @_;
       my $self = {
-		  logger   => $params{logger},
+		  session   => $params{session},
 		  instance => $params{instance},
 		  query    => $params{query},
 		  rowcache => $params{rowcache},
@@ -25,7 +25,7 @@ sub new {
 
       bless( $self, $package ); # BS object
 
-      $self->{logger}   or return $self->_error('logger is required');
+      $self->{session}   or return $self->_error('session is required');
       $self->{instance} or return $self->_error('instance object must be specified');
       $self->{query}    or return $self->_error('query is required');
       $self->{rowcache} or return $self->_error('rowcache is required');
@@ -82,7 +82,7 @@ sub _prep{
       foreach my $table_id ($self->_uniq( @table_ids )){
 
 	    my $table = DBR::Config::Table->new(
-						logger   => $self->{logger},
+						session   => $self->{session},
 						table_id => $table_id,
 					       ) or return $self->_error('Failed to create table object');
 
@@ -121,7 +121,7 @@ sub _prep{
       $self->{name} = join('/',@tablenames);
 
       my $helper = DBR::Query::RecHelper->new(
-					      logger   => $self->{logger},
+					      session   => $self->{session},
 					      instance => $self->{instance},
 					      tablemap => \%tablemap,     # V
 					      pkmap    => \%pkmap,        # V

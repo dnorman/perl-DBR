@@ -15,7 +15,7 @@ sub new {
       my( $package ) = shift;
       my %params = @_;
       my $self = {
-		  logger => $params{logger},
+		  session => $params{session},
 		  instance   => $params{instance},
 		  table  => $params{table},
 		 };
@@ -34,7 +34,7 @@ sub all{
 
       my $table = $self->{table};
       my $scope = DBR::Config::Scope->new(
-					  logger        => $self->{logger},
+					  session        => $self->{session},
 					  conf_instance => $table->conf_instance,
 					  extra_ident   => $table->name,
 					 ) or return $self->_error('Failed to get calling scope');
@@ -46,7 +46,7 @@ sub all{
       my @fields = grep { !$uniq{ $_->field_id }++ } (@$pk, @$prefields);
 
       my $query = DBR::Query->new(
-				  logger => $self->{logger},
+				  session => $self->{session},
 				  instance   => $self->{instance},
 				  select => {
 					     fields => \@fields
@@ -66,7 +66,7 @@ sub where{
 
       my $table = $self->{table};
       my $scope = DBR::Config::Scope->new(
-					  logger        => $self->{logger},
+					  session        => $self->{session},
 					  conf_instance => $table->conf_instance,
 					  extra_ident   => $table->name,
 					 ) or return $self->_error('Failed to get calling scope');
@@ -97,7 +97,7 @@ sub where{
       my $outwhere = DBR::Query::Part::And->new(@and);
 
       my $query = DBR::Query->new(
-				  logger => $self->{logger},
+				  session => $self->{session},
 				  instance   => $self->{instance},
 				  select => {
 					     fields => \@fields
@@ -132,7 +132,7 @@ sub insert {
 
       my $query = DBR::Query->new(
 				  instance   => $self->{instance},
-				  logger => $self->{logger},
+				  session => $self->{session},
 				  insert => {
 					     set => \@sets,
 					    },
@@ -155,7 +155,7 @@ sub get{
       my $field = $pk->[0];
 
       my $scope = DBR::Config::Scope->new(
-					  logger        => $self->{logger},
+					  session        => $self->{session},
 					  conf_instance => $table->conf_instance
 					 ) or return $self->_error('Failed to get calling scope');
 
@@ -169,7 +169,7 @@ sub get{
       my $outwhere = DBR::Query::Part::Compare->new( field => $field, value => $value ) or return $self->_error('failed to create compare object');
 
       my $query = DBR::Query->new(
-				  logger => $self->{logger},
+				  session => $self->{session},
 				  instance => $self->{instance},
 				  select => { fields => \@fields },
 				  tables => $table->name,

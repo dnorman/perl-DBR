@@ -18,7 +18,7 @@ sub new {
 
       my $self = {
 		  instance => $params{instance},
-		  logger   => $params{logger},
+		  session   => $params{session},
 		 };
 
       bless( $self, $package );
@@ -49,7 +49,7 @@ sub select {
       my @Qfields;
       foreach my $field (@$fields){
 	    my $Qfield = DBR::Config::Field::Anon->new(
-						       logger => $self->{logger},
+						       session => $self->{session},
 						       name   => $field
 						      ) or return $self->_error('Failed to create field object');
 	    push @Qfields, $Qfield;
@@ -65,7 +65,7 @@ sub select {
 
       my $query = DBR::Query->new(
 				  instance => $self->{instance},
-				  logger   => $self->{logger},
+				  session   => $self->{session},
 				  select   => {
 					     count  => $params{'-count'}?1:0, # takes precedence
 					     fields => \@Qfields
@@ -124,7 +124,7 @@ sub insert {
 	    my $value = $fields->{$field};
 
 	    my $fieldobj = DBR::Config::Field::Anon->new(
-							 logger => $self->{logger},
+							 session => $self->{session},
 							 name   => $field
 							) or return $self->_error('Failed to create field object');
 
@@ -137,7 +137,7 @@ sub insert {
 
       my $query = DBR::Query->new(
 				  instance => $self->{instance},
-				  logger   => $self->{logger},
+				  session   => $self->{session},
 				  insert   => {
 					       set => \@sets,
 					      },
@@ -172,7 +172,7 @@ sub update {
 	    my $value = $fields->{$field};
 
 	    my $fieldobj = DBR::Config::Field::Anon->new(
-							 logger => $self->{logger},
+							 session => $self->{session},
 							 name   => $field
 							) or return $self->_error('Failed to create field object');
 
@@ -186,7 +186,7 @@ sub update {
 
       my $query = DBR::Query->new(
 				  instance => $self->{instance},
-				  logger   => $self->{logger},
+				  session   => $self->{session},
 				  update   => {
 					       set => \@sets,
 					      },
@@ -216,7 +216,7 @@ sub delete {
 
       my $query = DBR::Query->new(
 				  instance => $self->{instance},
-				  logger   => $self->{logger},
+				  session   => $self->{session},
 				  delete   => 1,
 				  tables   => $table,
 				  where    => $where,
@@ -261,12 +261,12 @@ sub _where {
 			if($value->{-table} && ($value->{-field} || $value->{-fields})){ #does it smell like a subquery?
 
 			      my $field = DBR::Config::Field::Anon->new(
-									logger => $self->{logger},
+									session => $self->{session},
 									name   => $key,
 								       ) or return $self->_error('Failed to create field object');
 
 			      my $compat = DBR::Interface::DBRv1->new(
-								      logger   => $self->{logger},
+								      session   => $self->{session},
 								      instance => $self->{instance},
 								     ) or return $self->_error('failed to create Query object');
 
@@ -315,7 +315,7 @@ sub _processfield{
       my $value   = shift;
 
       my $field = DBR::Config::Field::Anon->new(
-						logger => $self->{logger},
+						session => $self->{session},
 						name   => $fieldname
 					       ) or return $self->_error('Failed to create fromfield object');
       my $flags;
@@ -327,7 +327,7 @@ sub _processfield{
       if ($flags && $flags =~ /j/) {	# join
 
 	    my $tofield = DBR::Config::Field::Anon->new(
-							logger => $self->{logger},
+							session => $self->{session},
 							name   => $value->[1]
 						       ) or return $self->_error('Failed to create tofield object');
 
@@ -384,7 +384,7 @@ sub _value {
       my $valobj = DBR::Query::Part::Value->new(
 						is_number => $is_number,
 						value     => $value,
-						logger    => $self->{logger}
+						session    => $self->{session}
 					       ) or return $self->_error('failed to create value object');
       return $valobj;
 

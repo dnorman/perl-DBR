@@ -21,7 +21,7 @@ sub load{
       my( $package ) = shift;
       my %params = @_;
 
-      my $self = { logger => $params{logger} };
+      my $self = { session => $params{session} };
       bless( $self, $package ); # Dummy object
 
       my $instance = $params{instance} || return $self->_error('instance is required');
@@ -60,13 +60,13 @@ sub load{
 
       if(@table_ids){
 	    DBR::Config::Field->load(
-				     logger => $self->{logger},
+				     session => $self->{session},
 				     instance => $instance,
 				     table_id => \@table_ids,
 				    ) or return $self->_error('failed to load fields');
 
 	    DBR::Config::Relation->load(
-					logger => $self->{logger},
+					session => $self->{session},
 					instance => $instance,
 					table_id => \@table_ids,
 				       ) or return $self->_error('failed to load relationships');
@@ -114,7 +114,7 @@ sub new {
   my( $package ) = shift;
   my %params = @_;
   my $self = {
-	      logger   => $params{logger},
+	      session   => $params{session},
 	      table_id => $params{table_id}
 	     };
 
@@ -134,7 +134,7 @@ sub get_field{
       my $field_id = $FIELDS_BY_NAME{ $self->{table_id} } -> { $name } || return $self->_error("field $name does not exist");
 
       my $field = DBR::Config::Field->new(
-					  logger   => $self->{logger},
+					  session   => $self->{session},
 					  field_id => $field_id,
 					 ) or return $self->_error('failed to create table object');
       return $field;
@@ -148,7 +148,7 @@ sub fields{
       foreach my $field_id (    values %{$FIELDS_BY_NAME{$self->{table_id}}}   ) {
 
 	    my $field = DBR::Config::Field->new(
-						logger   => $self->{logger},
+						session   => $self->{session},
 						field_id => $field_id,
 					       ) or return $self->_error('failed to create field object');
 	    push @fields, $field;
@@ -162,7 +162,7 @@ sub primary_key{
       my $self = shift;
       [
        map {
-	     DBR::Config::Field->new(logger   => $self->{logger}, field_id => $_ )
+	     DBR::Config::Field->new(session   => $self->{session}, field_id => $_ )
 		 or return $self->_error('failed to create field object')
 	   } @{ $PK_FIELDS{ $self->{table_id} } }
       ];
@@ -177,7 +177,7 @@ sub relations{
       foreach my $relation_id (    values %{$RELATIONS_BY_NAME{$self->{table_id}}}   ) {
 
 	    my $relation = DBR::Config::Relation->new(
-						      logger      => $self->{logger},
+						      session      => $self->{session},
 						      relation_id => $relation_id,
 						      table_id    => $self->{table_id},
 						     ) or return $self->_error('failed to create relation object');
@@ -197,7 +197,7 @@ sub conf_instance {
       my $guid = $TABLES_BY_ID{  $self->{table_id} }->{conf_instance_guid};
 
       return DBR::Config::Instance->lookup(
-					   logger => $self->{logger},
+					   session => $self->{session},
 					   guid   => $guid
 					  ) or return $self->_error('Failed to fetch conf instance');
 }

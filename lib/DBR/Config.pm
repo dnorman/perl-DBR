@@ -9,14 +9,16 @@ use strict;
 use base 'DBR::Common';
 use DBR::Config::Instance;
 use DBR::Config::Schema;
+use Carp;
 
 my %LOADED_FILES;
 sub new {
   my( $package ) = shift;
   my %params = @_;
-  my $self = {logger => $params{logger}};
+  my $self = {session => $params{session}};
 
-  return $self->_error( 'logger is required'  ) unless $self->{logger};
+  croak( 'session is required'  ) unless $self->{session};
+
   bless( $self, $package );
 
   return( $self );
@@ -70,7 +72,7 @@ sub load_file{
 
 	    my $instance = DBR::Config::Instance->register(
 							   dbr    => $dbr,
-							   logger => $self->{logger},
+							   session => $self->{session},
 							   spec   => $instspec
 							  ) or $self->_error("failed to load DBR conf file '$file' (stanza #$count)") && next;
 	    if($instance->dbr_bootstrap){
@@ -101,7 +103,7 @@ sub load_dbconf{
 
       $self->_error("failed to create instance handles") unless
 	my $instances = DBR::Config::Instance->load_from_db(
-							    logger   => $self->{logger},
+							    session   => $self->{session},
 							    dbr      => $dbr,
 							    parent_inst => $parent_inst
 							   );
@@ -112,7 +114,7 @@ sub load_dbconf{
       if(%schema_ids){
 	    $self->_error("failed to create schema handles") unless
 	      my $schemas = DBR::Config::Schema->load(
-						      logger    => $self->{logger},
+						      session    => $self->{session},
 						      schema_id => [keys %schema_ids],
 						      instance  => $parent_inst,
 						     );

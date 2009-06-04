@@ -16,14 +16,14 @@ sub new {
       my( $package ) = shift;
       my %params = @_;
       my $self = {
-		  logger   => $params{logger},
+		  session   => $params{session},
 		  instance => $params{conf_instance},
 		  extra_ident => $params{extra_ident},
 		 };
 
       bless( $self, $package );
 
-      return $self->_error('logger is required') unless $self->{logger};
+      return $self->_error('session is required') unless $self->{session};
       return $self->_error('conf_instance is required')   unless $self->{instance};
 
       my $offset = $params{offset} || 1;
@@ -123,7 +123,7 @@ sub fields{
       my @fields;
       foreach my $fid (@$fids){
 	     my $field = DBR::Config::Field->new(
-						 logger   => $self->{logger},
+						 session   => $self->{session},
 						 field_id => $fid,
 					       ) or return $self->_error('failed to create table object');
 	    push @fields, $field;

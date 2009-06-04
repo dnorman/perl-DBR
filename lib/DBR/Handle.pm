@@ -18,7 +18,7 @@ sub new {
 
       my $self = {
 		  conn     => $params{conn},
-		  logger   => $params{logger},
+		  session   => $params{session},
 		  instance => $params{instance}
 		 };
 
@@ -32,7 +32,7 @@ sub new {
 
       # Temporary solution to interfaces
       $self->{dbrv1} = DBR::Interface::DBRv1->new(
-						  logger  => $self->{logger},
+						  session  => $self->{session},
 						  instance => $self->{instance},
 						 ) or return $self->_error('failed to create DBRv1 interface object');
 
@@ -57,7 +57,7 @@ sub AUTOLOAD {
       my $table = $self->{schema}->get_table( $method ) or return $self->_error("no such table '$method' exists in this schema");
 
       my $object = DBR::Interface::Object->new(
-					       logger   => $self->{logger},
+					       session   => $self->{session},
 					       instance => $self->{instance},
 					       table    => $table,
 					      ) or return $self->_error('failed to create query object');

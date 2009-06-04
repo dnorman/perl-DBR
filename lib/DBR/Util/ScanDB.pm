@@ -13,14 +13,14 @@ sub new {
       my( $package ) = shift;
       my %params = @_;
       my $self = {
-		  logger   => $params{logger},
+		  session   => $params{session},
 		  conf_instance => $params{conf_instance},
 		  scan_instance => $params{scan_instance},
 		 };
 
       bless( $self, $package );
 
-      return $self->_error('logger object must be specified')   unless $self->{logger};
+      return $self->_error('session object must be specified')   unless $self->{session};
       return $self->_error('conf_instance object must be specified')   unless $self->{conf_instance};
       return $self->_error('scan_instance object must be specified')   unless $self->{scan_instance};
 

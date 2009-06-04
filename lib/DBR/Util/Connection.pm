@@ -15,13 +15,13 @@ sub new {
 
       my %params = @_;
       my $self = {
-		  logger  => $params{logger},
+		  session  => $params{session},
 		  dbh     => $params{dbh},
 		 };
 
       bless( $self, $package );
 
-      return $self->_error('logger is required') unless $self->{logger};
+      return $self->_error('session is required') unless $self->{session};
       return $self->_error('dbh is required')    unless $self->{dbh};
       $self->{lastping} = time; # assume the setup of the connection as being a good ping
 

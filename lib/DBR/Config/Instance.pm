@@ -44,11 +44,11 @@ sub lookup{
       my %params = @_;
 
       my $self = {
-		  logger => $params{logger}
+		  session => $params{session}
 		 };
       bless( $self, $package );
 
-      return $self->_error('logger is required') unless $self->{logger};
+      return $self->_error('session is required') unless $self->{session};
 
       if( $params{guid} ){
 	    $self->{guid} = $params{guid};
@@ -73,7 +73,7 @@ sub load_from_db{
       my %params = @_;
 
       my $self = {
-		  logger => $params{logger}
+		  session => $params{session},
 		 };
       bless( $self, $package ); # Dummy object
 
@@ -90,7 +90,7 @@ sub load_from_db{
       foreach my $instrow (@$instrows){
 
 	    my $instance = $self->register(
-					   logger => $self->{logger},
+					   session => $self->{session},
 					   spec   => $instrow
 					  ) || $self->_error("failed to load instance from database (@{[$parent->handle]} @{[$parent->class]})") or next;
 	    push @instances, $instance;
@@ -106,11 +106,11 @@ sub register { # basically the same as a new
 
 
       my $self = {
-		  logger => $params{logger}
+		  session => $params{session}
 		 };
       bless( $self, $package );
 
-      return $self->_error( 'logger is required'  ) unless $self->{logger};
+      return $self->_error( 'session is required'  ) unless $self->{session};
 
 
       my $spec = $params{spec} or return $self->_error( 'spec ref is required' );
@@ -194,7 +194,7 @@ sub connect{
 	    return $self->_error("Failed to create Handle object") unless
 	      my $dbrh = DBR::Handle->new(
 					  conn     => $conn,
-					  logger   => $self->{logger},
+					  session  => $self->{session},
 					  instance => $self,
 					 );
 	    return $dbrh;
@@ -237,8 +237,8 @@ sub _new_connection{
 
       return $self->_error("Failed to create $connclass object") unless
 	my $conn = $connclass->new(
-				   logger => $self->{logger},
-				   dbh    => $dbh
+				   session => $self->{session},
+				   dbh     => $dbh
 				  );
 
       return $conn;
@@ -261,7 +261,7 @@ sub schema{
       my $schema_id = $self->schema_id || return ''; # No schemas here
 
       my $schema = DBR::Config::Schema->new(
-					    logger    => $self->{logger},
+					    session   => $self->{session},
 					    schema_id => $schema_id,
 					   ) || return $self->_error("failed to fetch schema object for schema_id $schema_id");
 

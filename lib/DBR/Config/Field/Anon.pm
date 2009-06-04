@@ -15,7 +15,7 @@ sub new{
       my $field;
 
       my $self = {
-		  logger => $params{logger},
+		  session => $params{session},
 		 };
 
       bless( $self, $package );
@@ -57,7 +57,7 @@ sub clone{
       my $self = shift;
       return bless(
 		   {
-		    logger      => $self->{logger},
+		    session      => $self->{session},
 		    field       => $self->{field},
 		    table_alias => $self->{table_alias},
 		    sql         => $self->{sql}
