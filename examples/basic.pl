@@ -2,7 +2,6 @@
 
 use strict;
 
-use lib '/dj/tools/perl-dbr/lib';
 use DBR;
 use DBR::Util::Logger;   # Any object that implements log, logErr, logDebug, logDebug2 and logDebug3 will do
 use DBR::Util::Operator; # Imports operator functions
@@ -16,6 +15,7 @@ my $dbr = new DBR(
 		  -logger => $logger,
 		  -conf => 'support/example_dbr.conf'
 		 );
+
 
 sub foo{
 
@@ -31,7 +31,7 @@ sub foo{
       while (my $artist = $artists->next) {
 
 	    print $artist->name . "\n";
-	    return $artist;
+	    #return $artist;
 
       }
 
@@ -39,4 +39,5 @@ sub foo{
 
 
 
-my $artist = foo()
+my $artist = foo();
+print STDERR "EOP\n";
