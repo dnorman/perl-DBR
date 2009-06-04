@@ -40,6 +40,10 @@ my %datatypes = (
 
 my %datatype_lookup = map { $datatypes{$_}->{id} => {%{$datatypes{$_}}, handle => $_ }} keys %datatypes;
 
+sub list_datatypes{
+      return Clone::clone( [ sort { $a->{id} <=> $b->{id} } values %datatype_lookup ] );
+}
+
 sub get_type_id{
       my( $package ) = shift;
       my $type = shift;

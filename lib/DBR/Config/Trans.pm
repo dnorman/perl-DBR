@@ -19,6 +19,10 @@ my %MODULES = (
 	       2 => 'Dollars',
 	      );
 
+sub list_translators{
+      return [ map { {id => $_, name => $MODULES{$_} } }  keys %MODULES ];
+}
+
 sub load{
       my( $package ) = shift;
       my %params = @_;
