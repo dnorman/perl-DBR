@@ -189,7 +189,7 @@ sub _end{
       my $self = shift;
       $self->{real_count} ||= $self->{sth}->rows; # Sqlite doesn't give any rowcount, so we have to use this as a fallback
       $self->reset;
-      print STDERR "END\n";
+      #print STDERR "END\n";
       return undef;
 }
 
