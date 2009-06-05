@@ -83,8 +83,8 @@ my $ct;
 	     print "order_id is "   . $order->order_id . "\n";
 	     print "  Status is "   . $order->status . "\n";
 	     print "  Date Created is "   . $order->date_created . "\n";
-	     print "  Date Created minus two days is"   . ($order->date_created - '2 days')  . "\n";
-	     print "  Date Created midnight is"   . $order->date_created->midnight  . "\n";
+	     print "  Date Created minus two days is "   . ($order->date_created - '2 days')  . "\n";
+	     print "  Date Created midnight is "   . $order->date_created->midnight  . "\n";
 
 #	     $order->status('settled') if !$ct++;
 

@@ -35,42 +35,6 @@ sub new {
       return $self;
 }
 
-sub delete{
-      my $self = shift;
-      my $record = shift;
-      my %params = @_;
-
-      my %sets;
-      foreach my $fieldname (keys %params){
-	    my $field = $self->{flookup}->{$fieldname} or return $self->_error("$fieldname is not a valid field");
-	    $field->is_readonly && return $self->_error("Field $fieldname is readonly");
-
-	    my $setvalue = $field->makevalue($params{$fieldname}) or return $self->_error('failed to create setvalue object');
-	    $setvalue->count == 1 or return $self->_error("Field ${\$field->name} allows only a single value");
-
-	    my $setobj   = DBR::Query::Part::Set->new( $field, $setvalue ) or return $self->_error('failed to create set object');
-
-	    push @{$sets{$field->table_id}}, $setobj;
-      }
-      my $ct = scalar(keys %sets);
-
-
-      my $dbrh;
-      if($ct > 1){
-	    # create a new DBRH here to ensure proper transactional handling
-	    $dbrh = $self->{instance}->connect or return $self->_error('failed to connect');
-	    $dbrh->begin;
-      }
-
-      foreach my $table_id (keys %sets){
-	    $self->_set($record, $table_id, $sets{$table_id}) or return $self->_error('failed to set');
-      }
-
-      $dbrh->commit if $ct > 1;
-
-      return 1;
-}
-
 sub set{
       my $self = shift;
       my $record = shift;
@@ -303,6 +267,7 @@ sub getrelation{
 	    return $myresult;
 
       }else{
+
 	    my $result = $resultset;
 	    if($to1){
 		  $result = $resultset->next;

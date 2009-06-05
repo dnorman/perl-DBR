@@ -58,4 +58,13 @@ sub _log{
       return 1;
 }
 
+sub _directlog{
+      my $self = shift;
+      my $message = shift;
+      my $method  = shift;
+      my $mode    = shift;
+
+      $self->{logger}->log($message,$method,$mode)
+}
+
 1;

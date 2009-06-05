@@ -292,7 +292,7 @@ sub _eval_method{
 sub DESTROY{ # clean up the temporary object from the symbol table
       my $self = shift;
       my $class = $self->{recordclass};
-      $self->_logDebug2("Destroy $self->{name} ($class)");
+      #$self->_logDebug2("Destroy $self->{name} ($class)");
       push @IDPOOL, $self->{classidx};
 
       #print STDERR "DESTROY $class, $self->{classidx}\n";

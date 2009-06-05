@@ -35,4 +35,5 @@ sub gethash{
 
 sub next { croak "Can not call next on a record" }
 
+#sub DESTROY { print STDERR "RECORD DESTROY $_[0]\n"}
 1;

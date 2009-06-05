@@ -133,7 +133,7 @@ sub fields{
       return \@fields;
 }
 
-sub addfield{ #HERE HERE HERE double check the caching logic
+sub addfield{
       my $self = shift;
       my $field = shift;
 
