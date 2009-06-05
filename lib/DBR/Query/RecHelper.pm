@@ -35,6 +35,42 @@ sub new {
       return $self;
 }
 
+sub delete{
+      my $self = shift;
+      my $record = shift;
+      my %params = @_;
+
+      my %sets;
+      foreach my $fieldname (keys %params){
+	    my $field = $self->{flookup}->{$fieldname} or return $self->_error("$fieldname is not a valid field");
+	    $field->is_readonly && return $self->_error("Field $fieldname is readonly");
+
+	    my $setvalue = $field->makevalue($params{$fieldname}) or return $self->_error('failed to create setvalue object');
+	    $setvalue->count == 1 or return $self->_error("Field ${\$field->name} allows only a single value");
+
+	    my $setobj   = DBR::Query::Part::Set->new( $field, $setvalue ) or return $self->_error('failed to create set object');
+
+	    push @{$sets{$field->table_id}}, $setobj;
+      }
+      my $ct = scalar(keys %sets);
+
+
+      my $dbrh;
+      if($ct > 1){
+	    # create a new DBRH here to ensure proper transactional handling
+	    $dbrh = $self->{instance}->connect or return $self->_error('failed to connect');
+	    $dbrh->begin;
+      }
+
+      foreach my $table_id (keys %sets){
+	    $self->_set($record, $table_id, $sets{$table_id}) or return $self->_error('failed to set');
+      }
+
+      $dbrh->commit if $ct > 1;
+
+      return 1;
+}
+
 sub set{
       my $self = shift;
       my $record = shift;
@@ -54,6 +90,7 @@ sub set{
       }
       my $ct = scalar(keys %sets);
 
+      return $self->_error('Must specify at least one field to set') unless $ct > 0;
 
       my $dbrh;
       if($ct > 1){
@@ -111,6 +148,31 @@ sub _set{
 
       return $rv;
 }
+
+sub delete{
+       my $self = shift;
+       my $record = shift;
+
+       return $self->_error('Cannot call delete on join record')
+	 if scalar(keys %{$self->{tablemap}}) > 1;
+
+       my ($table_id) = keys %{$self->{tablemap}};
+
+       my ($outwhere,$tablename) = $self->_pk_where($record,$table_id) or return $self->_error('failed to create where tree');
+
+       my $query = DBR::Query->new(
+				   session  => $self->{session},
+				   instance => $self->{instance},
+				   tables   => $tablename,
+				   where    => $outwhere,
+				   delete   => 1,
+				  ) or return $self->_error('failed to create Query object');
+
+       $query->execute or return $self->_error('failed to execute');
+
+       return 1;
+}
+
 
 # Fetch a field ONLY if it was not prefetched
 sub getfield{

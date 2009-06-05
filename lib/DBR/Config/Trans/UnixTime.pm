@@ -57,17 +57,11 @@ use overload
 '0+' => sub { $_[0]->unixtime },
 
 #operators
-# '+'  => sub { new($_[0]->cents + _getcents($_[1])) },
-# '-'  => sub {
-#       my ($a,$b) = ($_[0]->cents, _getcents($_[1]));
-#       new ($_[2] ? $b - $a : $a - $b);
-# },
+ '+'  => sub { $_[0]->manip( $_[1], 'add' )      || croak "Invalid date manipulation '$_[1]'" },
+ '-'  => sub { $_[0]->manip( $_[1], 'subtract' ) || croak "Invalid date manipulation '$_[1]'" },
 
-# '*'  => sub { new($_[0]->cents * $_[1]) },
-# '/'  => sub {
-#       my ($a,$b) = ($_[0]->cents, $_[1] );
-#       new ($_[2] ? $b / $a : $a / $b);
-# },
+# Some ideas:
+# 
 
 'fallback' => 1,
 'nomethod' => sub {croak "UnixTime object: Invalid operation '$_[3]' The ways in which you can use UnixTime objects is restricted"}
@@ -127,6 +121,48 @@ sub endofday{
       my $endofday = $self->[0] + 86399 - ($sec + ($min * 60) + ($hour * 3600) ) ; # rewind!
       return $self->new($endofday);
 }
+
+sub manip{
+      my $self = shift;
+      my $manip = shift;
+      my $mode = shift;
+
+      $manip =~ s/^\s+|\s+$//g;
+      return undef unless $manip;
+
+      my ($number, $unit) = $manip =~ /^(\d+)\s+([A-Za-z]+?)s?$/;
+      $unit = lc($unit);
+
+      my $unixtime = $self->unixtime;
+
+      # This isn't actually the correct way to do this, on account of DST nd leap year and so on,
+      # just a proof of concept. Should probably just farm it out to Date::Manip
+
+      my $diff;
+      if($unit eq 'second'){
+	    $diff = $number
+      }elsif($unit eq 'minute'){
+	    $diff = $number * 60;
+      }elsif($unit eq 'hour'){
+	    $diff = $number * 3600;
+      }elsif($unit eq 'day'){
+	    $diff = $number * 86400;
+      }elsif($unit eq 'year'){
+	    $diff = $number * 31536000;
+      }else{
+	    return undef;
+      }
+
+      if ($mode eq 'add'){
+	    return $self->new( $unixtime + $diff );
+      }elsif($mode eq 'subtract'){
+	    return $self->new( $unixtime - $diff );
+      }
+
+      return undef;
+
+}
+
 
 #              uxtime , tzref
 sub new{ bless([ $_[1], $_[0][1] ],'DBR::_UXTIME') }
