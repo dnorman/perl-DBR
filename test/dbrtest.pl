@@ -19,6 +19,8 @@ my $dbr = new DBR(
 
 my $dbrh = $dbr->connect('esrp_main') || die "failed to connect";
 
+
+#$dbr->timezone('America/New_York') or die "failed to set timezone";
 #my $ret =  $dbh->orders->where(cust_id => 902349);
 #my $ret =  $dbh->orders->get($order_ids);
 
@@ -64,19 +66,25 @@ $dbrh->_stopwatch();
 
 
 
-my $orders = $dbrh->orders->all(
-				#cust_id => 902349,# + 100000,
+my $orders = $dbrh->orders->where(
+				cust_id => 902349,# + 100000,
 				#date_created => LT time,
 			       ) or die "where failed";
 
 #my $lookup = $orders->lookup_hash('status ship_method_id');
 #use Data::Dumper;
 #print Dumper($lookup);
+
+$dbr->timezone('America/New_York') or die "failed to set timezone";
+
 my $ct;
        while (my $order = $orders->next){
 
 	     print "order_id is "   . $order->order_id . "\n";
 	     print "  Status is "   . $order->status . "\n";
+	     print "  Date Created is "   . $order->date_created . "\n";
+	     print "  Date Created minus two days is"   . ($order->date_created - '2 days')  . "\n";
+	     print "  Date Created midnight is"   . $order->date_created->midnight  . "\n";
 
 #	     $order->status('settled') if !$ct++;
 
@@ -107,6 +115,12 @@ my $ct;
 
   	     }
 
+	     print "ITEM COUNT: ${\$items->count}\n";
+
+# 	     if($items->count == 0){
+		   
+# 		   $order->delete;
+# 	     }
 
 	    # $dbrh->_stopwatch('get');
 
