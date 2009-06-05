@@ -45,7 +45,7 @@ sub load{
 	    #eval "require $pkg" or $self->_error('failed to load package ' . $pkg) or next;
 
 	    $pkg->moduleload(
-			     session => $self->{session},
+			     session  => $self->{session},
 			     instance => $instance,
 			     field_id => $field_ids,
 			    ) or return $self->_error('failed to load translator' . $module);
@@ -63,20 +63,25 @@ sub new {
       my $package = shift;
       my %params = @_;
       my $self = {
-		  session   => $params{session},
+		  session  => $params{session},
 		  trans_id => $params{trans_id},
 		  field_id => $params{field_id},
 		 };
 
       return $package->_error('trans_id must be specified') unless $self->{trans_id};
+      return $self->_error('field_id is required')          unless $self->{field_id};
 
       my $module = $MODULES{ $self->{trans_id} } or $self->_error('invalid module');
       $self->{module} = $module;
 
       bless( $self, $package . '::' . $module );
-      return $self->_error('field_id is required')            unless $self->{field_id};
+
+      return $self->_error('Failed to init ' . $module) unless $self->init;
 
       return( $self );
 }
+
+#Stub
+sub init { 1 };
 
 1;

@@ -2,6 +2,7 @@ package DBR::Util::Session;
 
 use strict;
 use base 'DBR::Common';
+use DateTime::TimeZone;
 use Carp;
 
 
@@ -17,6 +18,8 @@ sub new {
 
       croak ('logger is required') unless $self->{logger};
 
+      my $tz = '';
+      $self->{tzref} = \$tz;
       $self->timezone('server') or confess "failed to initialize timezone";
 
       return $self;
@@ -27,7 +30,7 @@ sub timezone {
       my $self = shift;
       my $tz   = shift;
 
-      return $self->{tz} unless defined($tz);
+      return ${$self->{tzref}} unless defined($tz);
 
       if($tz eq 'server' ){
 	    my $tzobj = DateTime::TimeZone->new( name => 'local');
@@ -38,8 +41,9 @@ sub timezone {
 
       $self->_logDebug2('Set timezone to ' . $tz);
 
-      return $self->{tz} = $tz;
+      return ${$self->{tzref}} = $tz;
 }
+sub timezone_ref{ $_[0]->{tzref} }
 
 sub _session { $_[0] }
 
