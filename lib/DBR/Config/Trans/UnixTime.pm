@@ -24,9 +24,23 @@ sub backward{
 
       if(ref($value) eq 'DBR::_UXTIME'){ #ahh... I know what this is
 	    return $value->unixtime;
-      }elsif($value =~ /^\d$/){ # smells like a unixtime
+      }elsif($value =~ /^\d+$/){ # smells like a unixtime
 	    return $value;
       }else{
+
+	    # 	    my ($mon,$mday,$year,$hour,$min,$sec,$tz_abbrev) = 
+# 	      $date =~ /^(\d{1,2})[^\d](\d{1,2})[^\d](\d{2,4})[^\d]*(\d{1,2})?[^\d]?(\d{1,2})?[^\d]?(\d{1,2})?\s*([A-Z]T)?[^\d]*$/i;
+
+# 	    my $dt = DateTime->new( year   => 1066,
+#                                      month  => 10,
+#                                      day    => 25,
+#                                      hour   => 7,
+#                                      minute => 15,
+#                                      second => 47,
+#                                      nanosecond => 500000000,
+#                                      time_zone  => 'America/Chicago',
+	    #                                    );
+
 	    return $self->_error('I can dish it out, but I cant take it... yet');
       }
 
@@ -70,17 +84,17 @@ sub date  {
 
 sub time  {
       local($ENV{TZ}) = ${$_[0][1]}; tzset();
-      return strftime ("%H:%M:%S", localtime($_[0][0]));
+      return strftime ("%H:%M:%S %Z", localtime($_[0][0]));
 }
 
 sub datetime  {
       local($ENV{TZ}) = ${$_[0][1]}; tzset();
-      return strftime ("%D %H:%M:%S", localtime($_[0][0]));
+      return strftime ("%D %H:%M:%S %Z", localtime($_[0][0]));
 }
 
 sub fancytime  {
       local($ENV{TZ}) = ${$_[0][1]}; tzset();
-      return strftime ("%I:%M:%S %p", localtime($_[0][0]));
+      return strftime ("%I:%M:%S %p %Z", localtime($_[0][0]));
 }
 
 sub fancydatetime  {
