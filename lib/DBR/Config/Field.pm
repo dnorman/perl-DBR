@@ -14,7 +14,7 @@ use Clone;
 
 my %FIELDS_BY_ID;
 
-#HERE HERE HERE - This is ugly... clean it up
+#This is ugly... clean it up
 my %datatypes = (
 		 bigint    => { id => 1, numeric => 1, bits => 64},
 

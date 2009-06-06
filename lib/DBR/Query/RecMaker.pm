@@ -46,11 +46,14 @@ sub class { $_[0]->{recordclass} }
 # This is just a stub to return some sort of buddy object, with the
 # idea of keeping the recmaker object in scope, and possibley also
 # for providing rowcache
+# This object will become element index 1 (second element) in EVERY record object returned by resultset
 sub buddy {
       my $self = shift;
       my %params = @_;
 
-      $params{rowcache} or return $self->_error('rowcache is required');
+      # Require rowcache for future functionality. At some point I'd like the rowcache to belong in the buddy object
+      $params{rowcache} or return $self->_error('rowcache is required'); 
+
 
       return $self; # Just use the recmaker for now
 }
@@ -164,6 +167,10 @@ sub _prep{
       return 1;
 }
 
+
+
+
+
 sub _mk_accessor{
       my $self = shift;
       my %params = @_;
@@ -200,7 +207,7 @@ sub _mk_accessor{
       }
       $code = "sub {$code}";
 
-      $self->_logDebug2("$method = $code");
+      $self->_logDebug3("$method = $code");
 
       my $subref = _eval_accessor($helper,$field,$trans,$code) or $self->_error('Failed to eval accessor ' . $@);
 
@@ -219,6 +226,8 @@ sub _eval_accessor{
 
       return eval shift;
 }
+
+
 
 
 sub _mk_relation{
@@ -240,7 +249,7 @@ sub _mk_relation{
       my $code = "\$h->getrelation( $record, \$r, \$f )";
 
       $code = "sub {$code}";
-      $self->_logDebug2("$method = $code");
+      $self->_logDebug3("$method = $code");
 
       my $subref = _eval_relation($helper,$relation,$field,$code) or $self->_error('Failed to eval relation' . $@);
 
@@ -261,6 +270,8 @@ sub _eval_relation{
 }
 
 
+
+
 sub _mk_method{
       my $self = shift;
       my %params = @_;
@@ -274,7 +285,7 @@ sub _mk_method{
       my $code = "\$h->$method($record,\@_)";
 
       $code = "sub {$code}";
-      $self->_logDebug2("$method = $code");
+      $self->_logDebug3("$method = $code");
 
       my $subref = _eval_method($helper,$code) or $self->_error('Failed to eval method' . $@);
       my $symbol = qualify_to_ref( $self->{recordclass} . '::' . $method );
@@ -288,6 +299,8 @@ sub _eval_method{
       my $h = shift;
       return eval shift;
 }
+
+
 
 sub DESTROY{ # clean up the temporary object from the symbol table
       my $self = shift;

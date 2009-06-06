@@ -28,10 +28,7 @@ sub split{
       my $idx = $field->index;
       return $self->_error('field object must provide an index') unless defined($idx);
 
-      #print STDERR "ROWCACHE before $self->{rowcache} ${$self->{rowcache}}\n";
       my $rows = $self->_fetch_all or return $self->_error('_fetch_all failed');
-
-      #print STDERR "ROWCACHE  after $self->{rowcache} ${$self->{rowcache}}\n";
 
       my $code = 'map { push @{$groupby{ $_->[' . $idx . '] }}, $_ } @{ $rows }';
       $self->_logDebug3($code);
@@ -52,8 +49,41 @@ sub split{
       return \%groupby;
 }
 
-sub get_one {
-      # HERE HERE HERE = get all one value?
+# get all instances of a field or fields from the resultset
+# Kind of a flimsy way to do this, but it's lightweight
+sub values {
+      my $self = shift;
+      my @fieldnames = grep { /^[A-Za-z0-9_]+$/ } map { split(/\s+/,$_) }  @_;
+
+      scalar(@fieldnames) or croak('Must provide a list of field names');
+
+      my $rows = $self->_fetch_all or return $self->_error('Failed to retrieve rows');
+
+      return wantarray?():[] unless $self->count > 0;
+
+      my @parts;
+      foreach my $fieldname (@fieldnames){
+	    push @parts , "\$_[0]->$fieldname";
+      }
+
+      my $code;
+      if(scalar(@fieldnames) > 1){
+	    $code = ' [  ' . join(', ', @parts) . ' ]';
+      }else{
+	    $code = $parts[0];
+      }
+
+      $code = 'sub{ push @output, ' . $code . ' }';
+
+      $self->_logDebug3($code);
+
+      my @output;
+      my $sub = eval $code;
+      confess "values failed ($@)" if $@;
+
+      $self->each($sub) or confess "Failed to each";
+
+      return wantarray?(@output):\@output;
 }
 
 sub hashmap_multi { shift->_lookuphash('multi', @_) }
