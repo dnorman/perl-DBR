@@ -8,7 +8,7 @@ use ApolloUtils::Logger;
 use DBR;
 use DBR::Util::Operator; # Imports operator functions
 
-my $logger = new ApolloUtils::Logger(-logpath => '/dj/logs/dbr_test.log', -logLevel => 'debug2');
+my $logger = new ApolloUtils::Logger(-logpath => '/dj/logs/dbr_test.log', -logLevel => 'debug3');
 
 #<STDIN>;
 
@@ -76,6 +76,11 @@ my $orders = $dbrh->orders->where(
 #print Dumper($lookup);
 
 $dbr->timezone('America/New_York') or die "failed to set timezone";
+
+
+use Data::Dumper;
+print STDERR Dumper(scalar $orders->values('status date_created'));
+#exit;
 
 my $ct;
        while (my $order = $orders->next){
