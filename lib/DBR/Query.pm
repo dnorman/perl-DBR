@@ -131,7 +131,7 @@ sub _where{
       my $self = shift;
       my $param = shift;
 
-      return $self->_error('param must be an AND/OR/COMPARE/SUBQUERY object') unless ref($param) =~ /^DBR::Query::Part::(And|Or|Compare|Subquery)$/;
+      return $self->_error('param must be an AND/OR/COMPARE/SUBQUERY/JOIN object') unless ref($param) =~ /^DBR::Query::Part::(And|Or|Compare|Subquery|Join)$/;
 
       $param->validate($self) or return $self->_error('Where clause validation failed');
 
@@ -340,8 +340,6 @@ sub execute{
 	    my ($sequenceval) = $conn->getSequenceValue();
 
 	    return $sequenceval;
-
-	    #HERE HERE HERE return a record object?
       }elsif($self->{type} eq 'update'){
 
 	    my $rows = $conn->do($self->sql);
@@ -370,7 +368,7 @@ sub makerecord{
 
       my $handle = DBR::Query::RecMaker->new(
 					     instance => $self->{instance},
-					     session   => $self->{session},
+					     session  => $self->{session},
 					     query    => $self,
 					     rowcache => $params{rowcache},
 					    ) or return $self->_error('failed to create record class');
