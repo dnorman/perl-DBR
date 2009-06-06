@@ -132,9 +132,10 @@ sub _execute{
       $self->{sth} ||= $self->{query}->prepare or croak "Failed to prepare query"; # only prepare once
 
       my $rv = $self->{sth}->execute();
+      return $self->_error('failed to execute statement (' . $self->{sth}->errstr. ')') unless defined($rv);
+
       $self->{rows_hint} = $rv + 0;
-      $self->_logDebug2("ROWS: $self->{rows_hint}");
-      return $self->_error('failed to execute statement') unless $rv;
+      $self->_logDebug3("ROWS: $self->{rows_hint}");
       $self->{state} = ACTIVE;
 
       return 1;
