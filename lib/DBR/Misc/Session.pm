@@ -1,4 +1,4 @@
-package DBR::Util::Session;
+package DBR::Misc::Session;
 
 use strict;
 use base 'DBR::Common';

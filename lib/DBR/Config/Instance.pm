@@ -135,7 +135,7 @@ sub register { # basically the same as a new
 
       $config->{connectstring} = $connectstrings{$config->{module}} || return $self->_error("module '$config->{module}' is not a supported database type");
 
-      my $connclass = 'DBR::Util::Connection::' . $config->{module};
+      my $connclass = 'DBR::Misc::Connection::' . $config->{module};
       return $self->_error("Failed to Load $connclass ($@)") unless eval "require $connclass";
 
       $config->{connclass} = $connclass;

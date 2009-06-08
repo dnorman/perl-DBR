@@ -1,7 +1,7 @@
-package DBR::Util::Connection::SQLite;
+package DBR::Misc::Connection::SQLite;
 
 use strict;
-use base 'DBR::Util::Connection';
+use base 'DBR::Misc::Connection';
 
 sub required_config_fields {   [ qw(dbfile) ]   };
 

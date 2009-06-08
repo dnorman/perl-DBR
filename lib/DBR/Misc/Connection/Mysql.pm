@@ -1,7 +1,7 @@
-package DBR::Util::Connection::Mysql;
+package DBR::Misc::Connection::Mysql;
 
 use strict;
-use base 'DBR::Util::Connection';
+use base 'DBR::Misc::Connection';
 
 
 sub getSequenceValue{

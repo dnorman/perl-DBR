@@ -8,7 +8,7 @@ package DBR;
 use strict;
 use DBR::Handle;
 use DBR::Config;
-use DBR::Util::Session;
+use DBR::Misc::Session;
 use base 'DBR::Common';
 
 sub new {
@@ -21,7 +21,7 @@ sub new {
       return $self->_error("Error: -conf must be specified") unless $params{-conf};
 
       return $self->_error("Failed to create DBR::Util::Session object") unless
-	$self->{session} = DBR::Util::Session->new(
+	$self->{session} = DBR::Misc::Session->new(
 						   logger => $self->{logger}
 						  );
 

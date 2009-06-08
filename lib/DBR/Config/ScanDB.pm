@@ -3,7 +3,7 @@
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation.
 
-package DBR::Util::ScanDB;
+package DBR::Config::ScanDB;
 
 use strict;
 use base 'DBR::Common';
