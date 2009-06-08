@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use lib '/dj/tools/perl-dbr/lib';
+# example usage:  perl -I../lib conf/dbr.conf car_dealer
 
 use DBR::Util::Logger;
 use DBR::Util::ScanDB;
@@ -21,7 +21,7 @@ my $conf_instance = $dbr->get_instance($confdb) or die "No config found for conf
 my $scan_instance = $dbr->get_instance($scandb) or die "No config found for scandb $scandb";
 
 my $scanner = DBR::Util::ScanDB->new(
-				     logger => $logger,
+				     session => $dbr->session,
 				     conf_instance => $conf_instance,
 				     scan_instance => $scan_instance,
 				    );

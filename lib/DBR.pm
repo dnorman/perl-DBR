@@ -45,6 +45,8 @@ sub setlogger {
       $self->{logger} = shift;
 }
 
+sub session { $_[0]->{session} }
+
 sub connect {
       my $self = shift;
       my $name = shift;
@@ -73,7 +75,7 @@ sub get_instance {
       my $class = shift;
       my $flag;
 
-      if ($class eq 'dbh') {	# legacy
+      if ($class && $class eq 'dbh') {	# legacy
 	    $flag = 'dbh';
 	    $class = undef;
       }
