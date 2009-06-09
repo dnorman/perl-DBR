@@ -84,4 +84,27 @@ sub new {
 #Stub
 sub init { 1 };
 
+sub field{
+      my $self = shift;
+
+      my $field = DBR::Config::Field->new(
+					  session  => $self->{session},
+					  field_id => $self->{field_id},
+					 ) or return $self->_error('failed to create field object');
+
+      return $field;
+}
+
+sub parse{
+      my $self = shift;
+      my $raw = shift;
+
+      my $dbval = $self->backward($raw);
+      return undef unless defined($dbval);
+
+      return $self->forward($dbval);
+
+}
+
+
 1;
