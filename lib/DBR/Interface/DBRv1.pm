@@ -376,9 +376,8 @@ sub _value {
 
       my $flags;
       if (ref($value) eq 'ARRAY'){
-	    $flags = $value->[0];
-	    $value = [ @$value ];
-	    shift @$value;
+	    $value = [ @$value ]; # shallow clone
+	    $flags = shift @$value;
       }
 
       if($flags && $flags =~ /d/){  $is_number = 1 }
