@@ -31,14 +31,7 @@ sub new {
 
 sub select {
       my $self   = shift;
-      my @params = @_;
-      my %params;
-
-      if(scalar(@params) == 1){
-	    $params{-sql} = $params[0];
-      }else{
-	    %params = @params;
-      }
+      my %params = @_;
 
       my $tables = $self->_split( $params{-table} || $params{-tables} ) or
 	return $self->_error("No -table[s] parameter specified");
@@ -60,21 +53,22 @@ sub select {
 	    $where = $self->_where($params{-where});
 	    return $self->_error('failed to prep where') unless defined($where);
       }
-
-      #use Data::Dumper;
-      #print STDERR Dumper($where);
+      my $limit = $params{'-limit'};
+      if(defined $limit){
+	    return $self->_error('invalid limit') unless $limit =~ /^\d+$/;
+      }
 
       my $query = DBR::Query->new(
 				  instance => $self->{instance},
-				  session   => $self->{session},
+				  session  => $self->{session},
 				  select   => {
 					     count  => $params{'-count'}?1:0, # takes precedence
 					     fields => \@Qfields
 					    },
 				  tables => $tables,
-				  where  => $where
+				  where  => $where,
+				  limit  => $limit,
 				 ) or return $self->_error('failed to create query object');
-
 
       if ($params{-query}){
 
