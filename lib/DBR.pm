@@ -8,7 +8,7 @@ package DBR;
 use strict;
 use DBR::Handle;
 use DBR::Config;
-use DBR::Util::Session;
+use DBR::Misc::Session;
 use base 'DBR::Common';
 
 sub new {
@@ -21,7 +21,7 @@ sub new {
       return $self->_error("Error: -conf must be specified") unless $params{-conf};
 
       return $self->_error("Failed to create DBR::Util::Session object") unless
-	$self->{session} = DBR::Util::Session->new(
+	$self->{session} = DBR::Misc::Session->new(
 						   logger => $self->{logger}
 						  );
 
@@ -44,6 +44,8 @@ sub setlogger {
       my $self = shift;
       $self->{logger} = shift;
 }
+
+sub session { $_[0]->{session} }
 
 sub connect {
       my $self = shift;
@@ -73,7 +75,7 @@ sub get_instance {
       my $class = shift;
       my $flag;
 
-      if ($class eq 'dbh') {	# legacy
+      if ($class && $class eq 'dbh') {	# legacy
 	    $flag = 'dbh';
 	    $class = undef;
       }

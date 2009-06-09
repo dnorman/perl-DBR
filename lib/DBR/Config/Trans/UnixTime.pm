@@ -3,6 +3,8 @@ package DBR::Config::Trans::UnixTime;
 use strict;
 use base 'DBR::Config::Trans';
 use strict;
+use Date::Parse ();
+use POSIX qw(strftime tzset);
 
 sub new { die "Should not get here" }
 
@@ -24,24 +26,23 @@ sub backward{
 
       if(ref($value) eq 'DBR::_UXTIME'){ #ahh... I know what this is
 	    return $value->unixtime;
-      }elsif($value =~ /^\d+$/){ # smells like a unixtime
+
+      }elsif($value =~ /^\d+$/){         # smells like a unixtime
 	    return $value;
+
       }else{
+	    local($ENV{TZ}) = ${$self->{tzref}}; tzset(); # Date::Parse doesn't accept timezone in the way we want to specify it. Lame.
 
-	    # 	    my ($mon,$mday,$year,$hour,$min,$sec,$tz_abbrev) = 
-# 	      $date =~ /^(\d{1,2})[^\d](\d{1,2})[^\d](\d{2,4})[^\d]*(\d{1,2})?[^\d]?(\d{1,2})?[^\d]?(\d{1,2})?\s*([A-Z]T)?[^\d]*$/i;
+	    # Ok... so Date::Parse is kinda cool and all, except for the fact that it breaks horribly on
+	    # Non DST-specific timezone prefixes, like PT, MT, CT, ET. Treats them all like GMT.
+	    # Even strptime freaks out on it. What gives Graham? 
+	    # P.S. glass house here throwing stones, but try adding a comment or two.
 
-# 	    my $dt = DateTime->new( year   => 1066,
-#                                      month  => 10,
-#                                      day    => 25,
-#                                      hour   => 7,
-#                                      minute => 15,
-#                                      second => 47,
-#                                      nanosecond => 500000000,
-#                                      time_zone  => 'America/Chicago',
-	    #                                    );
+	    my $uxtime = Date::Parse::str2time($value);
 
-	    return $self->_error('I can dish it out, but I cant take it... yet');
+	    return $self->_error("Invalid time '$value'") unless $uxtime;
+
+	    return $uxtime;
       }
 
 }
@@ -93,7 +94,10 @@ sub fancytime  {
 
 sub fancydatetime  {
       local($ENV{TZ}) = ${$_[0][1]}; tzset();
-      return strftime ("%A %B %e %H:%M:%S %Y", localtime($_[0][0]));
+      my $v = strftime ("%A %B %e %l:%M%p %Y", localtime($_[0][0]));
+      $v =~ s/\s+/ /g;
+      $v =~ s/(AM|PM)/lc($1)/e;
+      return $v;
 }
 
 sub fancydate  {

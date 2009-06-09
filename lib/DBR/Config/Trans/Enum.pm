@@ -88,8 +88,15 @@ sub forward{
 
 sub backward{
       my $self = shift;
-      my $handle = shift;
-      return $FIELDMAP{ $self->{field_id} }->[ x_hmap ]->{ $handle }->[ v_id ]; # id
+      my $value = shift;
+
+      if( ref($value) eq 'DBR::_ENUM' ){ # smells like an enum object
+	    $value = $value->handle;     # swap it out for the handle, so we can make sure they didn't mix up enum objects
+      }
+
+      #otherwise hit the lookup
+
+      return $FIELDMAP{ $self->{field_id} }->[ x_hmap ]->{ $value }->[ v_id ]; # id
 }
 
 ###############################################################################################################

@@ -201,3 +201,17 @@ sub enum{
 
       return wantarray?@{$opts}:$opts;
 }
+
+
+sub parse{
+      my $self = shift;
+      my $fieldname = shift;
+      my $value = shift;
+
+      my $table = $self->{table};
+      my $field = $table->get_field( $fieldname ) or return $self->_error("invalid field $fieldname");
+      my $trans = $field->translator or return $self->_error("Field '$fieldname' has no translator");
+
+      return $trans->parse( $value ) || return $self->_error("Invalid value '$value' for " . $field->name);
+
+}

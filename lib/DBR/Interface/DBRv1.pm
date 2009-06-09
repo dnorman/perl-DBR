@@ -57,7 +57,8 @@ sub select {
 
       my $where;
       if($params{-where}){
-	    $where = $self->_where($params{-where}) or return $self->_error('failed to prep where');
+	    $where = $self->_where($params{-where});
+	    return $self->_error('failed to prep where') unless defined($where);
       }
 
       #use Data::Dumper;
@@ -235,8 +236,7 @@ sub _where {
       $param = [] unless (ref($param) eq 'ARRAY');
 
 
-      #use Data::Dumper;
-      #print Dumper ({v1request => $param});
+      return 0 unless scalar(@$param); # No where parameters
 
       my $where;
 
@@ -376,6 +376,7 @@ sub _value {
 
       my $flags;
       if (ref($value) eq 'ARRAY'){
+	    $value = [ @$value ]; # shallow clone
 	    $flags = shift @$value;
       }
 

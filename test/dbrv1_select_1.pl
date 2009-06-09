@@ -8,10 +8,13 @@ use Data::Dumper;
 
 chdir '../';
 
+use lib '/dj/tools/apollo-utils/lib';
+use ApolloUtils::DBR;
+
 my $logger = new DBR::Util::Logger(-logpath => '/tmp/dbr_test.log', -logLevel => 'debug3');
-my $dbr    = new DBR(
+my $dbr    = new ApolloUtils::DBR(
 		     -logger => $logger,
-		     -conf   => '/dj/data/DBR.conf',
+		     -conf   => '/dj/data/DBR.conf.dev2',
 		    );
 
 
@@ -22,11 +25,16 @@ my $dbr    = new DBR(
 my $dbrh = $dbr->connect('esrp_main') || die "failed to connect";
 
 my $ret = $dbrh->select(
-  '-table' => 'offices',
-          '-keycol' => 'office_id',
-          '-fields' => 'office_id tz_id'
 
-
+			'-table' => 'vendors',
+			'-where' => {
+				     'vendor_id' => [
+						     'd',
+						     undef
+						    ]
+				    },
+			'-fields' => 'vendor_id name',
+			'-single' => 1
 
 		       );
 print Dumper($ret);
