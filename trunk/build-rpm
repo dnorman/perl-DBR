@@ -1,0 +1,42 @@
+#!/bin/zsh
+
+BN0=`basename $0`
+PROG=DBR
+BDIR=/tmp/build-${PROG}-$$
+opd=`pwd`
+
+error () {
+   echo "${BN0}: error: $1"
+   exit $2
+}
+
+cleanup () {
+   rm -rf ${BDIR}
+}
+
+trap 0 1 2 15 cleanup
+
+if [ $# -ne 1 ]; then
+   error "Wrong number of arguments (should be 1)"
+fi
+
+tb=${1}
+bntb=$(basename ${tb})
+bntbi=$(basename ${tb} .tar.gz)
+
+echo ""
+echo "building RPM for ${PROG} using ${tb} ..."
+echo ""
+
+mkdir -p ${BDIR}
+
+cp ${tb} ${BDIR}
+cd ${BDIR}
+tar -xzf ${bntb}
+cd ${bntbi}
+./configure
+make test
+cd ..
+rm -f ${bntb}
+tar -czf ${bntb} ${bntbi}
+rpmbuild -tb ${bntb}
