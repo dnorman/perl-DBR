@@ -1,0 +1,80 @@
+select
+  t.table_id,
+  t.name,
+  f.field_id,
+  f.name
+from
+  dbr_tables t,
+  dbr_fields f
+where
+  f.table_id = t.table_id and
+  f.name like '%_id'
+order by
+  f.table_id,
+  f.field_id;
+
+
+table_id = 1
+    name = car
+field_id = 1
+    name = car_id
+
+table_id = 1
+    name = car
+field_id = 2
+    name = model_id
+
+table_id = 1
+    name = car
+field_id = 6
+    name = salesperson_id
+
+table_id = 2
+    name = car_feature
+field_id = 9
+    name = car_feature_id
+
+table_id = 2
+    name = car_feature
+field_id = 10
+    name = car_id
+
+table_id = 2
+    name = car_feature
+field_id = 11
+    name = feature_id
+
+table_id = 3
+    name = country
+field_id = 13
+    name = country_id
+
+table_id = 4
+    name = feature
+field_id = 16
+    name = feature_id
+
+table_id = 5
+    name = make
+field_id = 19
+    name = make_id
+
+table_id = 5
+    name = make
+field_id = 22
+    name = country_id
+
+table_id = 6
+    name = model
+field_id = 23
+    name = model_id
+
+table_id = 6
+    name = model
+field_id = 24
+    name = make_id
+
+table_id = 7
+    name = salesperson
+field_id = 27
+    name = salesperson_id
