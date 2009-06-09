@@ -42,9 +42,14 @@ sub new{
 
       my $ref = ref($value);
 
-      if(!$ref){
+      if(!$ref || $ref =~ /^DBR\:\:_/){
 	    $value = [$value];
-      }elsif ($ref ne 'ARRAY'){
+      }elsif ($ref eq 'ARRAY'){
+	    foreach (@$value){
+		  my $sref = ref($_);
+		  return $self->_error("Invalid array element '$_'") if $sref && $sref !~ /^DBR\:\:_/;
+	    }
+      }else{
 	    return $self->_error('value must be a scalar or an arrayref');
       }
 

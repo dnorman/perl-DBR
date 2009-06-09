@@ -14,12 +14,16 @@ sub forward{
 
 sub backward{
       my $self = shift;
-      my $prettymoney = shift;
+      my $value = shift;
 
-      $prettymoney =~ tr/0-9.-//cd; # the items listed are ALLOWED values
-      return $self->_error('invalid value specified') unless $prettymoney;
+      if( ref($value) eq 'DBR::_DOLLARS' ){ # looks like it's a dollar object, yay!
+	    return $value->cents;
+      }
 
-      return sprintf("%.0f", ($prettymoney * 100) );
+      $value =~ tr/0-9.-//cd; # the items listed are ALLOWED values
+      return $self->_error('invalid value specified') unless $value;
+
+      return sprintf("%.0f", ($value * 100) );
 }
 
 package DBR::_DOLLARS;
