@@ -377,7 +377,8 @@ sub _value {
       my $flags;
       if (ref($value) eq 'ARRAY'){
 	    $flags = $value->[0];
-	    $value = [ splice(@$value,1) ];
+	    $value = [ @$value ];
+	    shift @$value;
       }
 
       if($flags && $flags =~ /d/){  $is_number = 1 }
