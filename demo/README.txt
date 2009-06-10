@@ -59,8 +59,8 @@ What to do:
 
    zsh> ../bin/load_meta.pl conf/dbr.conf car_dealer
 
-   Note that the name of the config is currently hard-coded in
-   the scanner script to "dbrconf".
+   Note that the name of the config may be specified as a third
+   parameter to load_meta.pl, but defaults to "dbrconf".
 
 
 7) Load the enumeration definitions.
@@ -82,11 +82,25 @@ What to do:
 
    zsh> sqlite3 db/metadata.db < sql/car_dealer_translators.sql
 
+
    The admin tool will perform this function.
 
 
-9) Test application actions.
+9) Define table relationships.
 
+   Identify each foreign key relation in the database.
+   Specify the name to use when referencing the relation from both the
+   perspective of the table with the foreign key and the targeted table.
+
+   zsh> sqlite3 db/metadata.db < sql/car_dealer_relationships.sql
+
+   The admin tool will make this much easier.
+   See doc/fkeys.txt file to match up the ids used in the SQL input file.
+
+
+10) Test application actions.
+
+   zsh> init.sh              (performs all the above actions)
    zsh> script/create.pl
    zsh> script/all_cars.pl
    zsh> script/add_car.pl

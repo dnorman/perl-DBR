@@ -6,7 +6,7 @@
 
 -- set translators - see DBR::Config::Trans.pm
 
--- enum (model.style)
+-- enum (car.color, model.style)
 update dbr_fields set trans_id = 1 where field_id in (8,26);
 
 -- dollars (car.price, car_feature.cost)

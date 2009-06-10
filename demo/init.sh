@@ -2,7 +2,7 @@
 
 # this performs all the actions in README.txt
 
-rm db/*.db
+rm -f db/*.db
 sqlite3 db/car_dealer.db < sql/create_car_dealer_database.sql
 sqlite3 db/metadata.db < sql/create_metadata_database.sql
 sqlite3 db/metadata.db < sql/register_car_dealer.sql

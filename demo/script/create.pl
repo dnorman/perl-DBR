@@ -41,8 +41,8 @@ sub truncate {
 # countries
 my $usa_id   = $dbrh->country->insert( name => 'Unites States', abbrev => 'USA' );
 my $gdr_id   = $dbrh->country->insert( name => 'Germany',       abbrev => 'GDR' );
-my $india_id = $dbrh->country->insert( name => 'India' );
-my $japan_id = $dbrh->country->insert( name => 'Japan' );
+my $india_id = $dbrh->country->insert( name => 'India',         abbrev => ''    );  # blank string to avoid warnings
+my $japan_id = $dbrh->country->insert( name => 'Japan',         abbrev => ''    );  # blank string to avoid warnings
 
 # makes
 my $vw_id    = $dbrh->make->insert( name       => 'VW',
@@ -137,12 +137,12 @@ my $blue_f150 = $dbrh->car->insert( model_id       => $f150_id,
                                   );
 
 # car features
-$dbrh->car_feature->insert( car_id => $red_350z, feature_id => $sunroof_id, cost => 45000 );
-$dbrh->car_feature->insert( car_id => $red_350z, feature_id => $pwrseat_id, cost => 12500 );
-$dbrh->car_feature->insert( car_id => $red_350z, feature_id => $cruise_id,  cost => 8000 );
+$dbrh->car_feature->insert( car_id => $red_350z, feature_id => $sunroof_id, cost => 447.21 );
+$dbrh->car_feature->insert( car_id => $red_350z, feature_id => $pwrseat_id, cost => 124.95 );
+$dbrh->car_feature->insert( car_id => $red_350z, feature_id => $cruise_id,  cost => 79.99 );
 
-$dbrh->car_feature->insert( car_id => $blue_f150, feature_id => $moonroof_id, cost => 15000 );
-$dbrh->car_feature->insert( car_id => $blue_f150, feature_id => $cruise_id,   cost => 7000 );
+$dbrh->car_feature->insert( car_id => $blue_f150, feature_id => $moonroof_id, cost => 147.63 );
+$dbrh->car_feature->insert( car_id => $blue_f150, feature_id => $cruise_id,   cost => 69.95 );
 
 
 # this should not be necessary once date support in place

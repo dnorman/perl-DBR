@@ -18,8 +18,13 @@ my $cars = $dbrh->car->all;
 while (my $car = $cars->next) {
 
       print join( "\n\t",
-                  join( ' ', $car->model_year, $car->model->make->name, $car->model->name ),
+                  join( ' ',
+                        $car->model_year,
+                        $car->model->make->name,
+                        $car->model->name,
+                        '(' . $car->model->style . ')' ),
                   $car->price,
+                  "made in: " . $car->model->make->country->name,
                   "received: " . $car->date_received,
                   "sold: " . $car->date_sold,
                   "salesperson: " . $car->salesperson->name,
@@ -27,10 +32,13 @@ while (my $car = $cars->next) {
 
       my $car_features = $car->car_features;
 
+      my $total = 0;
       while (my $car_feature = $car_features->next) {  # we could $car->car_features->next
             my $feature = $car_feature->feature;
-            print "\t\t" . $feature->name . "\n";
+            print "\t\t" . $feature->name . " (" . $car_feature->cost . ")\n";
+            $total += $car_feature->cost;
       }
+      print "\t\tTOTAL: $total\n";
 
       print "\n";
 }

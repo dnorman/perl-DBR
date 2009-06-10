@@ -76,6 +76,6 @@ create table salesperson (
 
 create table country (
   country_id integer primary key autoincrement,
-  name varchar(32),
+  name varchar(32) not null,
   abbrev varchar(8)
 );
