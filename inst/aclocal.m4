@@ -92,3 +92,15 @@ AC_DEFUN([AC_PERL_MODULE_INSTALL_PATH],[dnl
    AC_SUBST(INSTALL_PATH)dnl
    AC_MSG_RESULT([$INSTALL_PATH])
 ])dnl
+
+AC_DEFUN([AC_PERL_MODULE_CHECK],[dnl
+   ac_checking_perlmod=$1
+   AC_MSG_CHECKING(for perl module $ac_checking_perlmod)
+
+   `$PERL -M$ac_checking_perlmod -e 'exit 0;' >/dev/null 2>&1`
+   if test $? != "0"; then
+      AC_MSG_ERROR(not found. Install $ac_checking_perlmod and try again.)
+      exit 1;
+   fi;
+   AC_MSG_RESULT(ok)
+])dnl

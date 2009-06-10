@@ -13,8 +13,12 @@ Source0:        %{_src}
 BuildArch:      noarch
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires:  make
+BuildRequires:  perl(DBD::SQLite)
+BuildRequires:  perl(Clone)
 
 Requires:       perl >= 5.8.8
+Requires:       perl(DBD::SQLite)
+Requires:       perl(Clone)
 
 %description
 DBR is an Object-Relational Mapping layer for MySQL and PostgreSQL databases.
