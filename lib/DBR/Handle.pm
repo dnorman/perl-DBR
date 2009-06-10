@@ -122,6 +122,45 @@ sub rollback{
       return 1;
 }
 
+sub getserial{
+      my $self = shift;
+      my $name = shift;
+      my $table = shift  || 'serials';
+      my $field1 = shift || 'name';
+      my $field2 = shift || 'serial';
+      return $self->_error('name must be specified') unless $name;
+
+      $self->begin();
+
+      my $row = $self->select(
+			      -table => $table,
+			      -field => $field2,
+			      -where => {$field1 => $name},
+			      -single => 1,
+			      -lock => 'update',
+			     );
+
+      return $self->_error('serial select failed') unless defined($row);
+      return $self->_error('serial is not primed') unless $row;
+
+      my $id = $row->{$field2};
+
+      return $self->_error('serial update failed') unless 
+	$self->update(
+		      -table => $table,
+		      -fields => {$field2 => ['d',$id + 1]},
+		      -where => {
+				 $field1 => $name
+				},
+		     );
+
+      $self->commit();
+
+      return $id;
+}
+
+sub disconnect { 1 } # Dummy
+
 sub DESTROY{
     my $self = shift;
 
