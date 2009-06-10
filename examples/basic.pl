@@ -6,6 +6,12 @@ use DBR;
 use DBR::Util::Logger;   # Any object that implements log, logErr, logDebug, logDebug2 and logDebug3 will do
 use DBR::Util::Operator; # Imports operator functions
 
+my $filepath = "";
+
+if (scalar(@ARGV) gt 1) {
+   $filepath = $1 . '/';  
+}
+
 my $logger = new DBR::Util::Logger(
 				   -logpath => '/tmp/dbr_example.log',
 				   -logLevel => 'debug3'
@@ -13,7 +19,7 @@ my $logger = new DBR::Util::Logger(
 
 my $dbr = new DBR(
 		  -logger => $logger,
-		  -conf => 'support/example_dbr.conf'
+		  -conf => $filepath . 'support/example_dbr.conf'
 		 );
 
 

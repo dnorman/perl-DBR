@@ -8,7 +8,7 @@ CTARGETS  = Makefile perl-DBR.spec config.log config.status
 DCTARGETS = configure
 MCTARGETS = autom4te.cache configure.ac
 
-all: test
+all: prep
 	@./make-makefile src
 	@echo "Type '$(MAKE) install' to install the library to $(DESTDIR)."
 
@@ -17,7 +17,10 @@ install:
 	cd src && $(MAKE) DESTDIR=$(DESTDIR) install
 
 test:
-	perl -e 'use lib qw(./src); use DBR; print "$$DBR::VERSION\n";'
+	cd examples && $(PERL) -I../src -w basic.pl
+
+prep:
+	$(PERL) -e 'use lib qw(./src); use DBR; print "$$DBR::VERSION\n";'
 
 clean: 
 	$(RM) -rf $(CTARGETS)
@@ -28,4 +31,4 @@ distclean: clean
 maintainer-clean: distclean
 	$(RM) -rf $(MCTARGETS)
 
-.PHONY: test maintainer-clean
+.PHONY: prep test maintainer-clean
