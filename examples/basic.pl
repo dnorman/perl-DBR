@@ -9,7 +9,7 @@ use DBR::Util::Operator; # Imports operator functions
 my $filepath = "";
 
 if (scalar(@ARGV) gt 1) {
-   $filepath = $1 . '/';  
+   $filepath = $1 . '/';
 }
 
 my $logger = new DBR::Util::Logger(
@@ -23,27 +23,18 @@ my $dbr = new DBR(
 		 );
 
 
-sub foo{
 
-      my $dbrh = $dbr->connect('example') || die "failed to connect";
-
+my $dbrh = $dbr->connect('example') || die "failed to connect";
 
 
 
-      my $artists = $dbrh->artist->all or die "failed to fetch artists";
+
+my $artists = $dbrh->artist->all or die "failed to fetch artists";
 
 
-      print "Artists:\n\n";
-      while (my $artist = $artists->next) {
+print "Artists:\n\n";
+while (my $artist = $artists->next) {
 
-	    print $artist->name . "\n";
-	    #return $artist;
-
-      }
+      print $artist->name . "\n";
 
 }
-
-
-
-my $artist = foo();
-print STDERR "EOP\n";
