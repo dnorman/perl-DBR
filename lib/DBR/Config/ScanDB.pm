@@ -63,6 +63,8 @@ sub scan_pkeys {
             $map{$table}->{$field} = 1;
       }
 
+      $sth->finish();
+
       return \%map;
 }
 
@@ -70,7 +72,7 @@ sub scan_tables{
       my $self = shift;
       my $dbh = $self->{scan_instance}->connect('dbh') || die "failed to connect to scanned db";
 
-      return $self->_error('failed to prepare statement') unless
+      return $self->_error('failed call to table_info') unless
 	my $sth = $dbh->table_info;
 
       my @tables;
@@ -95,7 +97,7 @@ sub scan_fields{
 
       my $dbh = $self->{scan_instance}->connect('dbh') || die "failed to connect to scanned db";
 
-      return $self->_error('failed to prepare statement') unless
+      return $self->_error('failed call to column_info') unless
 	my $sth = $dbh->column_info( undef, undef, $table, undef );
 
       my @rows;
