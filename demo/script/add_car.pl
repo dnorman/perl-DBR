@@ -6,6 +6,8 @@
 use strict;
 use warnings;
 
+use Data::Dumper;
+
 use lib qw( ../lib ../../lib );  # works without deploy; remove if ran deploy
 use DBR;
 use DBR::Util::Logger;
@@ -27,7 +29,7 @@ sub new_car {
 
       my $salesperson = &pick_salesperson or return undef;
 
-      my $price = &get_dollars( $dbrh->car, 'car price', 'price' ) or return undef;
+      my $price = &get_dollars( $dbrh->car, 'price', 'car price' ) or return undef;
 
       my $date_received = &get_date( $dbrh->car, 'date_received' ) or return undef;
 
@@ -41,8 +43,8 @@ sub new_car {
       my $car_id = $dbrh->car->insert(
                                       model_id       => $model->model_id,
                                       price          => $price,
-                                      date_received  => &unix_timestamp( $date_received ),
-                                      date_sold      => &unix_timestamp( $date_sold ),
+                                      date_received  => $date_received,
+                                      date_sold      => $date_sold,
                                       salesperson_id => $salesperson->salesperson_id,
                                       model_year     => $model_year,
                                       color          => $color->handle,
@@ -299,19 +301,21 @@ sub get_enum {
 sub get_validated {
       my ($obj,$field,$error_msg,$prompt) = @_;
 
-      $prompt = $field && $prompt =~ s!_! !g unless defined $prompt;
+      if (!defined $prompt) {
+            $prompt = $field;
+            $prompt =~ s!_! !g;
+      }
 
-      my $value;
-      while (!$value) {
+      while (1) {
             print "$prompt> ";
             chomp( my $value = <STDIN> );
             return undef unless $value;
 
             $value = $obj->parse( $field, $value )
-              or print $error_msg;
-      }
+              or print $error_msg and next;
 
-      return $value;
+            return $value;
+      }
 }
 
 # this should not be necessary once date support in place

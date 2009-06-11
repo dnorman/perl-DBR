@@ -102,6 +102,23 @@ What to do:
 
    zsh> init.sh              (performs all the above actions)
    zsh> script/create.pl
+   zsh> script/sampler.pl    (explore the DBR api with executed code samples)
    zsh> script/all_cars.pl
    zsh> script/add_car.pl
+
+
+11) Something seem screwed up?
+
+   just run the init.sh script and the script/create.pl script
+   to reset all the demo data.
+
+   and remember that all the demo scripts in ./script/ should be
+   run from the demo directory!
+
+   known bugs (2009-06-10):
+   - count() won't work in SQLite unless you walk the resultset.
+   - a null, undef or blank date will either fail or be incorrect.
+     (this means you must enter a date_sold value in add_car.pl!).
+
+   consider filing a bug report!
 
