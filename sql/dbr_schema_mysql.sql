@@ -5,7 +5,7 @@ CREATE TABLE dbr_schemas (
   display_name varchar(50) default NULL,
   PRIMARY KEY  (schema_id),
   UNIQUE KEY handle (handle)
-);
+) Engine=InnoDB;
 
 CREATE TABLE dbr_instances (
   instance_id int(10) unsigned NOT NULL auto_increment,
@@ -21,7 +21,7 @@ CREATE TABLE dbr_instances (
   readonly boolean,
   PRIMARY KEY  (instance_id),
   KEY (schema_id)
-);
+) Engine=InnoDB;
 
 CREATE TABLE dbr_tables (
   table_id int(10) unsigned NOT NULL auto_increment,
@@ -31,7 +31,7 @@ CREATE TABLE dbr_tables (
   is_cachable tinyint(1) NOT NULL,
   PRIMARY KEY  (table_id),
   KEY (schema_id)
-);
+) Engine=InnoDB;
 
 CREATE TABLE dbr_fields (
   field_id int(10) unsigned NOT NULL auto_increment,
@@ -47,7 +47,7 @@ CREATE TABLE dbr_fields (
   trans_id tinyint(3) unsigned default NULL,
   PRIMARY KEY  (field_id),
   KEY (table_id)
-);
+) Engine=InnoDB;
 
 CREATE TABLE dbr_relationships (
   relationship_id INT PRIMARY KEY auto_increment,
@@ -63,14 +63,14 @@ CREATE TABLE dbr_relationships (
   type tinyint(3)  NOT NULL,
   KEY (from_table_id),
   KEY (to_table_id)
-);
+) Engine=InnoDB;
 
 CREATE TABLE cache_scopes (
   scope_id int(10) unsigned NOT NULL auto_increment,
   digest char(32) default NULL,
   PRIMARY KEY  (scope_id),
   UNIQUE KEY (digest)
-);
+) Engine=InnoDB;
 
 CREATE TABLE cache_fielduse (
   row_id   int(10) unsigned NOT NULL auto_increment,
@@ -78,7 +78,7 @@ CREATE TABLE cache_fielduse (
   field_id int(10) unsigned NOT NULL,
   PRIMARY KEY  (row_id),
   UNIQUE KEY (scope_id,field_id)
-);
+) Engine=InnoDB;
 
 CREATE TABLE enum (
   enum_id int(10) unsigned NOT NULL auto_increment,
@@ -87,7 +87,7 @@ CREATE TABLE enum (
   override_id int(10) unsigned default NULL,
   PRIMARY KEY  (enum_id),
   KEY handle (handle)
-);
+) Engine=InnoDB;
 
 CREATE TABLE enum_legacy_map (
   row_id int(10) unsigned NOT NULL auto_increment,
@@ -96,7 +96,7 @@ CREATE TABLE enum_legacy_map (
   enum_id int(10) unsigned NOT NULL,
   sortval int(11) default NULL,
   PRIMARY KEY  (row_id)
-);
+) Engine=InnoDB;
 
 CREATE TABLE enum_map (
   row_id int(10) unsigned NOT NULL auto_increment,
@@ -105,5 +105,5 @@ CREATE TABLE enum_map (
   sortval int(11) default NULL,
   PRIMARY KEY (row_id),
   KEY (field_id)
-);
+) Engine=InnoDB;
 

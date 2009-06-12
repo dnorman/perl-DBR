@@ -151,15 +151,14 @@ sub _gen_valcheck{
       }else{
 	    push @code, 'defined($_)' unless $fieldref->[C_is_nullable];
 	    if ($fieldref->[C_max_value] =~ /^\d+$/){ # use regex to prevent code injection
-		  my $gt = $fieldref->[C_max_value] + 1;
-		  push @code, "length(\$_)<$gt";
+		  my $max = $fieldref->[C_max_value];
+		  push @code, "length(\$_)<= $max";
 	    }
 
       }
 
       my $code = join(' && ', @code);
       $code = "!defined(\$_)||($code)" if $fieldref->[C_is_nullable];
-
       return $VALCHECKS{$code} ||= eval 'sub { shift ; ' . $code . ' }' || die "DBR::Config::Field::_get_valcheck: failed to gen sub '$@'";
 }
 

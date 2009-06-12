@@ -15,7 +15,7 @@ CREATE TABLE album (
 CREATE TABLE track (
   track_id INTEGER PRIMARY KEY DEFAULT NULL,
   album_id int NOT NULL,
-  name  int(10) NOT NULL
+  name varchar(250) NOT NULL
 );
 
 
