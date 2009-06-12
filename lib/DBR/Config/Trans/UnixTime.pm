@@ -58,8 +58,8 @@ use overload
 '0+' => sub { $_[0]->unixtime },
 
 #operators
- '+'  => sub { $_[0]->manip( $_[1], 'add' )      || croak "Invalid date manipulation '$_[1]'" },
- '-'  => sub { $_[0]->manip( $_[1], 'subtract' ) || croak "Invalid date manipulation '$_[1]'" },
+ '+'  => sub { $_[0]->_manip( $_[1], 'add' )      || croak "Invalid date manipulation '$_[1]'" },
+ '-'  => sub { $_[0]->_manip( $_[1], 'subtract' ) || croak "Invalid date manipulation '$_[1]'" },
 
 # Some ideas:
 # 
@@ -126,7 +126,7 @@ sub endofday{
       return $self->new($endofday);
 }
 
-sub manip{
+sub _manip{
       my $self = shift;
       my $manip = shift;
       my $mode = shift;

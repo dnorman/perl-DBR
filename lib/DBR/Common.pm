@@ -52,7 +52,8 @@ sub _stopwatch{
       my $label = shift;
 
       my ( $package, $filename, $line, $method ) = caller( 1 ); # First caller up
-      my ($m) = $method =~ /([^\:]+)$/;
+      $method ||= '';
+      my ($m) = $method =~ /([^\:]*)$/;
 
       if($label){
 	    my $elapsed = Time::HiRes::time() - $TIMERS{$method};

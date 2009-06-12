@@ -7,7 +7,7 @@ package DBR::Query::Part::Value;
 
 use strict;
 use base 'DBR::Common';
-
+use Scalar::Util 'looks_like_number';
 
 #### Constructors ###############################################
 
@@ -40,21 +40,9 @@ sub new{
 	    $self->{op_hint} = $wrapper->operator;
       }
 
-      my $ref = ref($value);
-
-      if(!$ref || $ref =~ /^DBR\:\:_/){
-	    $value = [$value];
-      }elsif ($ref eq 'ARRAY'){
-	    foreach (@$value){
-		  my $sref = ref($_);
-		  return $self->_error("Invalid array element '$_'") if $sref && $sref !~ /^DBR\:\:_/;
-	    }
-      }else{
-	    return $self->_error('value must be a scalar or an arrayref');
-      }
+      $value = [$value] unless ref($value) eq 'ARRAY';
 
       if(ref($field) eq 'DBR::Config::Field'){ # No Anon
-	    $self->{is_number} = $field->is_numeric? 1 : 0;
 
 	    my $trans = $field->translator;
 	    if($trans){
@@ -66,20 +54,26 @@ sub new{
 		  }
 		  $value = \@translated;
 	    }
+
+	    my $testsub = $field->testsub or return $self->_error('failed to retrieve testsub');
+
+	    foreach (@$value){
+		 $testsub->($_) or return $self->_error("invalid value '$_' for field " . $field->name );
+	    }
+
       }else{
 	    return $self->_error('is_number must be specified') unless defined($params{is_number});
 
 	    $self->{is_number}  = $params{is_number}? 1 : 0;
-      }
 
-      if( $self->{is_number} ){
-	    foreach my $val ( @{$value}) {
-                  $val = '' unless defined $val;
-		  if ($val !~ /^-?\d*\.?\d+$/) {
-			return $self->_error("value '$val' is not a legal number");
+	    if( $self->{is_number} ){
+		  foreach my $val ( @{$value}) {
+			$val = '' unless defined $val;
+			looks_like_number($val) or return $self->_error("value '$val' is not a legal number");
 		  }
 	    }
       }
+
 
       $self->{value}    = $value;
 

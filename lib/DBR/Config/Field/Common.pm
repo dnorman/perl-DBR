@@ -9,6 +9,15 @@ use strict;
 use base 'DBR::Common';
 use Carp;
 
+use constant ({
+	       # Object fields
+	       O_xname       => 0,
+	       O_session     => 1,
+	       O_index       => 2,
+	       O_table_alias => 3,
+	       O_alias_flag  => 4,
+	      });
+
 sub makevalue{ undef }
 sub table_id { undef };
 sub field_id { undef };
@@ -23,10 +32,10 @@ sub table_alias{
       my $self = shift;
       my $set = shift;
       if($set){
-	    return $self->{table_alias} = $set;
+	    return $self->[O_table_alias] = $set;
       }
 
-      return $self->{table_alias};
+      return $self->[O_table_alias];
 
 }
 
@@ -35,12 +44,12 @@ sub index{
       my $set = shift;
 
       if(defined($set)){
-	    croak "Cannot set the index on a field object twice" if defined($self->{index}); # I want this to fail obnoxiously
-	    $self->{index} = $set;
+	    croak "Cannot set the index on a field object twice" if defined( $self->[O_index] ); # I want this to fail obnoxiously
+	    $self->[O_index] = $set;
 	    return 1;
       }
 
-      return $self->{index};
+      return $self->[O_index];
 }
 
 sub validate { 1 }
@@ -54,13 +63,19 @@ sub sql  {
       $sql  = $alias . '.' if $alias;
       $sql .= $name;
 
-      if ( $self->{do_dealias} ) {
-	    $sql .= " AS $name";
-      } elsif ( $self->{do_alias} ) {
-	    $sql .= " AS '$alias.$name'";
+      if(defined($self->[O_alias_flag])){
+
+	    if ( $self->{O_alias_flag} == 1 ) {
+		  $sql .= " AS $name";
+	    } elsif ( $self->{O_alias_flag} == 2 ) {
+		  $sql .= " AS '$alias.$name'";
+	    }
+
       }
 
       return $sql;
 }
+
+sub _session { $_[0]->[O_session] }
 
 1;

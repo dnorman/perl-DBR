@@ -56,7 +56,7 @@ sub moduleload{
 	    $VALUES_BY_ID{ $enum_id } = [$id,$value->{handle},$value->{name}]; #
       }
 
-      foreach my $map (sort {$a->{sortval} <=> $b->{sortval}} @$maps){
+      foreach my $map (sort {( $a->{sortval}||0 ) <=> ( $b->{sortval}||0 ) } @$maps){
 	    my $enum_id = $map->{enum_id};
 	    my $value = $VALUES_BY_ID{ $enum_id };
 

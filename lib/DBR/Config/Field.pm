@@ -7,11 +7,39 @@ package DBR::Config::Field;
 
 use strict;
 use base 'DBR::Config::Field::Common';
+use Scalar::Util 'looks_like_number';
 use DBR::Query::Part::Value;
 use DBR::Config::Table;
 use DBR::Config::Trans;
 use Clone;
+use Carp;
 
+use constant ({
+	       # This MUST match the select fomr dbr_fields verbatim
+	       C_field_id    => 0,
+	       C_table_id    => 1,
+	       C_name        => 2,
+	       C_data_type   => 3,
+
+	       C_is_nullable => 4, # HERE - consider compressing these using bitmask
+	       C_is_signed   => 5,
+	       C_is_pkey     => 6,
+
+	       C_trans_id    => 7,
+	       C_max_value   => 8,
+
+	       C_is_readonly => 9, # Not in table
+	       C_testsub     => 10,
+
+	       # Object fields
+	       O_field_id    => 0,
+	       O_session     => 1,
+	       O_index       => 2,
+	       O_table_alias => 3,
+	       O_alias_flag  => 4,
+	      });
+
+my %VALCHECKS;
 my %FIELDS_BY_ID;
 
 #This is ugly... clean it up
@@ -56,69 +84,105 @@ sub load{
       my( $package ) = shift;
       my %params = @_;
 
-      my $self = { session => $params{session} };
-      bless( $self, $package ); # Dummy object
+      my $session  = $params{session} || return croak('session is required');
+      my $instance = $params{instance} || return croak('instance is required');
 
-      my $instance = $params{instance} || return $self->_error('instance is required');
-
-      my $table_ids = $params{table_id} || return $self->_error('table_id is required');
+      my $table_ids = $params{table_id} || return croak('table_id is required');
       $table_ids = [$table_ids] unless ref($table_ids) eq 'ARRAY';
 
       return 1 unless @$table_ids;
 
-      my $dbrh = $instance->connect || return $self->_error("Failed to connect to ${\$instance->name}");
+      my $dbrh = $instance->connect || return croak("Failed to connect to ${\$instance->name}");
 
-      return $self->_error('Failed to select fields') unless
+      die('Failed to select fields') unless
 	my $fields = $dbrh->select(
 				   -table => 'dbr_fields',
-				   -fields => 'field_id table_id name data_type is_nullable is_signed is_pkey trans_id max_value',
+				   # This MUST match constants above
+				   -fields => 'field_id table_id name data_type is_nullable is_signed is_pkey trans_id max_value', 
 				   -where  => { table_id => ['d in',@$table_ids] },
+				   -arrayref => 1,
 				  );
+
 
       my @trans_fids;
       foreach my $field (@$fields){
 	    # Consider adding another config param: is_readonly
 
-	    $field->{is_readonly} = 1 if $field->{is_pkey};
+	    $field->[C_is_readonly] = 1 if $field->[C_is_pkey];
 
 	    DBR::Config::Table->_register_field(
-						table_id => $field->{table_id},
-						name     => $field->{name},
-						field_id => $field->{field_id},
-						is_pkey  => $field->{is_pkey} ? 1 : 0,
-					       ) or return $self->_error('failed to register field');
-	    $FIELDS_BY_ID{ $field->{field_id} } = $field;
-	    push @trans_fids, $field->{field_id} if $field->{trans_id};
-      }
+						table_id => $field->[C_table_id],
+						name     => $field->[C_name],
+						field_id => $field->[C_field_id],
+						is_pkey  => $field->[C_is_pkey] ? 1 : 0,
+					       ) or die('failed to register field');
 
+
+	    $field->[C_testsub] = _gen_valcheck($field) or die('failed to generate value checking routine');
+
+	    $FIELDS_BY_ID{ $field->[C_field_id] } = $field;
+	    push @trans_fids, $field->[C_field_id] if $field->[C_trans_id];
+      }
 
       if (@trans_fids){
 
 	    DBR::Config::Trans->load(
-				     session => $self->{session},
+				     session => $session,
 				     instance => $instance,
 				     field_id => \@trans_fids,
-				    ) or return $self->_error('failed to load translators');
+				    ) or return die('failed to load translators');
 
       }
 
       return 1;
 }
 
+sub _gen_valcheck{
+      my $fieldref = shift;
+      my $dt = $datatype_lookup{ $fieldref->[C_data_type] };
+
+      my @code;
+      if($dt->{numeric}){
+	    my ($min,$max) = (0, 2 ** $dt->{bits});
+
+	    if($fieldref->[C_is_signed]){  $max /= 2; $min = 0 - $max }
+	    push @code, 'looks_like_number($_)', "\$_ >= $min", '$_ <= ' . ($max - 1);
+
+      }else{
+	    push @code, 'defined($_)' unless $fieldref->[C_is_nullable];
+	    if ($fieldref->[C_max_value] =~ /^\d+$/){ # use regex to prevent code injection
+		  my $gt = $fieldref->[C_max_value] + 1;
+		  push @code, "length(\$_)<$gt";
+	    }
+
+      }
+
+      my $code = join(' && ', @code);
+      $code = "!defined(\$_)||($code)" if $fieldref->[C_is_nullable];
+
+      return $VALCHECKS{$code} ||= eval 'sub { shift ; ' . $code . ' }' || die "DBR::Config::Field::_get_valcheck: failed to gen sub '$@'";
+}
+
+
+####################################################################################################
+####################################################################################################
+####################################################################################################
+####################################################################################################
+
+
 
 sub new {
       my $package = shift;
       my %params = @_;
-      my $self = {
-		  session   => $params{session},
-		  field_id => $params{field_id},
-		 };
+
+      # Order must match O_ constants
+      my $self = [$params{field_id}, $params{session}];
 
       bless( $self, $package );
 
-      return $self->_error('field_id is required') unless $self->{field_id};
+      return $self->_error('field_id is required') unless $self->[O_field_id];
 
-      $FIELDS_BY_ID{ $self->{field_id} } or return $self->_error('invalid field_id');
+      $FIELDS_BY_ID{ $self->[O_field_id] } or return $self->_error('invalid field_id');
 
       return( $self );
 }
@@ -126,12 +190,9 @@ sub new {
 sub clone{
       my $self = shift;
       return bless(
-		   {
-		    session => $self->{session},
-		    field_id => $self->{field_id}
-		   },
-	    ref($self),
-	   );
+		   [ $self->[O_field_id], $self->[O_session] ],
+		   ref($self),
+		  );
 }
 
 sub makevalue{ # shortcut function?
@@ -139,42 +200,44 @@ sub makevalue{ # shortcut function?
       my $value = shift;
 
       return DBR::Query::Part::Value->new(
-					  session => $self->{session},
-					  value  => $value,
+					  session   => $self->[O_session],
+					  value     => $value,
 					  is_number => $self->is_numeric,
-					  field  => $self,
+					  field     => $self,
 					 );# or return $self->_error('failed to create value object');
 
 }
 
-sub field_id { $_[0]->{field_id} }
-sub table_id { $FIELDS_BY_ID{  $_[0]->{field_id} }->{table_id}    }
-sub name     { $FIELDS_BY_ID{  $_[0]->{field_id} }->{name}    }
-sub is_pkey  { $FIELDS_BY_ID{  $_[0]->{field_id} }->{is_pkey} }
-sub is_readonly  { $FIELDS_BY_ID{  $_[0]->{field_id} }->{is_readonly} }
+sub field_id     { $_[0]->[O_field_id] }
+sub table_id     { $FIELDS_BY_ID{  $_[0]->[O_field_id] }->[C_table_id]    }
+sub name         { $FIELDS_BY_ID{  $_[0]->[O_field_id] }->[C_name]        }
+sub is_pkey      { $FIELDS_BY_ID{  $_[0]->[O_field_id] }->[C_is_pkey]     }
+sub is_readonly  { $FIELDS_BY_ID{  $_[0]->[O_field_id] }->[C_is_readonly] }
+sub testsub      { $FIELDS_BY_ID{  $_[0]->[O_field_id] }->[C_testsub]     }
+
 sub table    {
       my $self = shift;
 
       return DBR::Config::Table->new(
-				     session   => $self->{session},
-				     table_id => $FIELDS_BY_ID{  $_[0]->{field_id} }->{table_id}
+				     session   => $self->[O_session],
+				     table_id => $FIELDS_BY_ID{  $_[0]->[O_field_id] }->[C_table_id]
 				    );
 }
 
 sub is_numeric{
-      my $field = $FIELDS_BY_ID{ $_[0]->{field_id} };
-      return $datatype_lookup{ $field->{data_type} }->{numeric} ? 1:0;
+      my $field = $FIELDS_BY_ID{ $_[0]->[O_field_id] };
+      return $datatype_lookup{ $field->[C_data_type] }->{numeric} ? 1:0;
 }
 
 sub translator{
       my $self = shift;
 
-      my $trans_id = $FIELDS_BY_ID{ $self->{field_id} }->{trans_id} or return undef;
+      my $trans_id = $FIELDS_BY_ID{ $self->[O_field_id] }->[C_trans_id] or return undef;
 
       return DBR::Config::Trans->new(
-				     session   => $self->{session},
+				     session  => $self->[O_session],
+				     field_id => $self->[O_field_id],
 				     trans_id => $trans_id,
-				     field_id => $self->{field_id},
 				    );
 }
 

@@ -7,16 +7,21 @@ package DBR::Config::Field::Anon;
 
 use strict;
 use base 'DBR::Config::Field::Common';
-
+use constant ({
+	       # Object fields
+	       O_fieldname   => 0,
+	       O_session     => 1,
+	       O_index       => 2,
+	       O_table_alias => 3,
+	       O_alias_flag  => 4,
+	      });
 sub new{
       my( $package ) = shift;
       my %params = @_;
 
       my $field;
 
-      my $self = {
-		  session => $params{session},
-		 };
+      my $self = [undef,$params{session}];
 
       bless( $self, $package );
 
@@ -40,15 +45,8 @@ sub new{
 	    return $self->_error("invalid table name '$table'") unless $table =~ /^[A-Z][A-Z0-9_-]*$/i;
       }
 
-      $self->{table_alias} = $table;
-      $self->{field} = $field;
-
-      my $sql = $table;
-      $sql .= '.' if $sql;
-      $sql .= $field;
-
-      $self->{sql} = $sql;
-
+      $self->[O_table_alias] = $table;
+      $self->[O_fieldname] = $field;
 
       return $self;
 }
@@ -56,16 +54,16 @@ sub new{
 sub clone{
       my $self = shift;
       return bless(
-		   {
-		    session      => $self->{session},
-		    field       => $self->{field},
-		    table_alias => $self->{table_alias},
-		    sql         => $self->{sql}
-		   },
+		   [
+		    $self->[O_fieldname],
+		    $self->[O_session],
+		    undef,         # index
+		    $self->[O_table_alias],
+		   ],
 		   ref($self),
 	   );
 }
 
-sub name { $_[0]->{field} }
+sub name { $_[0]->[O_fieldname] }
 
 1;
