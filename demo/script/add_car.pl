@@ -29,11 +29,17 @@ sub new_car {
 
       my $salesperson = &pick_salesperson or return undef;
 
-      my $price = &get_dollars( $dbrh->car, 'price', 'car price' ) or return undef;
+      my $price = &get_dollars( obj => $dbrh->car,
+                                field => 'price',
+                                prompt => 'car price',
+                                required => 1 ) or return undef;
 
-      my $date_received = &get_date( $dbrh->car, 'date_received' ) or return undef;
+      my $date_received = &get_date( obj => $dbrh->car,
+                                     field => 'date_received',
+                                     required => 1 ) or return undef;
 
-      my $date_sold = &get_date( $dbrh->car, 'date_sold' );
+      my $date_sold = &get_date( obj => $dbrh->car,
+                                 field => 'date_sold' ) or return undef;
 
       print "model year> "; chomp( my $model_year = <STDIN> ); return undef unless $model_year;
 
@@ -54,7 +60,9 @@ sub new_car {
       # features
       while (1) {
             my $feature = &pick_feature or last;
-            my $cost = &get_dollars( $dbrh->car_feature, 'cost' ) or return undef;
+            my $cost = &get_dollars( obj => $dbrh->car_feature,
+                                     field => 'cost',
+                                     required => 1 ) or return undef;
 
             $dbrh->car_feature->insert(
                                        car_id     => $car_id,
@@ -74,7 +82,8 @@ sub pick_color {
             print "\t" . $color->handle . ': ' . $color . "\n";
       }
 
-      return &get_enum( $dbrh->car, 'color' ) or return undef;
+      return &get_enum( obj => $dbrh->car,
+                        field => 'color' ) or return undef;
 }
 
 sub pick_feature {
@@ -193,7 +202,8 @@ sub pick_style {
             print "\t" . $style->handle . ': ' . $style . "\n";
       }
 
-      return &get_enum( $dbrh->model, 'style' ) or return undef;
+      return &get_enum( obj => $dbrh->model,
+                        field => 'style' ) or return undef;
 }
 
 sub pick_make {
@@ -277,42 +287,29 @@ sub new_country {
       return $country_id;
 }
 
-sub get_date {
-      my ($obj,$field,$prompt) = @_;
-      return &get_validated( $obj, $field,
-                             "bad date/time format - try yyyy-mm-dd hh:mm:ss\n",
-                             $prompt );
-}
-
-sub get_dollars {
-      my ($obj,$field,$prompt) = @_;
-      return &get_validated( $obj, $field,
-                             "bad money format - try dddd.cc\n",
-                             $prompt );
-}
-
-sub get_enum {
-      my ($obj,$field,$prompt) = @_;
-      return &get_validated( $obj, $field,
-                             "bad value - check your spelling\n",
-                             $prompt );
-}
+sub get_date    { return &get_validated( @_, error_msg => "bad date/time format - try yyyy-mm-dd hh:mm:ss" ) }
+sub get_dollars { return &get_validated( @_, error_msg => "bad money format - try dddd.cc" ) }
+sub get_enum    { return &get_validated( @_, error_msg => "bad value - check your spelling" ) }
 
 sub get_validated {
-      my ($obj,$field,$error_msg,$prompt) = @_;
+      my %params = @_;  # obj, field, error_msg, prompt, required
 
+      print "cannot validate - missing required obj or field param\n" and
+        return undef unless $params{obj} && $params{field};
+
+      my $prompt = $params{prompt};
       if (!defined $prompt) {
-            $prompt = $field;
+            $prompt = $params{field};
             $prompt =~ s!_! !g;
       }
 
       while (1) {
             print "$prompt> ";
             chomp( my $value = <STDIN> );
-            return undef unless $value;
+            return undef if $params{required} && length($value) == 0;
 
-            $value = $obj->parse( $field, $value )
-              or print $error_msg and next;
+            $value = $params{obj}->parse( $params{field}, $value )
+              or print "$params{error_msg}\n" and next;
 
             return $value;
       }

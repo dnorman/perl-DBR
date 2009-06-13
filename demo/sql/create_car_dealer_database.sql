@@ -54,7 +54,7 @@ create table car_feature (
   car_feature_id integer primary key autoincrement,
   car_id int not null,
   feature_id int not null,
-  cost int
+  cost int not null
 );
 
 -- a car that is available
@@ -65,13 +65,13 @@ create table car (
   date_received int not null,
   date_sold int,
   salesperson_id int,
-  model_year smallint,
-  color tinyint
+  model_year smallint not null,
+  color tinyint not null
 );
 
 create table salesperson (
   salesperson_id integer primary key autoincrement,
-  name varchar(64)
+  name varchar(64) not null
 );
 
 create table country (
