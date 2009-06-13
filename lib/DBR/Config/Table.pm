@@ -6,7 +6,7 @@
 package DBR::Config::Table;
 
 use strict;
-use base 'DBR::Common';
+use base 'DBR::Config::Table::Common';
 
 use DBR::Config::Field;
 use DBR::Config::Relation;
@@ -167,6 +167,22 @@ sub primary_key{
 	   } @{ $PK_FIELDS{ $self->{table_id} } }
       ];
 
+}
+
+sub get_relation{
+      my $self  = shift;
+      my $name = shift or return $self->_error('name is required');
+
+      my $relation_id = $RELATIONS_BY_NAME{ $self->{table_id} } -> { $name } || return $self->_error("relationship $name does not exist");
+
+
+      my $relation = DBR::Config::Relation->new(
+						session     => $self->{session},
+						relation_id => $relation_id,
+						table_id    => $self->{table_id},
+					       ) or return $self->_error('failed to create relation object');
+
+      return $relation;
 }
 
 sub relations{

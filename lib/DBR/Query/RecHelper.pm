@@ -93,12 +93,12 @@ sub _set{
       my $table_id = shift;
       my $sets = shift;
 
-      my ($outwhere,$tablename) = $self->_pk_where($record,$table_id) or return $self->_error('failed to create where tree');
+      my ($outwhere,$table) = $self->_pk_where($record,$table_id) or return $self->_error('failed to create where tree');
 
        my $query = DBR::Query->new(
 				   session => $self->{session},
 				   instance => $self->{instance},
-				   tables => $tablename,
+				   tables => $table,
 				   where  => $outwhere,
 				   update => { set => $sets }
 				  ) or return $self->_error('failed to create Query object');
@@ -122,12 +122,12 @@ sub delete{
 
        my ($table_id) = keys %{$self->{tablemap}};
 
-       my ($outwhere,$tablename) = $self->_pk_where($record,$table_id) or return $self->_error('failed to create where tree');
+       my ($outwhere,$table) = $self->_pk_where($record,$table_id) or return $self->_error('failed to create where tree');
 
        my $query = DBR::Query->new(
 				   session  => $self->{session},
 				   instance => $self->{instance},
-				   tables   => $tablename,
+				   tables   => $table,
 				   where    => $outwhere,
 				   delete   => 1,
 				  ) or return $self->_error('failed to create Query object');
@@ -151,7 +151,7 @@ sub getfield{
 
        $self->{scope}->addfield($field) or return $self->_error('Failed to add field to scope');
 
-       my ($outwhere,$tablename)  = $self->_pk_where($record,$field->table_id) or return $self->_error('failed to create where tree');
+       my ($outwhere,$table)  = $self->_pk_where($record,$field->table_id) or return $self->_error('failed to create where tree');
 
        # Because we are doing a new select, which will set the indexes on
        # its fields, we must clone the field provided by the original query
@@ -160,7 +160,7 @@ sub getfield{
        my $query = DBR::Query->new(
 				   session  => $self->{session},
 				   instance => $self->{instance},
-				   tables   => $tablename,
+				   tables   => $table,
 				   where    => $outwhere,
 				   select   => { fields => [ $newfield ] } # use the new cloned field
 				  ) or return $self->_error('failed to create Query object');
@@ -227,7 +227,7 @@ sub getrelation{
       my $query = DBR::Query->new(
 				  session  => $self->{session},
 				  instance => $self->{instance},
-				  tables   => $maptable->name,
+				  tables   => $maptable,
 				  where    => $outwhere,
 				  select   => { fields => \@fields },
 				  scope    => $scope,
@@ -295,7 +295,7 @@ sub _pk_where{
       }
 
 
-      return (DBR::Query::Part::And->new(@and), $table->name);
+      return (DBR::Query::Part::And->new(@and), $table);
 }
 
 sub _setlocalval{

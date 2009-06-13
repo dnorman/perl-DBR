@@ -26,7 +26,7 @@ sub _split{
 	    $out = [ split(/\s+/,$value) ];
       }
 
-      return $out;
+      return wantarray?(@$out):$out;
 }
 
 # returns true if all elements of Arrayref A (or single value) are present in arrayref B

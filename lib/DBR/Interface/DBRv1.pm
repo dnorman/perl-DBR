@@ -9,6 +9,7 @@ use strict;
 use base 'DBR::Common';
 use DBR::Query;
 use DBR::Config::Field::Anon;
+use DBR::Config::Table::Anon;
 use DBR::Query::Part::Value;
 use DBR::Query::Part;
 
@@ -39,6 +40,9 @@ sub select {
       my $fields = $self->_split( $params{-fields} || $params{-field}) or
 	return $self->_error('No -field[s] parameter specified');
 
+
+      my $Qtables = $self->_tables($tables) or return $self->_error('tables failed');
+
       my @Qfields;
       foreach my $field (@$fields){
 	    my $Qfield = DBR::Config::Field::Anon->new(
@@ -65,7 +69,7 @@ sub select {
 					     count  => $params{'-count'}?1:0, # takes precedence
 					     fields => \@Qfields
 					    },
-				  tables => $tables,
+				  tables => $Qtables,
 				  where  => $where,
 				  limit  => $limit,
 				 ) or return $self->_error('failed to create query object');
@@ -114,6 +118,10 @@ sub insert {
       return $self->_error('No -table parameter specified') unless $table && $table =~ /^[A-Za-z0-9_-]+$/;
       return $self->_error('No proper -fields parameter specified') unless ref($fields) eq 'HASH';
 
+      my $Qtable = DBR::Config::Table::Anon->new(
+						 session => $self->{session},
+						 name    => $table,
+						) or return $self->_error('Failed to create table object');
       my @sets;
       foreach my $field (keys %$fields){
 	    my $value = $fields->{$field};
@@ -137,7 +145,7 @@ sub insert {
 					       set => \@sets,
 					      },
 				  quiet_error => $params{-quiet} ? 1:0,
-				  tables => $table,
+				  tables => $Qtable,
 				 ) or return $self->_error('failed to create query object');
 
       return $query->execute();
@@ -155,6 +163,10 @@ sub update {
       return $self->_error('No -table parameter specified') unless $table =~ /^[A-Za-z0-9_-]+$/;
       return $self->_error('No proper -fields parameter specified') unless ref($fields) eq 'HASH';
 
+      my $Qtable = DBR::Config::Table::Anon->new(
+						 session => $self->{session},
+						 name    => $table,
+						) or return $self->_error('Failed to create table object');
       my $where;
       if($params{-where}){
 	    $where = $self->_where($params{-where}) or return $self->_error('failed to prep where');
@@ -186,7 +198,7 @@ sub update {
 					       set => \@sets,
 					      },
 				  quiet_error => $params{-quiet} ? 1:0,
-				  tables => $table,
+				  tables => $Qtable,
 				  where  => $where
 				 ) or return $self->_error('failed to create query object');
 
@@ -202,6 +214,10 @@ sub delete {
 
       return $self->_error('No -table parameter specified') unless $table =~ /^[A-Za-z0-9_-]+$/;
 
+      my $Qtable = DBR::Config::Table::Anon->new(
+						 session => $self->{session},
+						 name    => $table,
+						) or return $self->_error('Failed to create table object');
       my $where;
       if($params{-where}){
 	    $where = $self->_where($params{-where}) or return $self->_error('failed to prep where');
@@ -213,12 +229,65 @@ sub delete {
 				  instance => $self->{instance},
 				  session   => $self->{session},
 				  delete   => 1,
-				  tables   => $table,
+				  tables   => $Qtable,
 				  where    => $where,
 				  quiet_error => $params{-quiet} ? 1:0
 				 ) or return $self->_error('failed to create query object');
 
       return $query->execute();
+
+}
+
+sub _tables{
+      my $self = shift;
+      my $tables = shift;
+
+      if(ref($tables) eq 'ARRAY' and @{$tables} == 1){
+	    $tables = $tables->[0]
+      }
+
+      my @Qtables;
+      if(ref($tables) eq 'ARRAY'){
+	    my $ct = 0;
+	    foreach my $table (@{$tables}){
+		  return $self->_error("Invalid table name specified ($table)") unless
+		    $table =~ /^[A-Za-z][A-Za-z0-9_-]*$/;
+
+		  return $self->_error('No more than 26 tables allowed in a join') if $ct > 25;
+		  my $alias = chr(97 + $ct++); # a-z
+
+		  my $Qtable = DBR::Config::Table::Anon->new(
+							     session => $self->{session},
+							     name    => $table,
+							     alias   => $alias,
+							    ) or return $self->_error('Failed to create table object');
+		  push @Qtables, $Qtable;
+	    }
+      }elsif(ref($tables) eq 'HASH'){
+	    foreach my $alias (keys %{$tables}){
+
+		  return $self->_error("invalid table alias '$alias' in -table[s]") unless $alias =~ /^[A-Za-z][A-Za-z0-9_-]*$/;
+		  my $table = $tables->{ $alias };
+		  return $self->_error("Invalid table name specified ($table)")     unless $table =~ /^[A-Za-z][A-Za-z0-9_-]*$/;
+
+		  my $Qtable = DBR::Config::Table::Anon->new(
+							     session => $self->{session},
+							     name    => $table,
+							     alias   => $alias,
+							    ) or return $self->_error('Failed to create table object');
+		  push @Qtables, $Qtable;
+	    }
+      }else{
+	    return $self->_error("Invalid table name specified ($tables)") unless $tables =~ /^[A-Za-z][A-Za-z0-9_-]*$/;
+
+	    my $Qtable = DBR::Config::Table::Anon->new(
+						       session => $self->{session},
+						       name    => $tables,
+						      ) or return $self->_error('Failed to create table object');
+	    push @Qtables, $Qtable;
+      }
+
+      return \@Qtables;
 
 }
 

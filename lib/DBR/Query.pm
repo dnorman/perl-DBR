@@ -64,53 +64,6 @@ sub new {
       return( $self );
 }
 
-sub _tables{
-      my $self   = shift;
-      my $tables = shift;
-
-      return $self->_error("No -table[s] parameter specified") unless $tables;
-      if(ref($tables) eq 'ARRAY' and @{$tables} == 1){
-	    $tables = $tables->[0]
-      }
-
-      my $aliasmap;
-      my @tparts;
-      if(ref($tables) eq 'ARRAY'){
-	    $aliasmap = {};
-	    my $ct = 0;
-	    foreach my $table (@{$tables}){
-		  return $self->_error("Invalid table name specified ($table)") unless
-		    $table =~ /^[A-Za-z][A-Za-z0-9_-]*$/;
-		  return $self->_error('No more than 26 tables allowed in a join') if $ct > 25;
-		  my $alias = chr(97 + $ct++); # a-z
-		  $aliasmap->{$alias} = $table;
-		  push @tparts, "$table $alias";
-	    }
-      }elsif(ref($tables) eq 'HASH'){
-	    $aliasmap = {};
-	    foreach my $alias (keys %{$tables}){
-		  return $self->_error("invalid table alias '$alias' in -table[s]") unless
-		    $alias =~ /^[A-Za-z][A-Za-z0-9_-]*$/;
-		  my $table = $tables->{$alias};
-		  return $self->_error("Invalid table name specified ($table)") unless
-		    $table =~ /^[A-Za-z][A-Za-z0-9_-]*$/;
-
-		  $aliasmap->{$alias} = $table;
-		  push @tparts, "$table $alias";
-	    }
-      }else{
-	    return $self->_error("Invalid table name specified ($tables)") unless
-	      $tables =~ /^[A-Za-z][A-Za-z0-9_-]*$/;
-
-	    @tparts = $tables;
-      }
-
-      $self->{tparts}   = \@tparts;
-      $self->{aliasmap} = $aliasmap;
-
-      return 1;
-}
-
 sub get_field {
       my $self = shift;
       my $fieldname = shift;
@@ -125,6 +78,31 @@ sub check_table{
       my $alias = shift;
 
       return $self->{aliasmap}->{$alias} ? 1 : 0;
+}
+
+sub _tables{
+      my $self   = shift;
+      my $tables = shift;
+
+      $tables = [$tables] unless ref($tables) eq 'ARRAY';
+      return $self->_error('At least one table must be specified') unless @$tables;
+
+      my @tparts;
+      my %aliasmap;
+      foreach my $table (@$tables){
+	    return $self->_error('must specify table as a DBR::Config::Table object') unless ref($table) =~ /^DBR::Config::Table/; # Could also be ::Anon
+
+	    my $name  = $table->name or return $self->_error('failed to get table name');
+	    my $alias = $table->alias;
+	    $aliasmap{$alias} = $name;
+
+	    push @tparts, $table->sql;
+      }
+
+      $self->{tparts}   = \@tparts;
+      $self->{aliasmap} = \%aliasmap;
+
+      return 1;
 }
 
 sub _where{

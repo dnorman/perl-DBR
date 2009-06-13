@@ -118,17 +118,30 @@ sub field_id {
       return $RELATIONS_BY_ID{  $self->{relation_id} }->{ $self->{forward}  . '_field_id' };
 }
 
+sub field {
+      my $self = shift;
+      my $field_id = $RELATIONS_BY_ID{  $self->{relation_id} }->{ $self->{forward}  . '_field_id' };
+
+      my $field = DBR::Config::Field->new(
+					  session  => $self->{session},
+					  field_id => $field_id,
+					 ) or return $self->_error('failed to create field object');
+
+      return $field;
+}
+
 sub mapfield {
       my $self = shift;
       my $mapfield_id = $RELATIONS_BY_ID{  $self->{relation_id} }->{ $self->{reverse}  . '_field_id' };
 
       my $field = DBR::Config::Field->new(
-					  session   => $self->{session},
+					  session  => $self->{session},
 					  field_id => $mapfield_id,
 					 ) or return $self->_error('failed to create field object');
 
       return $field;
 }
+
 sub maptable {
       my $self = shift;
 

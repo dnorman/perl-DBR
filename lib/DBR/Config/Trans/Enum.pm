@@ -92,11 +92,18 @@ sub backward{
 
       if( ref($value) eq 'DBR::_ENUM' ){ # smells like an enum object
 	    $value = $value->handle;     # swap it out for the handle, so we can make sure they didn't mix up enum objects
+	    return $FIELDMAP{ $self->{field_id} }->[ x_hmap ]->{ $value }->[ v_id ]; # id
       }
 
-      #otherwise hit the lookup
+      my @out;
+      foreach ( $self->_split($value) ){
+	    #otherwise hit the lookup
+	    my $id =  $FIELDMAP{ $self->{field_id} }->[ x_hmap ]->{ $_ }->[ v_id ] || return undef;
+	    push @out, $id;
+      }
 
-      return $FIELDMAP{ $self->{field_id} }->[ x_hmap ]->{ $value }->[ v_id ]; # id
+      return @out;
+
 }
 
 ###############################################################################################################

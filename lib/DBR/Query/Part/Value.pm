@@ -49,11 +49,13 @@ sub new{
 
 		  my @translated;
 		  foreach (@$value){
-			my $tv = $trans->backward($_) or return $self->_error("invalid value '$_' for field " . $field->name );
-			push @translated, $tv;
+			my @tv = $trans->backward($_);
+			$tv[0] or return $self->_error("invalid value '$_' for field " . $field->name );
+			push @translated, @tv;
 		  }
 		  $value = \@translated;
 	    }
+	    $self->{is_number}  = $field->is_numeric;
 
 	    my $testsub = $field->testsub or return $self->_error('failed to retrieve testsub');
 
