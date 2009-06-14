@@ -19,6 +19,7 @@ my %MODULES = (
 	       1 => 'Enum',
 	       2 => 'Dollars',
 	       3 => 'UnixTime',
+	       4 => 'percent',
 	      );
 
 sub list_translators{
