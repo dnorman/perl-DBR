@@ -2,6 +2,7 @@
 
 # example usage:  perl -I../lib conf/dbr.conf car_dealer
 
+use lib qw'../lib ../../lib';
 use DBR::Util::Logger;
 use DBR::Config::ScanDB;
 

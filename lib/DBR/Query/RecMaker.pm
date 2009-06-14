@@ -102,7 +102,7 @@ sub _prep{
 			      return $self->_error('Resultset is missing primary key field ' . $checkfield->name);
 			}
 
-			push @pk, $field->clone; # Make a clean copy of the field object in case this one has an alias
+			push @pk, $field->clone( with_index => 1 ); # Make a clean copy of the field object in case this one has an alias
 		  }else{
 			if(!$field){
 			      push @$fields, $checkfield; #not in the resultset, but we should still know about it

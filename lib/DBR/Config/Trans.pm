@@ -12,6 +12,7 @@ use base 'DBR::Common';
 use DBR::Config::Trans::Enum;
 use DBR::Config::Trans::Dollars;
 use DBR::Config::Trans::UnixTime;
+use DBR::Config::Trans::Percent;
 
 
 
@@ -19,7 +20,7 @@ my %MODULES = (
 	       1 => 'Enum',
 	       2 => 'Dollars',
 	       3 => 'UnixTime',
-	       4 => 'percent',
+	       4 => 'Percent',
 	      );
 
 sub list_translators{

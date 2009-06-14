@@ -16,6 +16,8 @@ sub backward{
       my $self = shift;
       my $value = shift;
 
+      return undef unless defined($value) && length($value);
+
       if( ref($value) eq 'DBR::_PERCENT' ){ # looks like it's a percent object
 	    return $value->value;
       }
@@ -52,8 +54,11 @@ use overload
 'nomethod' => sub {croak "Percent object: Invalid operation '$_[3]' The ways in which you can use percent objects is restricted"}
 ;
 
-sub value   { $_[0]->[0] };
-sub format { $_[0]->value . '%' };
+sub value   { $_[0][0] };
+sub format { 
+      return '' unless defined($_[0][0]);
+      $_[0]->value . '%' 
+};
 
 #utilities
 sub new{ bless([ $_[1] || $_[0] ],'DBR::_PERCENT') } # will work OO or functional

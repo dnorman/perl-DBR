@@ -16,6 +16,8 @@ sub backward{
       my $self = shift;
       my $value = shift;
 
+      return undef unless defined($value) && length($value);
+
       if( ref($value) eq 'DBR::_DOLLARS' ){ # looks like it's a dollar object, yay!
 	    return $value->cents;
       }

@@ -53,15 +53,17 @@ sub new{
 
 sub clone{
       my $self = shift;
+      my %params = @_;
+
       return bless(
 		   [
 		    $self->[O_fieldname],
 		    $self->[O_session],
-		    undef,         # index
-		    $self->[O_table_alias],
+		    $params{with_index} ? $self->[O_index]        : undef, # index
+		    $params{with_alias} ? $self->[O_table_alias]  : undef, #alias
 		   ],
 		   ref($self),
-	   );
+		  );
 }
 
 sub name { $_[0]->[O_fieldname] }

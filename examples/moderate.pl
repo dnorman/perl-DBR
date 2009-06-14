@@ -32,22 +32,23 @@ print "Artists:\n";
 my $ct;
 while (my $artist = $artists->next){
 
-      print "\t" . $artist->name . "\n";
-
+      print "\t" . $artist->name . "\t Royalty Rate: " . $artist->royalty_rate . "\n";
       my $albums = $artist->albums or die "failed to retrieve albums";
+
 
       while (my $album = $albums->next){
 
- 	    print "\t\t Album: '" . $album->name . "'\n";
- 	    print "\t\t Rating: " . $album->rating . " (" . $album->rating->handle .")\n"; # rating is an enum. Enums and other translators are "magic" objects
+ 	    print "\t\t Album:   '" . $album->name . "'\n";
+ 	    print "\t\t Rating:   " . $album->rating . " (" . $album->rating->handle .")\n"; # rating is an enum. Enums and other translators are "magic" objects
+ 	    print "\t\t Released: " . $album->date_released . "\n";
 
 	    my $tracks = $album->tracks or die "failed to retrieve tracks";
-	    while (my $track = $tracks->next){
+ 	    while (my $track = $tracks->next){
 
-		  print "\t\t\t Track: '" . $track->name . "'\n";
-	    }
-	    print "\t\t ( No tracks )\n" unless $tracks->count;
-	    print "\n";
+ 		  print "\t\t\t Track: '" . $track->name . "'\n";
+ 	    }
+ 	    print "\t\t ( No tracks )\n" unless $tracks->count;
+ 	    print "\n";
 
       }
 

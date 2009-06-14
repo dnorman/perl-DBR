@@ -95,13 +95,13 @@ sub _set{
 
       my ($outwhere,$table) = $self->_pk_where($record,$table_id) or return $self->_error('failed to create where tree');
 
-       my $query = DBR::Query->new(
-				   session => $self->{session},
-				   instance => $self->{instance},
-				   tables => $table,
-				   where  => $outwhere,
-				   update => { set => $sets }
-				  ) or return $self->_error('failed to create Query object');
+      my $query = DBR::Query->new(
+				  session => $self->{session},
+				  instance => $self->{instance},
+				  tables => $table,
+				  where  => $outwhere,
+				  update => { set => $sets }
+				 ) or return $self->_error('failed to create Query object');
 
       my $rv = $query->execute() or return $self->_error('failed to execute');
 
@@ -288,6 +288,7 @@ sub _pk_where{
 
       my @and;
       foreach my $part (@{ $pk }){
+
 	    my $value = $part->makevalue( $record->[ $part->index ] ) or return $self->_error('failed to create value object');
 	    my $outfield = DBR::Query::Part::Compare->new( field => $part, value => $value ) or return $self->_error('failed to create compare object');
 

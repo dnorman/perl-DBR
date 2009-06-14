@@ -90,6 +90,8 @@ sub backward{
       my $self = shift;
       my $value = shift;
 
+      return undef unless defined($value) && length($value);
+
       if( ref($value) eq 'DBR::_ENUM' ){ # smells like an enum object
 	    $value = $value->handle;     # swap it out for the handle, so we can make sure they didn't mix up enum objects
 	    return $FIELDMAP{ $self->{field_id} }->[ x_hmap ]->{ $value }->[ v_id ]; # id

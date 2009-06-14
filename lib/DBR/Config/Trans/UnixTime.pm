@@ -3,7 +3,8 @@ package DBR::Config::Trans::UnixTime;
 use strict;
 use base 'DBR::Config::Trans';
 use strict;
-use Date::Parse ();
+#use Date::Parse ();
+use Time::ParseDate ();
 use POSIX qw(strftime tzset);
 
 sub new { die "Should not get here" }
@@ -24,6 +25,8 @@ sub backward{
       my $self = shift;
       my $value = shift;
 
+      return undef unless defined($value) && length($value);
+
       if(ref($value) eq 'DBR::_UXTIME'){ #ahh... I know what this is
 	    return $value->unixtime;
 
@@ -38,7 +41,8 @@ sub backward{
 	    # Even strptime freaks out on it. What gives Graham? 
 	    # P.S. glass house here throwing stones, but try adding a comment or two.
 
-	    my $uxtime = Date::Parse::str2time($value);
+	    #my $uxtime = Date::Parse::str2time($value);
+	    my $uxtime = Time::ParseDate::parsedate($value);
 
 	    return $self->_error("Invalid time '$value'") unless $uxtime;
 
@@ -73,26 +77,31 @@ sub unixtime { $_[0][0] };
 # Using $ENV{TZ} and the posix functions is ugly... and about 60x faster than the alternative in benchmarks
 
 sub date  {
+      return '' unless defined($_[0][0]);
       local($ENV{TZ}) = ${$_[0][1]}; tzset();
       return strftime ("%D", localtime($_[0][0]));
 }
 
 sub time  {
+      return '' unless defined($_[0][0]);
       local($ENV{TZ}) = ${$_[0][1]}; tzset();
       return strftime ("%H:%M:%S %Z", localtime($_[0][0]));
 }
 
 sub datetime  {
+      return '' unless defined($_[0][0]);
       local($ENV{TZ}) = ${$_[0][1]}; tzset();
       return strftime ("%D %H:%M:%S %Z", localtime($_[0][0]));
 }
 
 sub fancytime  {
+      return '' unless defined($_[0][0]);
       local($ENV{TZ}) = ${$_[0][1]}; tzset();
       return strftime ("%I:%M:%S %p %Z", localtime($_[0][0]));
 }
 
 sub fancydatetime  {
+      return '' unless defined($_[0][0]);
       local($ENV{TZ}) = ${$_[0][1]}; tzset();
       my $v = strftime ("%A %B %e %l:%M%p %Y", localtime($_[0][0]));
       $v =~ s/\s+/ /g;
@@ -101,6 +110,7 @@ sub fancydatetime  {
 }
 
 sub fancydate  {
+      return '' unless defined($_[0][0]);
       local($ENV{TZ}) = ${$_[0][1]}; tzset();
       return strftime ("%A %B %e, %Y", localtime($_[0][0]));
 }
@@ -108,6 +118,7 @@ sub fancydate  {
 sub midnight{
       my $self = shift;
 
+      return '' unless defined($self->[0]);
       local($ENV{TZ}) = ${$self->[1]}; tzset();
       my ($sec,$min,$hour) = localtime($self->[0]);
 
@@ -118,6 +129,8 @@ sub midnight{
 
 sub endofday{
       my $self = shift;
+
+      return '' unless defined($self->[0]);
 
       local($ENV{TZ}) = ${$self->[1]}; tzset();
       my ($sec,$min,$hour) = localtime($self->[0]);
