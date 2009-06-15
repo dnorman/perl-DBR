@@ -163,7 +163,7 @@ sub _gen_valcheck{
       my $code = join(' && ', @code);
       $code = "!defined(\$_)||($code)" if $fieldref->[C_is_nullable];
 
-      print " $dt->{handle} => $code \n";
+      #print " $dt->{handle} => $code \n";
       return $VALCHECKS{$code} ||= eval 'sub { shift ; ' . $code . ' }' || die "DBR::Config::Field::_get_valcheck: failed to gen sub '$@'";
 }
 
