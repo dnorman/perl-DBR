@@ -211,7 +211,7 @@ sub _reljoin{
 			$mapfield ->table_alias( $mapalias );
 		  }
 
-		  my $where = $self->_reljoin($kid, $aliascount,$mapalias) or return $self->_error('_reljoin failed');
+		  my $where = $self->_reljoin($kid, $tables_ref, $aliascount) or return $self->_error('_reljoin failed');
 
 		  if ($relation->is_to_one) {
 			push @and, $where;
