@@ -94,7 +94,7 @@ sub _tables{
 
 	    my $name  = $table->name or return $self->_error('failed to get table name');
 	    my $alias = $table->alias;
-	    $aliasmap{$alias} = $name;
+	    $aliasmap{$alias} = $name if $alias;
 
 	    push @tparts, $table->sql;
       }
