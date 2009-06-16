@@ -130,7 +130,7 @@ use base qw(DBR::Admin::Window);
 
 	my $listbox_options = $self->get_win->add(
 						  'instancelistbox_options', 'Listbox',
-						  -y => ($_args{listbox}->get_active_id() + 2) ,
+						  -y => ($_args{listbox}->get_active_id() + 2)  - $_args{listbox}->{-vscrollpos},
 						  -x => 30,
 						  -width => 25,
 						  -values    => ['Scan', 'Edit'],

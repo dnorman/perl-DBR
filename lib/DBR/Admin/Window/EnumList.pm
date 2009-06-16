@@ -90,7 +90,7 @@ use base qw(DBR::Admin::Window);
 	    $self->get_win->delete('enumlistbox_options');
 	}
 
-	print STDERR $_args{listbox}->{-vscrolllen} . "-" . $_args{listbox}->{-vscrollpos} . "\n";
+	#print STDERR $_args{listbox}->{-vscrolllen} . "-" . $_args{listbox}->{-vscrollpos} . "\n";
 
 	my $listbox_options = $self->get_win->add(
 						  'enumlistbox_options', 'Listbox',
