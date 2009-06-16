@@ -228,11 +228,9 @@ sub is_readonly  { $FIELDS_BY_ID{  $_[0]->[O_field_id] }->[C_is_readonly] }
 sub testsub      { $FIELDS_BY_ID{  $_[0]->[O_field_id] }->[C_testsub]     }
 
 sub table    {
-      my $self = shift;
-
       return DBR::Config::Table->new(
-				     session   => $self->[O_session],
-				     table_id => $FIELDS_BY_ID{  $_[0]->[O_field_id] }->[C_table_id]
+				     session   => $_[0][O_session],
+				     table_id => $FIELDS_BY_ID{  $_[0][O_field_id] }->[C_table_id]
 				    );
 }
 

@@ -8,7 +8,7 @@ sub alias{
       my $self = shift;
       my $set = shift;
       if($set){
-	    croak "Cannot set the index on a field object twice" if defined( $self->{alias} ); # I want this to fail obnoxiously
+	    croak "Cannot set the alias on a table object twice" if defined( $self->{alias} ); # I want this to fail obnoxiously
 	    return $self->{alias} = $set;
       }
 

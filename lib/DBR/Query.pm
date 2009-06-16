@@ -224,7 +224,6 @@ sub _insert{
 
 sub sql{
       my $self = shift;
-      my %params = @_;
 
       return $self->{sql} if exists($self->{sql});
 

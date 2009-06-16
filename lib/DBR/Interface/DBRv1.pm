@@ -338,9 +338,8 @@ sub _where {
 
 			      push @out, DBR::Query::Part::Subquery->new($field, $query);
 
-			}else{ #if( $self->{aliasmap} ){ #not a subquery... are we doing a join?
+			}else{
 			      my $alias = $key;
-			      #return $self->_error("invalid table alias '$alias' in -fields") unless $self->{aliasmap}->{$alias};
 
 			      if(%{$value}){
 				    foreach my $k (keys %{$value}) {
@@ -350,9 +349,7 @@ sub _where {
 				    }
 			      }
 
-			}#else{
-			 #     return $self->_error("invalid use of a hashref for key $key in -fields");
-			#}
+			}
 
 		  } else {
 

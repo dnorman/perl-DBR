@@ -113,6 +113,8 @@ sub _buildwhere{
       my %grouping = (
 		      table => $table # prime the pump
 		     );
+
+      my $aliascount = 0;
       foreach my $key (keys %$inwhere){
 	    my $rawval = $inwhere->{ $key };
 
@@ -129,7 +131,7 @@ sub _buildwhere{
 		  my $last = (scalar(@parts) == 0)?1:0;
 
 		  if($last){
-			return $self->_error('Sanity error. Duplicate field ' .$part ) if $ref->{fields}->{$part};
+			die('Sanity error. Duplicate field ' .$part ) if $ref->{fields}->{$part};
 
 			my $field = $cur_table->get_field( $part ) or return $self->_error("invalid field $part");
 			my $value = $field->makevalue( $rawval ) or return $self->_error("failed to build value object for $part");
@@ -139,20 +141,31 @@ sub _buildwhere{
 
 		  }else{
 			#test for relation?
-			$ref = $ref->{kids}->{$part} ||= {};
+			$ref = $ref->{kids}->{$part} ||= {}; # step deeper into the tree
 
-			if($ref->{maptable}){ # Dejavu - merge any common paths together
+			if($ref->{been_here}){ # Dejavu - merge any common paths together
 
-			      $cur_table = $ref->{maptable};  # next!
+			      $cur_table = $ref->{table};  # next!
 
 			}else{
 
 			      my $relation = $cur_table->get_relation($part) or return $self->_error("invalid relationship $part");
 			      my $maptable = $relation->maptable             or return $self->_error("failed to get maptable");
 
-			      $ref->{relation} = $relation;
-			      $ref->{table}    = $cur_table;
-			      $ref->{maptable} = $maptable;
+			      # Any to_one relationship results in a join. we'll need some table aliases for later.
+			      # Do them now so everything is in sync. I originally assigned the alias in _reljoin,
+			      # but it didn't always alias the fields that needed to be aliased due to the order of execution.
+			      if($relation->is_to_one){
+				    return $self->_error('No more than 25 tables allowed in a join') if $aliascount > 24;
+
+				    $cur_table ->alias() || $cur_table ->alias( chr(97 + $aliascount++)  ); # might be doing this one again
+				    $maptable  ->alias( chr(97 + $aliascount++)  );
+			      }
+
+			      $ref->{relation}  = $relation;
+			      $ref->{prevtable} = $cur_table;
+			      $ref->{table}     = $maptable;
+			      $ref->{been_here} = 1;
 
 			      $cur_table = $maptable; # next!
 			}
@@ -161,8 +174,7 @@ sub _buildwhere{
 	    };
       }
 
-      my $aliascount = 0;
-      my $where = $self->_reljoin(\%grouping, $tables_ref, \$aliascount) or return $self->_error('_reljoin failed');
+      my $where = $self->_reljoin(\%grouping, $tables_ref) or return $self->_error('_reljoin failed');
 
       return $where;
 }
@@ -171,12 +183,63 @@ sub _reljoin{
       my $self = shift;
       my $ref  = shift;
       my $tables_ref = shift;
-      my $aliascount = shift;
 
       return $self->_error('ref must be hash') unless ref($ref) eq 'HASH';
 
       my @and;
 
+      if($ref->{kids}){
+	    foreach my $key (keys %{$ref->{kids}}){
+		  my $kid = $ref->{kids}->{ $key };
+		  my $relation = $kid->{relation};
+
+		  # it's important we use the same table objects to preserve aliases
+
+		  my $table     = $kid->{table}      or return $self->_error("failed to get table");
+		  my $prevtable = $kid->{prevtable}  or return $self->_error("failed to get prev_table");
+
+		  my $field     = $relation->mapfield or return $self->_error('Failed to fetch field');
+		  my $prevfield = $relation->field    or return $self->_error('Failed to fetch prevfield');
+
+		  my $prevalias = $prevtable ->alias();
+		  my $alias     = $table     ->alias();
+
+		  $prevfield ->table_alias( $prevalias ) if $prevalias;
+		  $field     ->table_alias( $alias     ) if $alias;
+
+		  if ($relation->is_to_one) { # Do a join
+
+			$prevalias or die('Sanity error: prevtable alias is required');
+			$alias     or die('Sanity error: table alias is required');
+
+			push @$tables_ref, $table;
+
+			my $where = $self->_reljoin($kid, $tables_ref) or return $self->_error('_reljoin failed');
+			push @and, $where;
+
+			my $join = DBR::Query::Part::Join->new($field,$prevfield) or return $self->_error('failed to create join object');
+			push @and, $join;
+
+		  }else{ # if it's a to_many relationship, then subqery
+			my @tables = $table;
+			my $where = $self->_reljoin($kid, \@tables) or return $self->_error('_reljoin failed');
+
+ 			my $query = DBR::Query->new(
+ 						    instance => $self->{instance},
+ 						    session  => $self->{session},
+ 						    select   => { fields => [$field] },
+ 						    tables   => \@tables,
+ 						    where    => $where,
+ 						   ) or return $self->_error('failed to create query object');
+
+ 			my $subquery = DBR::Query::Part::Subquery->new($prevfield, $query) or return $self->_error('failed to create subquery object');
+			push @and, $subquery;
+		  }
+
+	    }
+      }
+
+      # It's important that fields are evaluated after all relationships are processed for this node
       if($ref->{fields}){
 	    my $alias = $ref->{table}->alias;
 
@@ -184,54 +247,6 @@ sub _reljoin{
 		  my $compare = $ref->{fields}->{ $key };
 		  $compare->field->table_alias( $alias ) if $alias;
 		  push @and, $compare;
-	    }
-      }
-
-      if($ref->{kids}){
-	    foreach my $key (keys %{$ref->{kids}}){
-		  my $kid = $ref->{kids}->{ $key };
-		  my $relation = $kid->{relation};
-		  my ($alias, $mapalias);
-
-		  # it's important we use the same table objects
-		  my $table     = $kid->{table}       or return $self->_error("failed to get table");
-		  my $maptable  = $kid->{maptable}    or return $self->_error("failed to get maptable");
-
-		  my $field     = $relation->mapfield or return $self->_error('Failed to fetch field');
-		  my $mapfield  = $relation->mapfield or return $self->_error('Failed to fetch mapfield');
-
-		  if ($relation->is_to_one) {
-			return $self->_error('No more than 25 tables allowed in a join') if $$aliascount > 24;
-
-			$alias    = $table    ->alias() || $table    ->alias( chr(97 + $$aliascount++)  );
-			$mapalias = $maptable ->alias() || $maptable ->alias( chr(97 + $$aliascount++)  );
-			push @$tables_ref, $maptable;
-
-			$field    ->table_alias( $alias    );
-			$mapfield ->table_alias( $mapalias );
-		  }
-
-		  my $where = $self->_reljoin($kid, $tables_ref, $aliascount) or return $self->_error('_reljoin failed');
-
-		  if ($relation->is_to_one) {
-			push @and, $where;
-
-			my $join = DBR::Query::Part::Join->new($field,$mapfield) or return $self->_error('failed to create join object');
-			push @and, $join;
-
-		  } else {
- 			my $query = DBR::Query->new(
- 						    instance => $self->{instance},
- 						    session  => $self->{session},
- 						    select   => { fields => [$mapfield] },
- 						    tables   => $maptable,
- 						    where    => $where,
- 						   ) or return $self->_error('failed to create query object');
-
- 			my $subquery = DBR::Query::Part::Subquery->new($field, $query) or return $self->_error('failed to create subquery object');
-			push @and, $subquery;
-		  }
-
 	    }
       }
 
