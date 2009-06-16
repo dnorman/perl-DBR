@@ -73,7 +73,7 @@ use base qw(DBR::Admin::Window);
 	my %menu_list;
 	my %tables;
 
-	foreach my $e (@$data) {
+	foreach my $e (sort {$a->{name} cmp $b->{name}} @$data) {
 	    $menu_list{$e->{table_id}} = $e->{name};
 	    $tables{$e->{table_id}} = $e;
 	}
@@ -91,7 +91,7 @@ use base qw(DBR::Admin::Window);
 
 	my $table_listbox = $self->get_table_listbox();
 	my $menu_list = $self->get_table_list();
-	my @menu_values = keys %{$menu_list};
+	my @menu_values = sort {$menu_list->{$a} cmp $menu_list->{$b} } keys %{$menu_list};
 	$table_listbox->values(\@menu_values);
 	$table_listbox->labels($menu_list);
 	$self->set_table_listbox($table_listbox);

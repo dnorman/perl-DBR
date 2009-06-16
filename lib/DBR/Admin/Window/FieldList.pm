@@ -98,7 +98,7 @@ use base qw(DBR::Admin::Window);
 
 	my $field_listbox = $self->get_field_listbox();
 	my $menu_list = $self->get_field_list();
-	my @menu_values = keys %{$menu_list};
+	my @menu_values = sort {$menu_list->{$a} cmp $menu_list->{$b} } keys %{$menu_list};
 	$field_listbox->values(\@menu_values);
 	$field_listbox->labels($menu_list);
 	$self->set_field_listbox($field_listbox);
@@ -386,7 +386,7 @@ use base qw(DBR::Admin::Window);
 								    -x => ($x + 30) ,
 								    -readonly => 0,
 								    -singleline => 1,
-								    -width => 5,
+								    -width => 10,
 								    -text => $e->{sortval}
 								   );
 	    $enum_map_textboxes->{$e->{row_id}}->draw();
