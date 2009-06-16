@@ -47,7 +47,8 @@ use base qw(DBR::Admin::Window);
 								-label => '< Add New Enum >',
 								-value => 1,
 								-shortcut => 1 ,
-								-onpress => sub {$self->add_edit_enum(add => 1)}
+								-onpress => sub {$self->add_edit_enum(add => 1)},
+								-ipadbottom => 3,
 								
 							       },
 								],
@@ -89,9 +90,11 @@ use base qw(DBR::Admin::Window);
 	    $self->get_win->delete('enumlistbox_options');
 	}
 
+	print STDERR $_args{listbox}->{-vscrolllen} . "-" . $_args{listbox}->{-vscrollpos} . "\n";
+
 	my $listbox_options = $self->get_win->add(
 						  'enumlistbox_options', 'Listbox',
-						  -y => ($_args{listbox}->get_active_id() + 2) ,
+						  -y => ($_args{listbox}->get_active_id() + 2) - $_args{listbox}->{-vscrollpos},
 						  -x => 30,
 						  -width => 25,
 						  -values    => ['Edit', 'Delete'],

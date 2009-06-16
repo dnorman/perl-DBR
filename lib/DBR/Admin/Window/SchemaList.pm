@@ -251,7 +251,7 @@ use base qw(DBR::Admin::Window);
 					      -x => $x + 30,
 					      -width => 25,
 					      -singleline => 1,
-					      -text => $schemas->{$_args{schema_id}}->{name}
+					      -text => $schemas->{$_args{schema_id}}->{display_name}
 					     );
 	$schema_display_name_box->draw();
 	$y += 1;
@@ -293,7 +293,7 @@ use base qw(DBR::Admin::Window);
 							    -onpress => sub {
 								$self->submit_add_edit(
 										   schema_id => $_args{schema_id},
-										   name => $schema_display_name_box->get(),
+										   display_name => $schema_display_name_box->get(),
 										   handle => $schema_handle_box->get(),
 										   edit_window => $edit_window,
 										   add => $_args{add}
