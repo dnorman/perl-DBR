@@ -45,7 +45,7 @@ while (1) {
                   $where{$path} = $value;
             }
             else {
-                  $where{$path} = LIKE $value;
+                  $where{$path} = $value =~ m!%! ? LIKE $value : $value;
             }
       }
 }
