@@ -2,6 +2,7 @@
 
 use strict;
 
+use lib qw'../lib ../../lib';
 use DBR;
 use DBR::Util::Logger;   # Any object that implements log, logErr, logDebug, logDebug2 and logDebug3 will do
 use DBR::Util::Operator; # Imports operator functions

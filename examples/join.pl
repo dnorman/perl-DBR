@@ -35,16 +35,16 @@ print "\n========================================\n\n";
 print "Do a join\n";
 print "Albums where artist name like Test, with a fair or poor rating:\n\n";
 
- my $album = $dbrh->album->where(
-				 'artist.name' => LIKE '%Test%',
-				 rating => 'fair poor',
-				) or die "failed to fetch albums";
+my $album = $dbrh->album->where(
+				'artist.name' => LIKE '%Test%',
+				rating => 'fair poor',
+			       ) or die "failed to fetch albums";
 
- while (my $album = $album->next) {
+while (my $album = $album->next) {
 
-       print $album->name . "\n";
+      print $album->name . "\n";
 
- }
+}
 
 
 print "\n========================================\n\n";
@@ -56,9 +56,8 @@ my $artists = $dbrh->artist->where( 'albums.tracks.name' => LIKE '%Test%', 'albu
 
 while (my $artist = $artists->next) {
 
-       print $artist->name . "\n";
+      print $artist->name . "\n";
 
-       
 
 }
 
@@ -68,14 +67,15 @@ print "\n========================================\n\n";
 print "Do a join AND a subquery\n";
 print "Albums where artist name like Test, with a fair or poor rating, and track name like Test:\n\n";
 
- my $album = $dbrh->album->where(
-				 'artist.name' => LIKE '%Test%',
-				 rating => 'fair poor',
-				 'tracks.name' => LIKE '%Test%',
-				) or die "failed to fetch albums";
+my $album = $dbrh->album->where(
+				'artist.royalty_rate' => GT 2.01,
+				rating       => 'fair poor',
+				'tracks.name' => LIKE '%Test%',
+				'tracks.album.artist.name' => LIKE '%Test Artist%' # yes, I'm querying crazy crazy things
+			       ) or die "failed to fetch albums";
 
- while (my $album = $album->next) {
+while (my $album = $album->next) {
 
-       print $album->name . "\n";
+      print $album->name . "\n";
 
- }
+}
