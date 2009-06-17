@@ -11,15 +11,6 @@ use DBR::Config;
 use DBR::Misc::Session;
 use base 'DBR::Common';
 
-my $headurl = '$HeadURL$';
-my ($rev) = '$Revision$' =~ /(\d+)/;
-my ($tag) = $headurl =~ /\/svn\/(?:tags|branches)?\/?(.*?)\//;
-if($tag eq 'trunk'){
-      $tag .= '_' . $rev;
-}
-
-our $VERSION = $tag || 'unknown';
-
 sub new {
       my( $package ) = shift;
       my %params = @_;

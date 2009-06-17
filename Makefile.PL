@@ -1,8 +1,20 @@
 use ExtUtils::MakeMaker;
+use strict;
+
+my $headurl = '$HeadURL: https://perl-dbr.googlecode.com/svn/trunk/lib/DBR.pm $';
+my ($rev) = '$Revision: 175 $' =~ /(\d+)/;
+my ($tag) = $headurl =~ /\/svn\/(?:tags|branches)?\/?(.*?)\//;
+if($tag eq 'trunk'){
+      $tag .= '_' . $rev;
+}
+
+my $version = $tag || 'unknown';
+
+
 
 WriteMakefile(
 	      NAME            => 'DBR',
-	      VERSION_FROM    => 'lib/DBR.pm',
+	      VERSION         => $version,
 	      PREREQ_PM       => {
 				  'Carp'               => 0,
 				  'Class::Std'         => 0,
