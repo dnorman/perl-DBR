@@ -8,7 +8,7 @@
 use strict;
 use Curses::UI;
 
-use lib '/drj/tools/perl-dbr/lib';
+use lib qw'../lib ../../lib';
 use DBR::Admin::Window::MainMenu;
 use DBR::Admin::Utility;
 

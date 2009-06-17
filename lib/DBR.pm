@@ -11,6 +11,8 @@ use DBR::Config;
 use DBR::Misc::Session;
 use base 'DBR::Common';
 
+our $VERSION = '$Tag:$' || 'test';
+
 sub new {
       my( $package ) = shift;
       my %params = @_;
