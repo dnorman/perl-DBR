@@ -1,6 +1,0 @@
-#!/bin/zsh
-
-sed 's/%VERSION%/1.0/g' configure.ac.in > configure.ac
-sed -i 's/%DBR_RELEASE%/1/g' configure.ac
-
-autoconf
