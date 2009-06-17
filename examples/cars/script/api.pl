@@ -3,16 +3,16 @@
 # how to use this script:
 #   simply run the script from the demo directory (not the script subdir!)
 #   see what various methods can do and what the code looks like.
-#   watch the log file (/tmp/dbr_sampler.log) to see why the first pass
+#   watch the log file (/tmp/dbr_api.log) to see why the first pass
 #     through some code is awfully slow, but very fast on all subsequent
 #     calls.
 #   change the log level in init() to measure real speed.
 #   change any code to be more complex if you wish.
-#   run all_cars.pl to see the data set being targeted by the sample code.
+#   run all_cars.pl to see the data set being targeted by this code.
 #   edit create.pl or run add_car.pl to change the data set.
 
-# how to add more sampler code:
-#   copy the needed structure in the samples() sub ... basically:
+# how to add more api code:
+#   copy the needed structure in the apis() sub ... basically:
 #   thing => {
 #     package => 'Perl::Package::Of::Thing',
 #     desc => 'Some description text about thing',
@@ -34,7 +34,7 @@
 
 # todo:
 #   add benchmarking metrics on code execution.
-#   add lots mode code samples!
+#   add lots more api example code!
 
 use strict;
 use warnings;
@@ -49,37 +49,37 @@ use DBR::Util::Operator;
 my ($logger,$dbr,$dbrh);
 &init;
 
-my $samples = &samples;
+my $apis = &apis;
 while (1) {
       print "\n" . '_'x80 . "\nWhat would you like to explore today?\n";
-      map { print "\t$_\n" } sort keys %{$samples};
+      map { print "\t$_\n" } sort keys %{$apis};
       print "\t\t(enter '?' for full index, or ?filter to search (try: ?enum))\n";
       my $thing;
       while (1) {
             print "> "; chomp( $thing = <STDIN> ); last unless $thing;
-            last if exists $samples->{$thing};
-            &sampler_index($1) and next if $thing =~ m!^\?(.*)!;
+            last if exists $apis->{$thing};
+            &api_index($1) and next if $thing =~ m!^\?(.*)!;
             print "invalid - try again\n";
       }
       last unless $thing;
-      print "\n$samples->{$thing}->{package}\n";
-      print "\n$samples->{$thing}->{desc}\n\n";
+      print "\n$apis->{$thing}->{package}\n";
+      print "\n$apis->{$thing}->{desc}\n\n";
 
       print "Select a method:\n";
-      map { print "\t$_\n" } sort keys %{$samples->{$thing}->{methods}};
+      map { print "\t$_\n" } sort keys %{$apis->{$thing}->{methods}};
       my $method;
       while (1) {
             print "> "; chomp( $method = <STDIN> ); last unless $method;
-            last if exists $samples->{$thing}->{methods}->{$method};
+            last if exists $apis->{$thing}->{methods}->{$method};
             print "invalid - try again\n";
       }
       next unless $method;
 
-      my $before = $samples->{$thing}->{methods}->{$method}->{before};
+      my $before = $apis->{$thing}->{methods}->{$method}->{before};
       print "\n$before\n" if $before;
 
       # show the code
-      my $code = $samples->{$thing}->{methods}->{$method}->{code};
+      my $code = $apis->{$thing}->{methods}->{$method}->{code};
       if ($code) {
             unless (ref($code)) {
                   $code =~ s!^\n+!!;
@@ -94,7 +94,7 @@ while (1) {
       }
       else {
             my $source = &source_code( "$thing\__$method" );
-            $code = $source ? "\&$thing\__$method" : 'print "No sample code found\n";';
+            $code = $source ? "\&$thing\__$method" : 'print "No code found\n";';
             print "\ncode:\n$source\n";
       }
 
@@ -104,11 +104,11 @@ while (1) {
       &$sub;
       print '-' x 80 . "\n";
 
-      my $after = $samples->{$thing}->{methods}->{$method}->{after};
+      my $after = $apis->{$thing}->{methods}->{$method}->{after};
       print "$after\n" if $after;
 }
 
-sub samples {
+sub apis {
       return {
               object => {
                          package => 'DBR::Interface::Object',
@@ -304,7 +304,7 @@ sub object__all {
 
 sub source_code {
       my $sub_name = shift;
-      open( IFILE, "<./script/sampler.pl" ) or die "failed to open sampler.pl\n";
+      open( IFILE, "<./script/api.pl" ) or die "failed to open api.pl\n";
       my @code = ();
       my $grabbing = 0;
       while (my $line = <IFILE>) {
@@ -320,11 +320,11 @@ sub source_code {
       return join( '', @code );
 }
 
-sub sampler_index {
+sub api_index {
       my $filter = shift;
-      foreach my $thing (sort keys %{$samples}) {
+      foreach my $thing (sort keys %{$apis}) {
             print "\t$thing\n" if !$filter || $filter && $thing =~ m!$filter!i;
-            foreach my $method (sort keys %{$samples->{$thing}->{methods}}) {
+            foreach my $method (sort keys %{$apis->{$thing}->{methods}}) {
                   if ($filter) {
                         print "\t$thing:$method\n" if $method =~ m!$filter!i;
                   }
@@ -387,7 +387,7 @@ sub unix_timestamp {
 
 sub init {
       $logger = new DBR::Util::Logger(
-                                      -logpath => '/tmp/dbr_sampler.log',
+                                      -logpath => '/tmp/dbr_api.log',
                                       -logLevel => 'debug3'
                                      )
         or return &_error( 'failed to get logger' );
