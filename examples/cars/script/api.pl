@@ -388,7 +388,7 @@ sub unix_timestamp {
 sub init {
       $logger = new DBR::Util::Logger(
                                       -logpath => '/tmp/dbr_examples.log',
-                                      -logLevel => 'debug3'
+                                      -logLevel => 'debug2'
                                      )
         or return &_error( 'failed to get logger' );
 
