@@ -4,7 +4,18 @@ The SQLite storage engine is used.
 
 Everything needed to try things out is located right here.
 
+Quickstart: (relative paths are important)
 
+init.sh          (initialize sample database)
+script/create.pl (populate sample data)
+
+Try / Read:
+script/all_cars.pl
+script/sampler.pl    (explore the DBR api with executed code samples)
+script/add_car.pl
+
+
+** Detailed Version **
 What to do:
 
 
