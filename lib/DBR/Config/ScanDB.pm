@@ -35,11 +35,11 @@ sub scan{
 
       my %params;
       my $tables = $self->scan_tables() || die "failed to scan tables";
-      my $pkeys = $self->scan_pkeys() || die "failed to scan primary keys";
+      my $pkeys = $self->scan_pkeys(); # || die "failed to scan primary keys";
 
       foreach my $table (@{$tables}){
        	    my $fields = $self->scan_fields($table) or return $self->_error( "failed to describe table" );
-            my $pkey = $pkeys->{$table};
+            my $pkey = $pkeys ? $pkeys->{$table} : $self->scan_pkeys( $table );
 
 	    $self->update_table($fields,$table,$pkey) or return $self->_error("failed to update table");
       }
@@ -50,10 +50,14 @@ sub scan{
 
 sub scan_pkeys {
       my $self = shift;
+      my $table = shift;  # undef for all
+      #print "SCAN_PKEYS called with table=[$table]\n";
+
       my $dbh = $self->{scan_instance}->connect('dbh') || die "failed to connect to scanned db";
 
-      return $self->_error('failed call to primary_key_info') unless
-	my $sth = $dbh->primary_key_info(undef,undef,undef);
+      my $sth;
+      eval { $sth= $dbh->primary_key_info(undef,undef,$table); };
+      return $self->_error('failed call to primary_key_info') unless $sth;
 
       my %map = ();
       while (my $row = $sth->fetchrow_hashref()) {

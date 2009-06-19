@@ -9,4 +9,5 @@ sqlite3 db/metadata.db < sql/register_car_dealer.sql
 perl -I../../lib ../../bin/load_meta.pl conf/dbr.conf car_dealer
 sqlite3 db/metadata.db < sql/car_dealer_enumerations.sql
 sqlite3 db/metadata.db < sql/car_dealer_translators.sql
-sqlite3 db/metadata.db < sql/car_dealer_relationships.sql
+# sqlite3 db/metadata.db < sql/car_dealer_relationships.sql
+perl -I../../lib ../../bin/load_spec.pl conf=conf/dbr.conf spec=conf/meta.conf

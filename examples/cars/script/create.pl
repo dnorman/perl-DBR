@@ -144,6 +144,9 @@ $dbrh->car_feature->insert( car_id => $red_350z, feature_id => $cruise_id,  cost
 $dbrh->car_feature->insert( car_id => $blue_f150, feature_id => $moonroof_id, cost => 147.63 );
 $dbrh->car_feature->insert( car_id => $blue_f150, feature_id => $cruise_id,   cost => 69.95 );
 
+# races
+$dbrh->race->insert( car_one => $red_350z, car_two => $blue_f150, event => 'California Speedway Race-Off 2009' );
+
 
 # this should not be necessary once date support in place
 sub unix_timestamp {

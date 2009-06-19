@@ -2,7 +2,11 @@
 -- see README.txt
 
 -- this is the application database schema
---                           +-----+
+--                          +------+
+--                          | race |
+--                          +--+-+-+
+--                             | |
+--                           +-+-+-+
 --                           | car |
 --                           ++-+-++
 --                            | | |
@@ -78,4 +82,11 @@ create table country (
   country_id integer primary key autoincrement,
   name varchar(32) not null,
   abbrev varchar(8)
+);
+
+create table race (
+  race_id integer primary key autoincrement,
+  car_one int not null,
+  car_two int not null,
+  event varchar(64) not null
 );
