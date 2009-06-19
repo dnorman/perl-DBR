@@ -22,7 +22,7 @@ WriteMakefile(
 				  'Curses::UI'         => 0,
 				  'Data::Dumper'       => 0,
 				  'DateTime::TimeZone' => 0,
-				  'DBD::SQLite'        => '1.20'
+				  'DBD::SQLite'        => '1.20',
 				  'DBI'                => 0,
 				  'Digest::MD5'        => 0,
 				  'Error'              => 0,
