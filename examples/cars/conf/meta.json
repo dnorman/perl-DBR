@@ -2,6 +2,16 @@
   {
     "schema" : "car_dealer",
 
+    "enums" : [
+      "coupe:Coupe",
+      "hatchback:Hatchback",
+      "sedan:Sedan",
+      "suv:SUV",
+      "pickup:Pickup Truck",
+      "wagon:Wagon",
+      "compact:Compact"
+    ],
+
     "tables" : {
 
       "car" : {
@@ -52,13 +62,13 @@
           "style" : {
             "type" : "enum",
             "enums" : [
-              "coupe:Coupe",
-              "hatchback:Hatchback",
-              "sedan:Sedan",
-              "suv:SUV",
-              "pickup:Pickup Truck",
-              "wagon:Wagon",
-              "compact:Compact"
+              "coupe",
+              "hatchback",
+              "sedan",
+              "suv",
+              "pickup",
+              "wagon",
+              "compact"
             ]
           },
           "make_id" : {
