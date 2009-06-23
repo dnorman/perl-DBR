@@ -30,7 +30,6 @@ sub new {
 
 sub all{
       my $self = shift;
-      my %inwhere = @_;
 
       my $table = $self->{table};
       my $scope = DBR::Config::Scope->new(

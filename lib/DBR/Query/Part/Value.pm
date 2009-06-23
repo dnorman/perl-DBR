@@ -50,7 +50,9 @@ sub new{
 		  my @translated;
 		  foreach (@$value){
 			my @tv = $trans->backward($_);
-			$tv[0] or return $self->_error("invalid value '$_' for field " . $field->name );
+
+			# undef is ok... but we Must have at least one element, or we are bailing
+			scalar(@tv) or return $self->_error("invalid value '$_' for field " . $field->name . ' (translator)' );
 			push @translated, @tv;
 		  }
 		  $value = \@translated;

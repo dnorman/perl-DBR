@@ -23,7 +23,10 @@ sub backward{
       }
 
       $value =~ s/[^\d\.-]//g; # strip everything but digit and .
-      return $self->_error('invalid value specified') unless $value =~ /^\-?\d*\.?\d+$/; ;
+      unless( $value =~ /^\-?\d*\.?\d+$/ ){
+	    $self->_error('invalid value specified');
+	    return ();
+      }
 
       return $value;
 }

@@ -23,8 +23,10 @@ sub backward{
       }
 
       $value =~ tr/0-9.-//cd; # the items listed are ALLOWED values
-      return $self->_error('invalid value specified') unless $value;
-
+      unless(length($value)){
+	    $self->_error('invalid value specified');
+	    return ();
+      }
       return sprintf("%.0f", ($value * 100) );
 }
 

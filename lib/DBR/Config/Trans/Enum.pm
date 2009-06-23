@@ -100,7 +100,7 @@ sub backward{
       my @out;
       foreach ( $self->_split($value) ){
 	    #otherwise hit the lookup
-	    my $id =  $FIELDMAP{ $self->{field_id} }->[ x_hmap ]->{ $_ }->[ v_id ] || return undef;
+	    my $id =  $FIELDMAP{ $self->{field_id} }->[ x_hmap ]->{ $_ }->[ v_id ] || return ();
 	    push @out, $id;
       }
 

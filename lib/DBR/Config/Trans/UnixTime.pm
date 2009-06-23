@@ -44,7 +44,10 @@ sub backward{
 	    #my $uxtime = Date::Parse::str2time($value);
 	    my $uxtime = Time::ParseDate::parsedate($value);
 
-	    return $self->_error("Invalid time '$value'") unless $uxtime;
+	    unless($uxtime){
+		  $self->_error("Invalid time '$value'");
+		  return ();
+	    }
 
 	    return $uxtime;
       }
