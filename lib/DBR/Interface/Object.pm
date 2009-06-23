@@ -355,6 +355,11 @@ sub parse{
       my $field = $table->get_field( $fieldname ) or return $self->_error("invalid field $fieldname");
       my $trans = $field->translator or return $self->_error("Field '$fieldname' has no translator");
 
-      return $trans->parse( $value ) || return $self->_error("Invalid value '$value' for " . $field->name);
+      return $trans->parse( $value ) || return $self->_error(
+                                                             "Invalid value " .
+                                                             ( defined $value ? "'$value'" : '(undef)' ) .
+                                                             " for " .
+                                                             $field->name
+                                                            );
 
 }
