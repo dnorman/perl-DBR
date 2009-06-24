@@ -143,28 +143,28 @@ sub _gen_valcheck{
 
       my @code;
       if($dt->{numeric}){
-	    push @code, 'looks_like_number($_)';
+	    push @code, 'looks_like_number($v)';
 
 	    if($dt->{bits} ne 'NA'){ # can't really range check floats and such things
 		  my ($min,$max) = (0, 2 ** $dt->{bits});
 
 		  if($fieldref->[C_is_signed]){  $max /= 2; $min = 0 - $max }
-		  push @code, "\$_ >= $min", '$_ <= ' . ($max - 1);
+		  push @code, "\$v >= $min", '$v <= ' . ($max - 1);
 	    }
       }else{
-	    push @code, 'defined($_)' unless $fieldref->[C_is_nullable];
+	    push @code, 'defined($v)' unless $fieldref->[C_is_nullable];
 	    if ($fieldref->[C_max_value] =~ /^\d+$/){ # use regex to prevent code injection
 		  my $max = $fieldref->[C_max_value];
-		  push @code, "length(\$_)<= $max";
+		  push @code, "length(\$v)<= $max";
 	    }
 
       }
 
       my $code = join(' && ', @code);
-      $code = "!defined(\$_)||($code)" if $fieldref->[C_is_nullable];
+      $code = "!defined(\$v)||($code)" if $fieldref->[C_is_nullable];
 
-      #print " $dt->{handle} => $code \n";
-      return $VALCHECKS{$code} ||= eval 'sub { shift ; ' . $code . ' }' || die "DBR::Config::Field::_get_valcheck: failed to gen sub '$@'";
+      #print " $fieldref->[C_name] => $code \n" if $fieldref->[C_table_id] == 64;
+      return $VALCHECKS{$code} ||= eval 'sub { my $v = shift ; ' . $code . ' }' || die "DBR::Config::Field::_get_valcheck: failed to gen sub '$@'";
 }
 
 
