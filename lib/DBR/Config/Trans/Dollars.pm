@@ -56,9 +56,17 @@ use overload
 'nomethod' => sub {croak "Dollar object: Invalid operation '$_[3]' The ways in which you can use dollar objects is restricted"}
 ;
 
-sub cents   { $_[0]->[0] };
-sub dollars { sprintf("%.02f",$_[0]->cents/100) };
+sub cents   {
+      return '' unless defined($_[0][0]);
+      return $_[0][0]
+};
+sub dollars {
+      return '' unless defined($_[0][0]);
+      return sprintf("%.02f",$_[0][0]/100)
+};
+
 sub format  {
+      return '' unless defined($_[0][0]);
       my $dollars = shift->dollars;
       $dollars =~ s/\G(\d{1,3})(?=(?:\d\d\d)+(?:\.|$))/$1,/g;
       return '$' . $dollars;

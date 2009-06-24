@@ -280,7 +280,7 @@ sub insert {
 				  tables => $table,
 				 ) or return $self->_error('failed to create query object');
 
-      return $query->execute();
+      return $query->execute( void => !defined(wantarray) );
 
       # HERE HERE HERE - consider changing behavior. Use wantarray to determine if we are being executed in a void context or not ( wantarray == undef )
 }
@@ -354,11 +354,12 @@ sub parse{
       my $field = $table->get_field( $fieldname ) or return $self->_error("invalid field $fieldname");
       my $trans = $field->translator or return $self->_error("Field '$fieldname' has no translator");
 
-      return $trans->parse( $value ) || return $self->_error(
-                                                             "Invalid value " .
-                                                             ( defined $value ? "'$value'" : '(undef)' ) .
-                                                             " for " .
-                                                             $field->name
-                                                            );
+      my $obj = $trans->parse( $value );
+      defined($obj) || return $self->_error(
+					    "Invalid value " .
+					    ( defined $value ? "'$value'" : '(undef)' ) .
+					    " for " . $field->name
+					   );
 
+      return $obj;
 }

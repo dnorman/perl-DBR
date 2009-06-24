@@ -83,8 +83,15 @@ sub options{
 sub forward{
       my $self = shift;
       my $id   = shift;
-      return bless( [ $FIELDMAP{ $self->{field_id} }->[ x_idmap ]->{ $id }, $self->{field_id} ] , 'DBR::_ENUM');
+
+      if (defined($id)){
+	    return bless( [ $FIELDMAP{ $self->{field_id} }->[ x_idmap ]->{ $id }, $self->{field_id} ] , 'DBR::_ENUM');
+      }else{
+	    # Looks like a null value. return a dummy object
+	    return bless( [ ['','',''] , $self->{field_id} ] , 'DBR::_ENUM');
+      }
 }
+
 
 sub backward{
       my $self = shift;

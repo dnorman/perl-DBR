@@ -312,11 +312,15 @@ sub execute{
 
 	    $conn->prepSequence() or return $self->_error('Failed to prepare sequence');
 
-	    my $rows = $conn->do($self->sql);
+	    my $rows = $conn->do($self->sql) or return $self->_error("Insert failed");
+
+	    # Tiny optimization: if we are being executed in a void context, then we
+	    # don't care about the sequence value. save the round trip and reduce latency.
+	    return 1 if $params{void};
 
 	    my ($sequenceval) = $conn->getSequenceValue();
-
 	    return $sequenceval;
+
       }elsif($self->{type} eq 'update'){
 
 	    my $rows = $conn->do($self->sql);

@@ -75,7 +75,7 @@ use overload
 'nomethod' => sub {croak "UnixTime object: Invalid operation '$_[3]' The ways in which you can use UnixTime objects is restricted"}
 ;
 
-sub unixtime { $_[0][0] };
+sub unixtime { $_[0][0] || '' };
 
 # Using $ENV{TZ} and the posix functions is ugly... and about 60x faster than the alternative in benchmarks
 

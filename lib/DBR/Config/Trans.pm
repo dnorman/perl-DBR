@@ -101,11 +101,21 @@ sub parse{
       my $self = shift;
       my $raw = shift;
 
-      my $dbval = $self->backward($raw);
-      return undef unless defined($dbval);
+      my @tv = $self->backward($raw);
 
-      return $self->forward($dbval);
+      return undef unless scalar(@tv) > 0; # $self->_error('failed to parse value')
+      return $self->_error('parse does not allow multi-valued translations') if scalar(@tv) > 1;
 
+      my $field   = $self->field;
+      my $testsub = $field->testsub or return $self->_error('failed to retrieve testsub');
+      my $value = $tv[0];
+
+      $testsub->($value) or return $self->_error(
+						 "Invalid internal value " .
+						 ( defined $value ? "'$value'" : '(undef)' ) .
+						 " for " . $field->name
+						);
+      return $self->forward($value);
 }
 
 
