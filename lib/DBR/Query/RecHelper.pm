@@ -237,31 +237,38 @@ sub getrelation{
 
       my $to1 = $relation->is_to_one;
       if(scalar(keys %allvals) > 1){
-	    my $resultmap;
 	    my $myresult;
 	    if($to1){
+		  my $dummy;
 		  $self->_logDebug2('mapping to individual records');
-		  $resultmap = $resultset->hashmap_single(  $mapfield->name  ) or return $self->_error('failed to split resultset');
+		  my $resultmap = $resultset->hashmap_single(  $mapfield->name  ) or return $self->_error('failed to split resultset');
 
-		  $myresult = $resultmap->{$val};
+		  # look forward in the rowcache and assign the resultsets for whatever we find
+		  foreach my $row (@${$self->{rowcache}}) {
+
+			my $record = $resultmap->{ $row->[$fidx] } || ($dummy ||= $resultset->dummy_record or return $self->_error('failed to create dummy record'));
+			$self->_setlocalval($row,$relation,$record) or return $self->_error('failed to _setlocalval');
+		  }
+
+		  $myresult = $resultmap->{$val} || ($dummy ||= $resultset->dummy_record or return $self->_error('failed to create dummy record'));
+
 	    }else{
 		  $self->_logDebug2('splitting into resultsets');
-		  $resultmap = $resultset->split( $mapfield ) or return $self->_error('failed to split resultset');
+		  my $resultmap = $resultset->split( $mapfield ) or return $self->_error('failed to split resultset');
+
+		  # look forward in the rowcache and assign the resultsets for whatever we find
+		  foreach my $row (@${$self->{rowcache}}) {
+
+			my $rs = $resultmap->{ $row->[$fidx] } || DBR::Query::ResultSet::Empty->new() # Empty resultset
+			  or return $self->_error('failed to create ResultSet::Empty object');
+			$self->_setlocalval($row,$relation,$rs) or return $self->_error('failed to _setlocalval');
+		  }
 
 		  $myresult = $resultmap->{$val} || DBR::Query::ResultSet::Empty->new() # Empty resultset
 		    or return $self->_error('failed to create ResultSet::Empty object');
 	    }
 
 	    $self->_setlocalval($record,$relation,$myresult) or return $self->_error('failed to _setlocalval');
-
-	    # look forward in the rowcache and assign the resultsets for whatever we find
-	    foreach my $row (@${$self->{rowcache}}) {
-
-		  my $rs = $resultmap->{ $row->[$fidx] } || DBR::Query::ResultSet::Empty->new() # Empty resultset
-			or return $self->_error('failed to create ResultSet::Empty object');
-
-		  $self->_setlocalval($row,$relation,$rs) or return $self->_error('failed to _setlocalval');
-	    }
 
 	    return $myresult;
 
@@ -302,7 +309,7 @@ sub _pk_where{
 sub _setlocalval{
       my $self   = shift;
       my $record = shift;
-      my $field  = shift; # Could also be a relationship
+      my $field  = shift; # Could also be a relationship object
       my $val    = shift;
 
       my $idx = $field->index;

@@ -5,6 +5,7 @@ use base 'DBR::Common';
 
 use DBR::Query::ResultSet::DB;
 use DBR::Query::ResultSet::Mem;
+use DBR::Query::Dummy;
 
 use Carp;
 
@@ -86,6 +87,8 @@ sub values {
       return wantarray?(@output):\@output;
 }
 
+sub dummy_record{ bless([],'DBR::Query::Dummy') }
+
 sub hashmap_multi { shift->_lookuphash('multi', @_) }
 sub hashmap_single{ shift->_lookuphash('single',@_) }
 
@@ -131,7 +134,8 @@ sub _mem_iterator{
       my $buddy = $self->{buddy} or confess "No buddy object present";
 
       my $rows  = ${$self->{rowcache}};
-      my $ct;
+      my $ct = 0;
+      my $dummy = $self->dummy_record;
 
       # use a closure to reduce hash lookups
       # It's very important that this closure is fast.
@@ -139,8 +143,8 @@ sub _mem_iterator{
       $self->{next} = sub {
 	    bless( (
 		    [
-		     ($rows->[$ct++ || 0] or return $ct = undef),
-		     $buddy # buddy object comes aling for the ride - to keep my recmaker in scope
+		     ($rows->[$ct++] or $ct = 0 or return $dummy ),
+		     $buddy # buddy object comes along for the ride - to keep my recmaker in scope
 		    ]
 		   ),	$class );
       };

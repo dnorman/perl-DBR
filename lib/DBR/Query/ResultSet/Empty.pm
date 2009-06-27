@@ -2,6 +2,7 @@ package DBR::Query::ResultSet::Empty;
 
 use strict;
 use base 'DBR::Common';
+use DBR::Query::Dummy;
 use Carp;
 
 sub new {
@@ -13,7 +14,9 @@ sub new {
       return( $self );
 }
 
-sub next     { undef }
+sub dummy_record{ bless([],'DBR::Query::Dummy') }
+
+sub next     { shift->dummy_record  }
 sub count    { 0     }
 sub hashrefs { []    }
 

@@ -48,7 +48,7 @@ sub count{
 
 	    $self->reset(); # don't use _end
       }else{
-	    return $self->{rows_hint}; #If we've gotten here, all we have is the rows_hint
+	    return $self->{rows_hint} || 0; #If we've gotten here, all we have is the rows_hint
       }
 
       return $count;
@@ -198,13 +198,15 @@ sub _dbfetch_iterator{
 #
 sub _end_safe{
       my $self = shift;
+
+      my $dummy = $self->dummy_record;
       weaken ($self); # Weaken the refcount
 
       return sub {
 	    defined($self) or return undef; # technically this could be out of scope because it's a weak ref
 	    $self->_end;
 
-	    return undef;
+	    return $dummy; # evaluates to false
       }
 }
 

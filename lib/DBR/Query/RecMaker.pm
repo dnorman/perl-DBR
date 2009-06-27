@@ -17,7 +17,7 @@ sub new {
       my( $package ) = shift;
       my %params = @_;
       my $self = {
-		  session   => $params{session},
+		  session  => $params{session},
 		  instance => $params{instance},
 		  query    => $params{query},
 		  rowcache => $params{rowcache},
