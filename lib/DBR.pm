@@ -12,12 +12,9 @@ use DBR::Misc::Session;
 use base 'DBR::Common';
 
 
-my $headurl = '$HeadURL$';
+my ($tag) = '$HeadURL$' =~ /\/svn\/(?:tags|branches)?\/?(.*?)\//;
 my ($rev) = '$Revision$' =~ /(\d+)/;
-my ($tag) = $headurl =~ /\/svn\/(?:tags|branches)?\/?(.*?)\//;
-if($tag eq 'trunk'){
-      $tag .= '_' . $rev;
-}
+$tag .= '_' . $rev if $tag eq 'trunk';
 
 our $VERSION = $tag || 'unknown';
 
