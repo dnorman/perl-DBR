@@ -17,7 +17,7 @@
       "car" : {
         "singular" : "car",
         "plural" : "cars",
-        "fields : {
+        "fields" : {
           "color" : {
             "type" : "enum",
             "enums" : [
@@ -38,12 +38,12 @@
             "type" : "date"
           },
           "date_sold" : {
-            "type" : date"
+            "type" : "date"
           },
           "salesperson_id" : {
             "fkey" : {
               "table" : "car",
-              "field" : "car_id",
+              "field" : "car_id"
             }
           },
           "model_id" : {
@@ -101,7 +101,6 @@
       "salesperson" : {
         "singular" : "salesperson",
         "plural"   : "salespeople"
-        }
       },
 
       "feature" : {
@@ -141,7 +140,7 @@
               "field"    : "car_id",
               "forward"  : "car_one",
               "backward" : "races_car_one"
-            },
+            }
           },
           "car_two" : {
             "fkey" : {
@@ -153,8 +152,6 @@
           }
         }
       }
-
     }
   }
-
 ]

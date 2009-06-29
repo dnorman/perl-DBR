@@ -25,8 +25,8 @@
 use strict;
 use warnings;
 
-use lib qw'../lib ../../lib';
 use DBR::Util::Logger;
+use DBR::Config::MetaSpec;
 
 use Data::Dumper;
 
@@ -40,14 +40,7 @@ $params{confdb} ||= 'dbrconf';
 
 &_usage && exit unless $params{conf} && $params{spec};
 
-# load spec file
-my $spec = &load_spec( $params{spec} )
-  or die "failed to load spec from [$params{spec}]\n";
-#print "LOADED SPEC:\n" . Dumper( $spec );
-
-my $schema_handle = $params{schema} || $spec->{schema}
-  or die "schema must be specified in spec or as command line param\n";
-
+# dbr init
 my $logger = new DBR::Util::Logger(
                                    -logpath  => '/tmp/dbr_loadspec.log',
                                    -logLevel => 'debug3'
@@ -62,6 +55,43 @@ my $dbr    = new DBR(
 
 my $conf_instance = $dbr->get_instance( $params{confdb} )
   or die "No config entry found with name [$params{confdb}]";
+
+# load spec file
+my $spec;
+if ($params{spec} =~ m!\.json$!) {
+      open( JFILE, "<$params{spec}\n" ) or die "failed to open specified spec file\n";
+      my @lines = <JFILE>;
+      close JFILE;
+      my $json = JSON->new;
+      $spec = $json->decode( join( '', @lines ) )
+        or die "failed to decode JSON loaded from $params{spec}\n";
+      foreach my $schema_spec (@{$spec}) {
+            my $schema_handle = $schema_spec->{schema}
+              or die "required schema not specified in spec\n";
+            next if $params{schema} && $params{schema} ne $schema_handle;
+            my $targ_instance = $dbr->get_instance( $schema_handle )
+              or die "Failed to get instance for [$schema_handle]\n";
+            my $meta = DBR::Config::MetaSpec->new(
+                                                  session => $dbr->session,
+                                                  conf_instance => $conf_instance,
+                                                  targ_instance => $targ_instance,
+                                                 )
+              or die "failed to create Config::Meta processor\n";
+            $meta->process(
+                           spec => $schema_spec,
+                          )
+              or die "failed to process spec\n";
+      }
+      exit;
+}
+else {
+      $spec = &load_spec( $params{spec} )
+        or die "failed to load spec from [$params{spec}]\n";
+}
+print "LOADED SPEC:\n" . Dumper( $spec );
+
+my $schema_handle = $params{schema} || $spec->{schema}
+  or die "schema must be specified in spec or as command line param\n";
 
 my $scan_instance = $dbr->get_instance( $schema_handle )
   or die "Failed to get instance for [$schema_handle]\n";
@@ -202,7 +232,31 @@ if (@delete_ids) {
       print "  deleted.\n";
 }
 
-# field types
+# field types  (NOTE: only blindly sets values for now)
+my %trans_map = (
+                 enum     => 1,
+                 dollars  => 2,
+                 unixtime => 3,
+                 percent  => 4,
+                );
+foreach my $table_name (keys %{$spec->{field}}) {
+      foreach my $field_name (keys %{$spec->{field}->{$table_name}}) {
+            my $type = $spec->{field}->{$table_name}->{$field_name};
+
+            my $table = $schema->get_table( $table_name ) or die "$table_name not found in schema\n";
+            my $field = $table->get_field( $field_name ) or die "$table_name.$field_name not found\n";
+
+            $dbrh->update(
+                          -table  => 'dbr_fields',
+                          -fields => {
+                                      trans_id => [ 'd', $trans_map{$type} ],
+                                     },
+                          -where  => {
+                                      field_id => [ 'd', $field->field_id ],
+                                     },
+                         );
+      }
+}
 
 # enums
 foreach my $table_name (keys %{$spec->{enums}}) {
