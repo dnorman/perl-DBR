@@ -88,7 +88,7 @@ else {
       $spec = &load_spec( $params{spec} )
         or die "failed to load spec from [$params{spec}]\n";
 }
-print "LOADED SPEC:\n" . Dumper( $spec );
+#print "LOADED SPEC:\n" . Dumper( $spec );
 
 my $schema_handle = $params{schema} || $spec->{schema}
   or die "schema must be specified in spec or as command line param\n";
