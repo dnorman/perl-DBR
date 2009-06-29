@@ -41,11 +41,16 @@ while (1) {
       my $field = $fields{$prompt};
       print "$prompt> "; chomp( my $value = <STDIN> ); next unless $value;
       foreach my $path (@{$field->{fields}}) {
-            if ($field->{type} && $field->{type} =~ m!^(enum|date|dollars|number)$!) {
-                  $where{$path} = $value;
+            if ($field->{type} && $field->{type} =~ m!^(date|dollars|number)$!) {
+                  if (my ($op,$val) = $value =~ m!([A-Z]{2,})\s+(.*)!) {
+                        $where{$path} = eval "$op $val";
+                  }
+                  else {
+                        $where{$path} = $value;
+                  }
             }
             else {
-                  $where{$path} = $value =~ m!%! ? LIKE $value : $value;
+                  $where{$path} = $value =~ m!%! ? LIKE $value : $value;  # enum too
             }
       }
 }
