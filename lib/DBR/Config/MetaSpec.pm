@@ -39,7 +39,7 @@ sub process {
       my $self = shift;
       my %params = @_;
 
-      print "SPEC TO PROCESS:\n" . Dumper( $params{spec} ) . "\n";
+      #print "SPEC TO PROCESS:\n" . Dumper( $params{spec} ) . "\n";
 
       my $schema = $self->{targ_instance}->schema;
       die "failed to get schema!\n" unless defined $schema;

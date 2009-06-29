@@ -207,9 +207,9 @@ foreach my $table_id (keys %new_map) {
                                                      )
                     or die "create for [$targ_singular/$from_plural] failed\n";
 
-                  print "INSERTED " .
-                    $new->{from_table}->name . '.' . $new->{from_field}->name .
-                      ": ($targ_singular/$from_plural) relationship id = [$relationship_id]\n";
+#                  print "INSERTED " .
+#                    $new->{from_table}->name . '.' . $new->{from_field}->name .
+#                      ": ($targ_singular/$from_plural) relationship id = [$relationship_id]\n";
             }
       }
 }
