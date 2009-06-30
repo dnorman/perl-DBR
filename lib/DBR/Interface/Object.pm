@@ -9,7 +9,7 @@ use strict;
 use base 'DBR::Common';
 use DBR::Query::Part;
 use DBR::Config::Scope;
-
+use Carp;
 
 sub new {
       my( $package ) = shift;
@@ -290,6 +290,7 @@ sub insert {
 sub get{
       my $self = shift;
       my $pkval = shift;
+      croak('get only accepts one argument. Use an arrayref to specify multiple pkeys.') if shift;
 
       my $table = $self->{table};
       my $pk = $table->primary_key or return $self->_error('Failed to fetch primary key');
@@ -321,8 +322,11 @@ sub get{
 
       my $resultset = $query->resultset or return $self->_error('failed to get resultset');
 
-      return $resultset;
-
+      if(ref($pkval)){
+	    return $resultset;
+      }else{
+	    return $resultset->next;
+      }
 }
 
 1;
