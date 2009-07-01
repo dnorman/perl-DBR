@@ -100,7 +100,7 @@ sub pick_feature {
             $feature_id = &new_feature if $feature_id eq 'n';
             return undef unless $feature_id;
 
-            $feature = $dbrh->feature->get( $feature_id )->next  # this will change!
+            $feature = $dbrh->feature->get( $feature_id )
               or print "invalid feature_id - try again\n";
       }
       print "You selected: " . $feature->name . "\n";
@@ -138,7 +138,7 @@ sub pick_salesperson {
             $salesperson_id = &new_salesperson if $salesperson_id eq 'n';
             return undef unless $salesperson_id;
 
-            $salesperson = $dbrh->salesperson->get( $salesperson_id )->next  # this will change!
+            $salesperson = $dbrh->salesperson->get( $salesperson_id )
               or print "invalid selection\n";
       }
       print "You selected " . $salesperson->name . "\n";
@@ -174,7 +174,7 @@ sub pick_model {
             $model_id = &new_model if $model_id eq 'n';
             return undef unless $model_id;
 
-            $model = $dbrh->model->get( $model_id )->next  # this will change!
+            $model = $dbrh->model->get( $model_id )
               or print "invalid model_id\n";
       }
       print "You selected " . $model->name . "\n";
@@ -223,7 +223,7 @@ sub pick_make {
             $make_id = &new_make if $make_id eq 'n';
             return undef unless $make_id;
 
-            $make = $dbrh->make->get( $make_id )->next  # this will change!
+            $make = $dbrh->make->get( $make_id )
               or return &_error( "invalid make id" );
       }
       print "You selected " . $make->name . "\n";
@@ -264,7 +264,7 @@ sub pick_country {
             $country_id = &new_country if $country_id eq 'n';
             return undef unless $country_id;
 
-            $country = $dbrh->country->get( $country_id )->next  # this will change!
+            $country = $dbrh->country->get( $country_id )
               or print "invalid country id\n";
       }
       print "You selected " . $country->name . "\n";
