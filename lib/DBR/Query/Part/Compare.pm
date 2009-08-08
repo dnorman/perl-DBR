@@ -3,6 +3,14 @@ package DBR::Query::Part::Compare;
 use strict;
 use base 'DBR::Query::Part';
 
+
+use constant ({
+		F_FIELD     => 0,
+		F_OPERATOR  => 1,
+		F_VALUE     => 2,
+		F_SQLFUNC   => 3
+	       });
+
 my %sql_ops = (
 	       eq      => '=',
 	       ne      => '!=',
@@ -12,6 +20,8 @@ my %sql_ops = (
 	       lt      => '<',
 	       like    => 'LIKE',
 	       notlike => 'NOT LIKE',
+	       between    => 'BETWEEN',
+	       notbetween => 'NOT BETWEEN',
 
 	       in      => 'IN',     # \
 	       notin   => 'NOT IN', #  |  not directly accessable
@@ -20,7 +30,7 @@ my %sql_ops = (
 	      );
 
 my %str_operators = map {$_ => 1} qw'eq ne like notlike';
-my %num_operators = map {$_ => 1} qw'eq ne ge le gt lt';
+my %num_operators = map {$_ => 1} qw'eq ne ge le gt lt between notbetween';
 
 
 sub new{
@@ -43,7 +53,11 @@ sub new{
 	    return $package->_error("invalid operator '$operator'") unless $str_operators{ $operator };
       }
 
-      if ( $value->count > 1 ){
+      my $sqlfunc = \&_sql;
+      if ($operator eq 'between' or $operator eq 'notbetween'){
+	    $value->count == 2 or return $package->_error("between/notbetween comparison requires two values");
+	    $sqlfunc = \&_betweensql;
+      }elsif ( $value->count > 1 ){
 	    $operator = 'in'    if $operator eq 'eq';
 	    $operator = 'notin' if $operator eq 'ne';
       }elsif ($value->is_null) {
@@ -51,7 +65,7 @@ sub new{
 	    $operator = 'isnot' if $operator eq 'ne';
       }
 
-      my $self = [ $field, $operator, $value ];
+      my $self = [ $field, $operator, $value, $sqlfunc];
 
       bless( $self, $package );
 
@@ -60,10 +74,18 @@ sub new{
 
 sub type { return 'COMPARE' };
 sub children { return () };
-sub field    { return $_[0]->[0] }
-sub operator { return $_[0]->[1] }
-sub value    { return $_[0]->[2] }
+sub field    { return $_[0]->[F_FIELD] }
+sub operator { return $_[0]->[F_OPERATOR] }
+sub value    { return $_[0]->[F_VALUE] }
 
-sub sql   { return $_[0]->field->sql($_[1]) . ' ' . $sql_ops{ $_[0]->operator } . ' ' . $_[0]->value->sql($_[1]) }
+sub sql   { shift->[F_SQLFUNC]->(@_) }
+
+sub _sql{ return $_[0]->field->sql($_[1]) . ' ' . $sql_ops{ $_[0]->operator } . ' ' . $_[0]->value->sql($_[1]) }
+
+sub _betweensql{
+      my $quoted = $_[0]->value->quoted( $_[1] );
+      @$quoted = sort {$a <=> $b} @$quoted;
+      return $_[0]->field->sql($_[1]) . ' ' . $sql_ops{ $_[0]->operator } . " $quoted->[0] AND $quoted->[1]";
+}
 
 sub _validate_self{ 1 }
