@@ -29,6 +29,7 @@ sub sql   { return $_[0]->field->sql($_[1]) . ' IN (' . $_[0]->query->sql($_[1])
 
 sub _validate_self{ 1 }
 
+sub is_emptyset { $_[0]->query->where_is_emptyset }
 1;
 
 ###########################################

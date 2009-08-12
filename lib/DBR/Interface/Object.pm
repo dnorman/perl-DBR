@@ -9,6 +9,7 @@ use strict;
 use base 'DBR::Common';
 use DBR::Query::Part;
 use DBR::Config::Scope;
+use DBR::Query::ResultSet::Empty;
 use Carp;
 
 sub new {
@@ -80,6 +81,10 @@ sub where{
 
       my @tables = ($table);
       my $where = $self->_buildwhere(\%inwhere,\@tables) or return $self->_error('Failed to generate where');
+
+      if($where->is_emptyset){
+	  return DBR::Query::ResultSet::Empty->new(); # Empty resultset
+      }
 
       my $alias = $table->alias;
       if($alias){

@@ -57,7 +57,7 @@ sub new{
       if ($operator eq 'between' or $operator eq 'notbetween'){
 	    $value->count == 2 or return $package->_error("between/notbetween comparison requires two values");
 	    $sqlfunc = \&_betweensql;
-      }elsif ( $value->count > 1 ){
+      }elsif ( $value->count != 1 ){
 	    $operator = 'in'    if $operator eq 'eq';
 	    $operator = 'notin' if $operator eq 'ne';
       }elsif ($value->is_null) {
@@ -89,3 +89,6 @@ sub _betweensql{
 }
 
 sub _validate_self{ 1 }
+
+#Might be buggy for nullsets with a notin operator? think about this.
+sub is_emptyset{ $_[0]->value->is_emptyset }

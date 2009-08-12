@@ -47,4 +47,6 @@ sub _validate_self{
       return 1;
 }
 
+sub is_emptyset { 0 }
+
 1;

@@ -26,7 +26,7 @@ sub new{
       return $self;
 }
 
-sub children{ return @{$_[0]} }
+sub children{ @{$_[0]} }
 
 sub _validate_self{ return scalar($_[0]->children)?1:$_[0]->_error('Invalid object')  } # AND/OR are only valid if they have at least one child
 
@@ -56,6 +56,12 @@ our @ISA = ('DBR::Query::Part::AndOr');
 
 sub type { return 'AND' };
 
+#If any children are empty, we are empty
+sub is_emptyset{
+    $_->is_emptyset && return 1 for ($_[0]->children);
+    return 0;
+}
+
 1;
 
 ###########################################
@@ -64,5 +70,11 @@ use strict;
 our @ISA = ('DBR::Query::Part::AndOr');
 
 sub type { return 'OR' };
+
+# If any children are non-empty, then we are non-empty
+sub is_emptyset{
+    $_->is_emptyset || return 0 for ($_[0]->children);
+    return 1;
+}
 
 1;

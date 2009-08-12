@@ -8,6 +8,7 @@ package DBR::Query::Part::Value;
 use strict;
 use base 'DBR::Common';
 use Scalar::Util 'looks_like_number';
+use Carp;
 
 #### Constructors ###############################################
 
@@ -95,18 +96,16 @@ sub count    { return scalar(  @{ $_[0]->{value} } ) }
 
 sub sql {
       my $self = shift;
-      my $conn = shift or return $self->_error('conn is required');
+      my $conn = shift or return croak('conn is required');
 
       my $sql;
 
       my $values = $self->quoted($conn);
 
-      if (@$values > 1) {
+      if (@$values != 1) {
 	    $sql .= '(' . join(',',@{$values}) . ')';
       } elsif(@$values == 1){
 	    $sql = $values->[0];
-      }else{
-	    $sql = 'NULL';
       }
 
       return $sql;
@@ -116,14 +115,15 @@ sub sql {
 sub is_null{
       my $self = shift;
 
-      return 0 if $self->count > 1;
-      return 1 if !defined( $self->{value}->[0] );
+      return 1 if $self->count == 1 and !defined( $self->{value}->[0] );
       return 0;
 }
 
+sub is_emptyset{ $_[0]->count == 0 }
+
 sub quoted{
       my $self = shift;
-      my $conn = shift or return $self->_error('conn is required');
+      my $conn = shift or croak('conn is required');
 
       if ($self->is_number){
 	    return [ map { defined($_)?$_:'NULL' } @{$self->{value}} ];

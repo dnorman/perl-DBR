@@ -33,6 +33,7 @@ sub new {
       $self->_tables( $params{tables} ) or return $self->_error('failed to prepare tables');
 
       if($params{where}){
+	    $self->{where_tree} = $params{where};
 	    $self->{where_sql} = $self->_where ( $params{where} ) or return $self->_error('failed to prepare where');
       }
 
@@ -251,6 +252,11 @@ sub sql{
       return $sql;
 }
 
+sub where_is_emptyset{
+    my $self = shift;
+    return 0 unless $self->{where_tree};
+    return $self->{where_tree}->is_emptyset;
+}
 
 sub can_be_subquery {
       my $self = shift;
