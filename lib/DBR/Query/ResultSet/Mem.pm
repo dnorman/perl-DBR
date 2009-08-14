@@ -35,7 +35,7 @@ sub split { croak "Cannot split an already ResultSet::Mem object" }
 sub next   { $_[0]->{next}->() }
 sub count  {  scalar @{    ${ $_[0]->{rowcache} }    } }
 
-sub hashrefs{
+sub hashrefs{ # Is this used?
       my $self = shift;
 
       return [] unless $self->count > 0;

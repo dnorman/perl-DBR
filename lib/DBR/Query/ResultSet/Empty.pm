@@ -14,11 +14,18 @@ sub new {
       return( $self );
 }
 
+sub delete {croak "Mass delete is not allowed. No cookie for you!"}
+sub each { 1 }
+sub split { {} }
+sub values { wantarray?():[]; }
+
 sub dummy_record{ bless([],'DBR::Query::Dummy') }
+sub hashmap_multi { {} }
+sub hashmap_single{ {} }
 
 sub next     { shift->dummy_record  }
 sub count    { 0     }
-sub hashrefs { []    }
+sub hashrefs { []    } # Is this used?
 
 sub raw_hashrefs  { [] }
 sub raw_arrayrefs { [] }

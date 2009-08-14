@@ -39,6 +39,10 @@ use overload
 '""' => sub { $_[0]->format },
 '0+' => sub { $_[0]->dollars },
 
+# comparisons
+'==' => sub { $_[0]->dollars == $_[1] },
+'!=' => sub { $_[0]->dollars != $_[1] },
+
 #operators
 '+'  => sub { new($_[0]->cents + _getcents($_[1])) },
 '-'  => sub {
@@ -53,7 +57,7 @@ use overload
 },
 
 'fallback' => 1,
-'nomethod' => sub {croak "Dollar object: Invalid operation '$_[3]' The ways in which you can use dollar objects is restricted"}
+'nomethod' => sub {croak "Dollar object: Invalid operation '$_[3]' The ways you can use dollar objects are restricted"}
 ;
 
 sub cents   {
