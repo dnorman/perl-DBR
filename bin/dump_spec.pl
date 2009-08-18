@@ -126,12 +126,20 @@ if(@rtableids){
 
 
 foreach my $field (@$fields){
-      my @prefix = (   $schemaname,  $tablename,  $field->{name}   );
+      my @prefix = (
+		    schema => $schemaname,
+		    table  => $tablename,
+		    field  => $field->{name}
+		   );
 
 
       if($field->{trans_id}){
 	    my $transtype = uc($trans_lookup{  $field->{trans_id}  }->{name} || "Unknown");
-	    line(@prefix, 'TRANSLATOR',$transtype);
+	    line(
+		 @prefix,
+		 cmd        => 'TRANSLATOR',
+		 translator => $transtype
+		);
 
 	    if ($transtype eq 'ENUM'){
 		  my $mappings = $enum_map_lookup{ $field->{field_id} };
@@ -140,11 +148,11 @@ foreach my $field (@$fields){
 
 			line(
 			     @prefix,
-			     'ENUMOPTION',
-			     $enum->{handle},
-			     $enum->{enum_id},
-			     $enum->{override_id} || 'NULL',
-			     $enum->{name},
+			     cmd     => 'ENUMOPT',
+			     handle  => $enum->{handle},
+			     enum_id =>$enum->{enum_id},
+			     override_id => $enum->{override_id} || 'NULL',
+			     name    => $enum->{name},
 			    );
 		  }
 	    }
@@ -158,12 +166,12 @@ foreach my $field (@$fields){
 		  my $typename = uc($relationtype_lookup{ $relation->{type} }->{name} || 'Unknown');
 		  line(
 		       @prefix,
-		       'RELATION',
-		       $rtable->{name},
-		       $rfield->{name},
-		       $relation->{from_name},
-		       $typename,
-		       $relation->{to_name},
+		       cmd      => 'RELATION',
+		       reltable => $rtable->{name},
+		       relfield => $rfield->{name},
+		       relname  => $relation->{to_name},
+		       revname  => $relation->{from_name},
+		       type     => $typename,
 		      );
 	    }
       }
@@ -172,8 +180,14 @@ foreach my $field (@$fields){
 
 
 sub line{
-      my @fields = @_;
-      print join("\t",@fields) . "\n";
+      my @pairs;
+      while (@_){
+	    my ($field,$value) = (shift,shift);
+	    die "Illegal character in fieldname" if $field =~ /\t/;
+	    die "Illegal character in value"     if $value =~ /\t/;
+	    push @pairs, $field . '=' . $value;
+      }
+      print join("\t",@pairs) . "\n";
 }
 
 
