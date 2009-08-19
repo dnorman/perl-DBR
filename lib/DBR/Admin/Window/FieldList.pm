@@ -216,7 +216,7 @@ use base qw(DBR::Admin::Window);
 	foreach my $e (sort { $a->{name} cmp $b->{name} } @$data) {
 	    next if $existing_enums{$e->{enum_id}};
 	    push @{$values}, $e->{enum_id};
-	    $labels->{$e->{enum_id}} = $e->{name};
+	    $labels->{$e->{enum_id}} = "$e->{name} (handle: $e->{handle}, id: $e->{enum_id}, override: $e->{override_id})";
 	}
 	my $label = $edit_window->add(
 				      "enum_popup_label", 'Label',

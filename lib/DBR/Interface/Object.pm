@@ -62,7 +62,7 @@ sub all{
 
 sub where{
       my $self = shift;
-      my %inwhere = @_;
+      my @inwhere = @_;
 
       my $table = $self->{table};
       my $scope = DBR::Config::Scope->new(
@@ -80,7 +80,7 @@ sub where{
       my @fields = grep { !$uniq{ $_->field_id }++ } (@$pk, @$prefields);
 
       my @tables = ($table);
-      my $where = $self->_buildwhere(\%inwhere,\@tables) or return $self->_error('Failed to generate where');
+      my $where = $self->_buildwhere(\@inwhere,\@tables) or return $self->_error("Failed to generate where for ${\$table->name}");
 
       if($where->is_emptyset){
 	  return DBR::Query::ResultSet::Empty->new(); # Empty resultset
@@ -114,13 +114,17 @@ sub _buildwhere{
       my $tables_ref = shift;
       my $table = $self->{table};
 
+      !(scalar(@$inwhere) % 2) or return $self->_error('Odd number of arguments in where parameters');
+
       my %grouping = (
 		      table => $table # prime the pump
 		     );
 
       my $aliascount = 0;
-      foreach my $key (keys %$inwhere){
-	    my $rawval = $inwhere->{ $key };
+
+      while(@$inwhere){
+	    my $key    = shift @$inwhere;
+	    my $rawval = shift @$inwhere;
 
 	    $key =~ /^\s+|\s+$/g; # trim junk
 

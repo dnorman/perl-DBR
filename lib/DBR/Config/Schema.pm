@@ -12,6 +12,7 @@ use DBR::Config::Table;
 
 my %TABLES_BY_NAME;
 my %SCHEMAS_BY_ID;
+my %SCHEMAS_BY_HANDLE;
 
 sub load{
       my( $package ) = shift;
@@ -38,7 +39,9 @@ sub load{
 
       my @schema_ids; # track the schema ids from this request seperately from the global cache
       foreach my $schema (@$schemas){
-	    $SCHEMAS_BY_ID{ $schema->{schema_id} } = $schema;
+	    $SCHEMAS_BY_ID{  $schema->{schema_id} } = $schema;
+	    $SCHEMAS_BY_HANDLE{ $schema->{handle} } = $schema->{schema_id};
+
 	    push @schema_ids, $schema->{schema_id};
       }
 
@@ -73,12 +76,20 @@ sub new {
   my %params = @_;
   my $self = {
 	      session    => $params{session},
-	      schema_id => $params{schema_id}
 	     };
 
   bless( $self, $package );
 
-  return $self->_error('schema_id is required') unless $self->{schema_id};
+  return $self->_error('session is required') unless $self->{session};
+
+  if ($params{schema_id}){
+	$self->{schema_id} = $params{schema_id};
+  }elsif($params{handle}){
+	$self->{schema_id} = $SCHEMAS_BY_HANDLE{ $params{handle} } or return $self->_error("handle $params{handle} is invalid");
+  }else{
+	return $self->_error('schema_id is required');
+  }
+
   return $self->_error("schema_id $self->{schema_id} is not defined") unless $SCHEMAS_BY_ID{ $self->{schema_id} };
 
   return( $self );

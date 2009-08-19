@@ -1,8 +1,5 @@
 #!/usr/bin/perl
 
-# example usage:  perl -I../lib conf/dbr.conf car_dealer
-
-use lib qw'../lib ../../lib';
 use DBR::Util::Logger;
 use DBR::Config::ScanDB;
 
@@ -12,7 +9,7 @@ use strict;
 my ($conffile,$scandb,$confdb) = @ARGV;
 $confdb ||= 'dbrconf';
 
-my $logger = new DBR::Util::Logger(-logpath => '/tmp/dbr_loadmeta.log', -logLevel => 'debug3');
+my $logger = new DBR::Util::Logger(-logpath => '/tmp/dbr_scan.log', -logLevel => 'debug3');
 my $dbr    = new DBR(
 		     -logger => $logger,
 		     -conf   => $conffile,

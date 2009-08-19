@@ -114,19 +114,21 @@ sub new {
   my( $package ) = shift;
   my %params = @_;
   my $self = {
-	      session   => $params{session},
+	      session  => $params{session},
 	      table_id => $params{table_id}
 	     };
 
   bless( $self, $package );
 
   return $self->_error('table_id is required') unless $self->{table_id};
+  return $self->_error('session is required' ) unless $self->{session};
 
   $TABLES_BY_ID{ $self->{table_id} } or return $self->_error("table_id $self->{table_id} doesn't exist");
 
   return( $self );
 }
 
+sub table_id { $_[0]->{table_id} }
 sub get_field{
       my $self  = shift;
       my $name = shift or return $self->_error('name is required');
@@ -173,7 +175,7 @@ sub get_relation{
       my $self  = shift;
       my $name = shift or return $self->_error('name is required');
 
-      my $relation_id = $RELATIONS_BY_NAME{ $self->{table_id} } -> { $name } || return $self->_error("relationship $name does not exist");
+      my $relation_id = $RELATIONS_BY_NAME{ $self->{table_id} } -> { $name } or return $self->_error("relationship $name does not exist");
 
 
       my $relation = DBR::Config::Relation->new(
@@ -217,4 +219,6 @@ sub conf_instance {
 					   guid   => $guid
 					  ) or return $self->_error('Failed to fetch conf instance');
 }
+
+
 1;

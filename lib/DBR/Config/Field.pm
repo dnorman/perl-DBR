@@ -53,6 +53,7 @@ my %datatypes = (
 		 smallint  => { id => 4, numeric => 1, bits => 16},
 		 tinyint   => { id => 5, numeric => 1, bits => 8},
 		 bool      => { id => 6, numeric => 1, bits => 1},
+		 boolean   => { id => 6, numeric => 1, bits => 1},
 		 float     => { id => 7, numeric => 1, bits => 'NA'},
 		 double    => { id => 8, numeric => 1, bits => 'NA'},
 		 varchar   => { id => 9 },
@@ -185,6 +186,7 @@ sub new {
       bless( $self, $package );
 
       return $self->_error('field_id is required') unless $self->[O_field_id];
+      return $self->_error('session is required' ) unless $self->[O_session];
 
       $FIELDS_BY_ID{ $self->[O_field_id] } or return $self->_error('invalid field_id');
 
@@ -249,6 +251,40 @@ sub translator{
 				     field_id => $self->[O_field_id],
 				     trans_id => $trans_id,
 				    );
+}
+
+
+### Admin functions
+
+sub update_translator{
+      my $self = shift;
+      my $transname = shift;
+
+      $self->[O_session]->is_admin or return $self->_error('Cannot update translator in non-admin mode');
+
+      my $existing_trans_id = $FIELDS_BY_ID{ $self->[O_field_id] }->[C_trans_id];
+
+      my $trans_defs = DBR::Config::Trans->list_translators or die 'Failed to get translator list';
+
+      my %trans_lookup;
+      map {$trans_lookup{ uc($_->{name}) } = $_}  @$trans_defs;
+      my $new_trans = $trans_lookup{ uc ($transname) } or die "Invalid translator '$transname'";
+
+      return 1 if $existing_trans_id && $new_trans->{id} == $existing_trans_id;
+
+
+      my $instance = $self->table->conf_instance or die "Failed to retrieve conf instance";
+      my $dbrh     = $instance->connect or die "Failed to connect to conf instance";
+
+      $dbrh->update(
+		    -table  => 'dbr_fields',
+		    -fields => { trans_id => ['d', $new_trans->{id} ]},
+		    -where  => { field_id => ['d', $self->field_id  ]}
+		   ) or die "Failed to update dbr_fields";
+
+      $FIELDS_BY_ID{ $self->[O_field_id] }->[C_trans_id] = $new_trans->{id}; # update local copy
+
+      return 1;
 }
 
 1;

@@ -12,6 +12,7 @@ sub new {
       my %params = @_;
       my $self = {
 		  logger  => $params{logger},
+		  admin   => $params{admin} ? 1 : 0,
 		 };
 
       bless( $self, $package );
@@ -44,6 +45,8 @@ sub timezone {
       return ${$self->{tzref}} = $tz;
 }
 sub timezone_ref{ $_[0]->{tzref} }
+
+sub is_admin{ $_[0]->{admin} }
 
 sub _session { $_[0] }
 
