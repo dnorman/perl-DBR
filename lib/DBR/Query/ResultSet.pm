@@ -109,7 +109,7 @@ sub _lookuphash{
       my $code;
       foreach my $fieldname (@fieldnames){
 	    my @parts = split(/\.|\->/,$fieldname);
-	    map {croak "Invalid fieldname part '$_'" unless /[A-Za-z0-9_-]/} @parts;
+	    map {croak "Invalid fieldname part '$_'" unless /^[A-Za-z0-9_-]+$/} @parts;
 
 	    $fieldname = join('->',@parts);
 
