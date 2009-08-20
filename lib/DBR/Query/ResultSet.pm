@@ -108,6 +108,11 @@ sub _lookuphash{
 
       my $code;
       foreach my $fieldname (@fieldnames){
+	    my @parts = split(/\.|\->/,$fieldname);
+	    map {croak "Invalid fieldname part '$_'" unless /[A-Za-z0-9_-]/} @parts;
+
+	    $fieldname = join('->',@parts);
+
 	    $code .= "{ \$_->$fieldname }";
       }
       my $part = ' map {  bless([$_,$buddy],$class)  } @{$rows}';
