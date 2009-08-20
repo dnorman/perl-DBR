@@ -30,6 +30,7 @@ WriteMakefile(
 				  'POSIX'              => 0,
 				  'Scalar::Util'       => 0,
 				  'Symbol'             => 0,
+				  'Test::More'         => 0,
 				  'Time::HiRes'        => 0,
 				  'Time::ParseDate'    => 0,
 				 },
