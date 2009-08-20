@@ -2,8 +2,8 @@ package t::lib::Test;
 
 # Delete temporary files
 sub clean {
-	unlink( 'subject-db.sqlite' );
-	unlink( 'config-db.sqlite'  );
+	unlink( 'test-subject-db.sqlite' );
+	unlink( 'test-config-db.sqlite'  );
 }
 
 # Clean up temporary test files both at the beginning and end of the

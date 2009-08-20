@@ -1,18 +1,13 @@
 #!/usr/bin/perl
 
-# example usage:  perl -I../lib conf/dbr.conf car_dealer
-
-use lib qw'../lib ../../lib';
-use DBR::Util::Logger;
-use DBR::Config::Trans;
-use DBR::Config::Relation;
-use Switch;
-
-use DBR;
 use strict;
+use DBR;
+use DBR::Util::Logger;
+use DBR::Config::SpecLoader;
+
 
 my ($conffile, $spec_file) = @ARGV;
-my $confdb ||= 'dbrconf';
+my $confdb = 'dbrconf';
 
 my $logger = new DBR::Util::Logger(-logpath => '/tmp/dbr_loadspec.log', -logLevel => 'debug3') or die "Failed to create logger";
 my $dbr    = new DBR(
@@ -21,243 +16,14 @@ my $dbr    = new DBR(
 		     -admin  => 1,         # This flag allows us to update definitions through the DBR::Conf objects
 		    ) or die "Failed to create DBR";
 
+my $conf_instance = $dbr->get_instance($confdb) or die "No config found for confdb $confdb";
 
-my $trans_defs = DBR::Config::Trans->list_translators or die 'Failed to get translator list';
-my %trans_lookup; map {$trans_lookup{ uc($_->{name}) } = $_}  @$trans_defs;
-
-my $relationtype_defs = DBR::Config::Relation->list_types or die 'Failed to get relationship type list';
-my %relationtype_lookup; map {$relationtype_lookup{ uc($_->{name}) } = $_}  @$relationtype_defs;
-
-
-
-my $specs = parse_file( $spec_file ) or die "Failed to open $spec_file";
-process_specs( $specs );
+my $loader = DBR::Config::SpecLoader->new(
+					  session => $dbr->session,
+					  conf_instance => $conf_instance,
+					 );
 
 
+my $spec = $loader->parse_file( $spec_file ) or die "Failed to open $spec_file";
+$loader->process_spec( $spec ) or die "Failed to process specs";
 
-sub process_specs{
-      my $specs = shift;
-
-      my $dbrh = $dbr->connect($confdb) or die "Failed to connect to $confdb";
-
-      $dbrh->begin();
-
-      my $sortval;
-      foreach my $spec ( @$specs ){
-	    map {$spec->{ $_ } or die "Invalid Spec row: Missing $_"} qw'schema table field cmd';
-
-	    my $schema = new DBR::Config::Schema(session => $dbr->session, handle => $spec->{schema}) or die "Schema $spec->{schema} not found";
-	    my $table = $schema->get_table( $spec->{table} ) or die "$spec->{table} not found in schema\n";
-	    my $field = $table->get_field ( $spec->{field} ) or die "$spec->{table}.$spec->{field} not found\n";
-
-	    switch ( uc($spec->{cmd}) ){
-		  case 'TRANSLATOR' { do_translator( $schema, $table, $field, $spec ) }
-		  case 'RELATION'   { do_relation  ( $schema, $table, $field, $spec ) }
-		  case 'ENUMOPT'    { do_enumopt   ( $schema, $table, $field, $spec, ++$sortval ) }
-		  else { die "Invalid spec: unknown command $spec->{cmd}"}
-	    }
-      }
-
-      $dbrh->commit();
-}
-
-# Did this one the new way cus it was easy, the rest will be redone at some point
-sub do_translator {
-      my $schema = shift;
-      my $table = shift;
-      my $field = shift;
-      my $spec = shift;
-
-      my $transname = uc($spec->{translator}) or die "Missing parameter: translator";
-      my $new_trans = $trans_lookup{ uc($transname) } or die "Invalid translator '$spec->{translator}'";
-
-      $field->update_translator($transname) or die "Failed to update field translator for $spec->{table}.$spec->{field}";
-
-      return 1;
-
-}
-
-sub do_relation   {
-      my $schema = shift;
-      my $table = shift;
-      my $field = shift;
-      my $spec = shift;
-
-      map { $spec->{$_} or die("Parameter '$_' must be specified") } qw'relname reltable relfield type reverse_name';
-
-
-      my $totable = $schema ->get_table( $spec->{reltable} ) or die "$spec->{reltable} not found in schema\n";
-      my $tofield = $totable->get_field( $spec->{relfield} ) or die "$spec->{reltable}.$spec->{relfield} not found\n";
-      my $type = $relationtype_lookup{ uc ($spec->{type}) } or die "Invalid relationship type '$spec->{type}'";
-      my $type_id = $type->{type_id};
-
-      my $dbrh = $dbr->connect($confdb) or die "Failed to connect to $confdb";
-      my $relationship = $dbrh->select(
-				       -table => 'dbr_relationships',
-				       -fields => 'relationship_id from_name from_table_id from_field_id to_name to_table_id to_field_id type',
-				       -where  => {
-						   from_table_id => ['d',$table->table_id],
-						   to_name       => $spec->{relname}
-						  },
-				       -single => 1,
-				      );
-      defined $relationship or die('Failed to select relationships');
-
-      if ($relationship){
-	    $dbrh->update(
-			  -table => 'dbr_relationships',
-			  -fields => {
-				      from_field_id => ['d',$field->field_id],
-				      from_name     => $spec->{reverse_name},
-
-				      to_table_id   => ['d',$totable->table_id],
-				      to_field_id   => ['d',$tofield->field_id],
-
-				      type          => ['d',$type_id],
-				     },
-			  -where  => { relationship_id => ['d', $relationship->{relationship_id} ]},
-			 ) or die "Failed to update relationship";
-      }else{
-	    $dbrh->insert(
-			  -table => 'dbr_relationships',
-			  -fields => {
-				      from_table_id => ['d',$table->table_id],
-				      from_field_id => ['d',$field->field_id],
-				      from_name     => $spec->{reverse_name},
-
-				      to_field_id   => ['d',$tofield->field_id],
-				      to_table_id   => ['d',$totable->table_id],
-				      to_name       => $spec->{relname},
-
-				      type          => ['d',$type_id],
-				     },
-			 ) or die "Failed to insert relationship";
-      }
-
-      return 1;
-}
-
-
-#This needs to be made smarter
-sub do_enumopt    {
-      my $schema  = shift;
-      my $table   = shift;
-      my $field   = shift;
-      my $spec    = shift;
-      my $sortval = shift;
-
-      map { length($spec->{$_}) or die("Parameter '$_' must be specified") } qw'handle enum_id override_id name';
-
-      my $override;
-
-      if (!length($spec->{override_id}) or uc($spec->{override_id}) eq 'NULL'){
-	    $override = undef;
-      }else{
-	    $override = [ 'd' => $spec->{override_id} ];
-      }
-
-      my %where = (
-		   handle      => $spec->{handle},
-		   override_id => $override
-		  );
-
-      my $dbrh = $dbr->connect($confdb) or die "Failed to connect to $confdb";
-
-      my $enum = $dbrh->select(
-			       -table => 'enum',
-			       -fields => 'enum_id handle name override_id',
-			       -where  => \%where,
-			       -single => 1,
-			      );
-      defined $enum or die "Failed to select from enum";
-
-      my $enum_id;
-      my $map;
-      if($enum){
-	    $enum_id = $enum->{enum_id};
-	    $dbrh->update(
-			  -table => 'enum',
-			  -fields => { name    => $spec->{name} },
-			  -where  => { enum_id => ['d', $enum->{enum_id} ] },
-			  -single => 1,
-			 ) or die "Failed to update enum";
-
-	    $map = $dbrh->select(
-				 -table => 'enum_map',
-				 -fields => 'row_id field_id enum_id sortval',
-				 -where  => {
-					     enum_id  => [ 'd', $enum_id         ],
-					     field_id => [ 'd', $field->field_id ]
-					    },
-				 -single => 1,
-				);
-	    defined ($map) or die "Failed to select from enum_map";
-      }else{
-	    $enum_id = $dbrh->insert(
-				     -table => 'enum',
-				     -fields => {
-						 handle      => $spec->{handle},
-						 override_id => $override,
-						 name        => $spec->{name}
-						},
-				    ) or die "Failed to insert into enum";
-      }
-
-
-
-      if($map){
-	    $dbrh->update(
-			  -table => 'enum_map',
-			  -fields => { sortval => ['d',$sortval] },
-			  -where  => { row_id => ['d', $map->{row_id} ] },
-			 ) or die "Failed to update enum_map";
-      }else{
-	    $dbrh->insert(
-			  -table => 'enum_map',
-			  -fields => {
-				      enum_id  => [ 'd', $enum_id         ],
-				      field_id => [ 'd', $field->field_id ],
-				      sortval  => [ 'd', $sortval         ]
-				     },
-			 ) or die "Failed to insert into enum";
-      }
-
-      return 1;
-}
-
-
-sub parse_file{
-      my $filename = shift;
-      open (my $fh, "<$filename") or die "Failed to open $filename";
-      my @out;
-      while( my $line = <$fh>){
-	    parse_line(\@out,$line);
-      }
-
-      return \@out;
-}
-
-sub parse_line{
-      my $out = shift;
-      my $line = shift;
-      chomp $line;
-
-      next if $line =~ /^\s*\#/; # skip comments
-
-      my @parts = split(/\t/,$line);
-      return 1 unless @parts;
-
-      my %params;
-      foreach my $part (@parts){
-	    my ($field,$value) = $part =~ /^(.*?)\s*\=\s*(.*)$/;
-
-	    if ( length($field) ){
-		  $params { lc($field) } = $value;
-	    }
-      }
-      if (%params){ # did we get anything?
-	    push @$out, \%params;
-      }
-
-      return 1;
-}
