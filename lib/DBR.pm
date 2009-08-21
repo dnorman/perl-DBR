@@ -120,3 +120,16 @@ sub flush_handles{ DBR::Config::Instance->flush_all_handles }
 sub DESTROY{ $_[0]->flush_handles }
 
 1;
+
+=pod
+
+=head1 NAME
+
+DBR - Database Repository ORM (object-relational mapper).
+
+=head1 MANUAL
+
+See L<DBR::Manual>
+
+=cut
+
