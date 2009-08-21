@@ -1,8 +1,8 @@
 use ExtUtils::MakeMaker;
 use strict;
 
-my $headurl = '$HeadURL: https://perl-dbr.googlecode.com/svn/trunk/lib/DBR.pm $';
-my ($rev) = '$Rev:$' =~ /(\d+)/;
+my $headurl = '$HeadURL$';
+my ($rev) = '$Rev$' =~ /(\d+)/;
 my ($tag) = $headurl =~ /\/svn\/(?:tags|branches)?\/?(.*?)\//;
 if($tag eq 'trunk'){
       $tag .= '_' . $rev;
