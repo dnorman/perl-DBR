@@ -1,21 +1,6 @@
 #!/usr/bin/perl -w
 
-#  +----------------+--------++-----------------+----------+-------------+
-#  |  Targeted By   |  via   ||   (orders)      | via      |   Targets   |
-#  +----------------+--------++-----------------+----------+-------------+
-#  | items          | items  || order_id        |          |             |
-#  | order_shipment | oships || cust_id         | customer | customer    |
-#  |                |        || total (Dollars) |          |             |
-#  |                |        || ship_address_id | shipaddr | address     |
-#  |                |        || bill_address_id | billaddr | address     |
-#  +----------------+--------++-----------------+----------+-------------+
-#
-#  +---------------+--------++-------------+----------+-------------+
-#  |  Targeted By  | <via<  ||   (items)   |  >via>   |   Targets   |
-#  +---------------+--------++-------------+----------+-------------+
-#  | orders        | order  || item_id     |          |             |
-#  |               |        || product_id  | product  | product     |
-#  +---------------+--------++-------------+----------+-------------+
+# a simple but useful DBR browse utility.
 
 use strict;
 use warnings;
@@ -25,8 +10,8 @@ use DBR::Util::Logger;
 
 use Data::Dumper;
 
-my $conffile = '/dj/data/DBR.conf';
-my $confdb = 'dbrconf';
+my $conffile = shift @ARGV or die "I need a path to a DBR conf file!\n";
+my $confdb   = shift @ARGV || 'dbrconf';
 
 my $logger = new DBR::Util::Logger(-logpath => '/tmp/dbr_browser.log', -logLevel => 'warn');
 my $dbr    = new DBR(
