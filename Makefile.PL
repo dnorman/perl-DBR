@@ -15,6 +15,7 @@ my $version = $tag || 'unknown';
 WriteMakefile(
 	      NAME            => 'DBR',
 	      VERSION         => $version,
+              EXE_FILES    => [qw'bin/dbr-admin bin/dbr-dump-spec bin/dbr-load-spec bin/dbr-scan-db'],
 	      PREREQ_PM       => {
 				  'Carp'               => 0,
 				  'Class::Std'         => 0,
