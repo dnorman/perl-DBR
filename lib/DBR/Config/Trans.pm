@@ -86,6 +86,8 @@ sub new {
 #Stub
 sub init { 1 };
 
+sub trans_id { return $_[0]->{trans_id} }
+
 sub field{
       my $self = shift;
 

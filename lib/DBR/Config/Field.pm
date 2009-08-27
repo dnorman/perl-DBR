@@ -227,6 +227,7 @@ sub table_id     { $FIELDS_BY_ID{  $_[0]->[O_field_id] }->[C_table_id]    }
 sub name         { $FIELDS_BY_ID{  $_[0]->[O_field_id] }->[C_name]        }
 sub is_pkey      { $FIELDS_BY_ID{  $_[0]->[O_field_id] }->[C_is_pkey]     }
 sub is_readonly  { $FIELDS_BY_ID{  $_[0]->[O_field_id] }->[C_is_readonly] }
+sub datatype     { $FIELDS_BY_ID{  $_[0]->[O_field_id] }->[C_data_type]   }
 sub testsub      { $FIELDS_BY_ID{  $_[0]->[O_field_id] }->[C_testsub]     }
 
 sub table    {
