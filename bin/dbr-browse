@@ -22,7 +22,7 @@ my %args = ( class    => 'query',  # default instance class - the other typical 
 # script args: command line overrides
 map { $_ =~ m!^([^=]+)=(.+)$! ? ($args{$1} = $2) : ($args{$_} = 1) } @ARGV;
 
-my $conf = $args{conf} or die "\nusage: $0 conf=<path to DBR conf file> [ <options> ]\n\n";
+my $conf = $args{conf} or die &usage;
 
 my $logger = new DBR::Util::Logger(-logpath => '/tmp/dbr-browse.log', -logLevel => 'warn') or die "no logger!\n";
 my $dbr    = new DBR( -logger => $logger, -conf => $conf ) or die "\nno dbr - check config file path\n\n";
@@ -228,13 +228,13 @@ sub sample_field2 {
       }
 
       my @keys = keys %stats;
-      my @samples = map { { value => $_,
+      my @samples = map { { $fieldname => $_,
                               count => $stats{$_}->{count},
                                 $pkey => join(',',@{$stats{$_}->{pkeys}}) } }
         $highvar ? sort splice( @keys, 0, $args{highsamp} ) : sort @keys;
 
       print "\nfield $tinf->{name}.$finf->{name}   ($pkey column are up to $args{pkeymax} sample pkey values)\n";
-      &grid( \@samples, [ 'value', 'count', $pkey ], '(UNDEFINED)' );
+      &grid( \@samples, [ $fieldname, 'count', $pkey ], '(UNDEFINED)' );
       print "$slurped rows processed" . ($highvar ? " ... highly variable - showing $args{highsamp} samples." : '') . "\n";
 
       return 1;
@@ -280,13 +280,13 @@ sub sample_field {
       $sth->finish();
 
       my @keys = keys %stats;
-      my @samples = map { { value => $_,
+      my @samples = map { { $fieldname => $_,
                               count => $stats{$_}->{count},
                                 $pkey => join(',',@{$stats{$_}->{pkeys}}) } }
         $highvar ? sort splice( @keys, 0, $args{highsamp} ) : sort @keys;
 
       print "\nfield $tinf->{name}.$finf->{name}   ($pkey column are up to $args{pkeymax} sample pkey values)\n";
-      &grid( \@samples, [ 'value', 'count', $pkey ], '(UNDEFINED)' );
+      &grid( \@samples, [ $fieldname, 'count', $pkey ], '(UNDEFINED)' );
       print "$slurped rows processed" . ($highvar ? " ... highly variable - showing $args{highsamp} samples." : '') . "\n";
 
       return 1;
@@ -361,6 +361,26 @@ sub make_chunker {
       }
 }
 
+sub usage {
+      return <<"EOF";
+
+usage:
+    $0 conf=<path to DBR conf file> [ <options> ]
+
+options:
+    conf=<conf-file>
+    class=<class>     [query]  DBR instance class.
+    pkeymax=<count>   [10]     sample pkeys to show.
+    dumpmax=<count>   [10]     sample records to show.
+    highvar=<count>   [200]    distinct values that flag a field as "highly variable".
+    highsamp=<count>  [20]     count of sample fields to show when highly variable.
+
+docs:
+    pod2text <path-to-$0-script>
+
+EOF
+}
+
 1;
 
 =pod
@@ -371,15 +391,15 @@ sub make_chunker {
 
 =head1 Synopsis
 
-    % dbr-browse dbr.conf
+    % dbr-browse conf=dbr.conf
 
-    % dbr-browse foo.conf class=master
+    % dbr-browse conf=foo.conf class=master
 
-    % dbr-browse foo.conf pkeymax=50 dumpmax=25 highvar=300 highsamp=10
+    % dbr-browse conf=foo.conf pkeymax=50 dumpmax=25 highvar=300 highsamp=10
 
 If you have not installed DBR yet:
 
-    % perl -I ../lib dbr-browse bar.conf
+    % perl -I ../lib dbr-browse conf=bar.conf
 
 =head1 Description
 
@@ -450,10 +470,18 @@ when expressing constraints for an Object where() method.
 
 =head2 Command Arguments
 
+=item conf
+
+    The DBR config file.
+
+    Required.
+
 =item class
 
     By default, the "query" class database is queried.  You may have other classes defined.
     The other typical class is "master", which is the read-write instance.
+
+    default: query
 
 =item pkeymax
 
