@@ -105,7 +105,10 @@ sub setup_schema_ok{
 
 
       Test::More::ok( 1, 'Setup Schema' );
-      
+
+	# returning DBR object to be used with test harnesses
+	return $dbr;
+
 }
 
 sub ready_sandbox{
@@ -130,6 +133,7 @@ sub load_sqlfile{
 
       foreach my $part (split(';',$buff)){
 	    next unless $part =~ /\S+/;
+	    next if $part =~ /^\s*--/;
 	    $dbh->do($part) or return 0;
       }
 
