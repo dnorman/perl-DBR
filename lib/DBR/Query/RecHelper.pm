@@ -4,6 +4,7 @@ use strict;
 use base 'DBR::Common';
 use DBR::Query::Part;
 use DBR::Query::ResultSet::Empty;
+use DBR::Query::Dummy;
 use Carp;
 
 sub new {
@@ -143,6 +144,7 @@ sub getfield{
        my $self = shift;
        my $record = shift;
        my $field = shift;
+       my $want_sref = shift;
 
        # Check to see if we've previously been assigned an index. if so, see if our record already has it fetched
        # This could happen if the field was not fetched in the master query, but was already fetched with getfield
@@ -174,7 +176,7 @@ sub getfield{
 
        $self->_setlocalval($record,$field,$val) or return $self->_error('failed to _setlocalval');
 
-       return $val;
+       return $want_sref?\$val:$val; # return a scalarref if requested
 }
 
 sub getrelation{
@@ -191,24 +193,41 @@ sub getrelation{
 
       my $fidx = $field->index();
       my $val;
-      my %allvals; # For uniq-ing
 
-      if( defined($fidx) && exists($record->[$fidx]) ){
-	    $val = $record->[ $fidx ]; # My value
-	    map { $allvals{ $_->[ $fidx ] } = 1 } @${$self->{rowcache}}; # look forward in the rowcache and add those too
-      }else{
-	    $val = $self->getfield($record,$field) or return $self->_error("failed to fetch the value of ${\ $field->name }");
-	    $fidx ||= $field->index;
-	    return $self->_error('field object STILL does not have an index') unless defined($fidx);
-      }
-
-      $allvals{$val} = 1;
-      delete $allvals{undef}; # equivalent to grep { $_ }
-
+      my $to1 = $relation->is_to_one;
       my $maptable = $relation->maptable or return $self->_error('Failed to fetch maptable');
       my $mapfield = $relation->mapfield or return $self->_error('Failed to fetch mapfield');
 
-      my $value = $mapfield->makevalue( [ keys %allvals ] ) or return $self->_error('failed to create value object');
+      my @allvals; # For uniq-ing
+
+      if( defined($fidx) && exists($record->[$fidx]) ){
+	    $val = $record->[ $fidx ]; # My value
+	    @allvals = $self->_uniq( $val, map { $_->[ $fidx ] } @${$self->{rowcache}} ); # look forward in the rowcache and add those too
+      }else{
+	    my $sref = $self->getfield($record,$field, 1 ); # go fetch the value in the form of a scalarref
+	    defined ($sref) or return $self->_error("failed to fetch the value of ${\ $field->name }");
+	    $val = $$sref;
+	    $fidx ||= $field->index;
+	    return $self->_error('field object STILL does not have an index') unless defined($fidx);
+	    push @allvals, $val;
+      }
+
+      unless($mapfield->is_nullable){
+	    @allvals = grep { defined } @allvals;
+      }
+
+      my $dummy = bless([],'DBR::Query::Dummy');
+      if(!scalar @allvals){
+	    if($to1){
+		  return $dummy;
+	    }else{
+		  my $rv = DBR::Query::ResultSet::Empty->new() # Empty resultset
+		    or return $self->_error('failed to create ResultSet::Empty object');
+		  return $rv;
+	    }
+      }
+
+      my $value = $mapfield->makevalue( \@allvals ) or return $self->_error('failed to create value object');
       my $outwhere = DBR::Query::Part::Compare->new( field => $mapfield, value => $value ) or return $self->_error('failed to create compare object');
 
       my $scope = DBR::Config::Scope->new(
@@ -235,22 +254,20 @@ sub getrelation{
 
       my $resultset = $query->resultset or return $self->_error('failed to retrieve resultset');
 
-      my $to1 = $relation->is_to_one;
-      if(scalar(keys %allvals) > 1){
+      if(scalar(@allvals) > 1){
 	    my $myresult;
 	    if($to1){
-		  my $dummy;
 		  $self->_logDebug2('mapping to individual records');
 		  my $resultmap = $resultset->hashmap_single(  $mapfield->name  ) or return $self->_error('failed to split resultset');
 
 		  # look forward in the rowcache and assign the resultsets for whatever we find
 		  foreach my $row (@${$self->{rowcache}}) {
 
-			my $record = $resultmap->{ $row->[$fidx] } || ($dummy ||= $resultset->dummy_record or return $self->_error('failed to create dummy record'));
+			my $record = $resultmap->{ $row->[$fidx] } || $dummy;
 			$self->_setlocalval($row,$relation,$record) or return $self->_error('failed to _setlocalval');
 		  }
 
-		  $myresult = $resultmap->{$val} || ($dummy ||= $resultset->dummy_record or return $self->_error('failed to create dummy record'));
+		  $myresult = $resultmap->{$val} || $dummy;
 
 	    }else{
 		  $self->_logDebug2('splitting into resultsets');

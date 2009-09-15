@@ -8,9 +8,9 @@ my %TIMERS;
 
 sub _uniq{
     my $self = shift;
-
+    my $has_undef;
     my %uniq;
-    return grep{!$uniq{$_}++} @_;
+    return grep{ defined($_)?(  !$uniq{$_}++  ):(  !$has_undef++  ) } @_;
 
 }
 
