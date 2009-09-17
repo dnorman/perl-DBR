@@ -72,7 +72,7 @@ use overload
 # 
 
 'fallback' => 1,
-'nomethod' => sub {croak "UnixTime object: Invalid operation '$_[3]' The ways in which you can use UnixTime objects is restricted"}
+#'nomethod' => sub {croak "UnixTime object: Invalid operation '$_[3]' The ways in which you can use UnixTime objects is restricted"}
 ;
 
 sub unixtime { $_[0][0] || '' };

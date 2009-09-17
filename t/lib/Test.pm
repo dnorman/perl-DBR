@@ -59,7 +59,7 @@ sub setup_schema_ok{
       $metadbh->disconnect();
 
       my $maindbh = connectdb    ( dbfile =>  "$sandbox/db.sqlite" )   or return fail ('Connect - Test DB');
-      load_sqlfile ( "$CONFDIR/$testid.sql", $maindbh ) or return fail ('Load SQL file');
+      load_sqlfile ( "$CONFDIR/$testid/sql", $maindbh ) or return fail ('Load SQL file');
       $maindbh->disconnect();
 
       write_dbrconf( $sandbox ) or return fail ('Write DBR.conf');
@@ -94,7 +94,7 @@ sub setup_schema_ok{
 					       ) or return fail("Failed to create spec loader");
 
 
-      my $spec = $loader->parse_file( "$CONFDIR/$testid.spec" ) or return fail( "Failed to open $CONFDIR/$testid.spec" );
+      my $spec = $loader->parse_file( "$CONFDIR/$testid/spec" ) or return fail( "Failed to open $CONFDIR/$testid/spec" );
       $loader->process_spec( $spec ) or return fail("Failed to process spec data");
 
       DBR::Config::Schema->load(
