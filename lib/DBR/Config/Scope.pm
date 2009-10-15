@@ -34,6 +34,14 @@ sub new {
       return $self;
 }
 
+
+sub purge_all{
+      %SCOPE_CACHE = ();
+      %FIELD_CACHE = ();
+
+      return 1;
+}
+
 sub _get_scope_id{
       my $self = shift;
       my $offset = shift;
