@@ -20,8 +20,8 @@ sub split { {} }
 sub values { wantarray?():[]; }
 
 sub dummy_record{ bless([],'DBR::Query::Dummy') }
-sub hashmap_multi { {} }
-sub hashmap_single{ {} }
+sub hashmap_multi { wantarray?():{} }
+sub hashmap_single{ wantarray?():{} }
 
 sub next     { shift->dummy_record  }
 sub count    { 0     }
