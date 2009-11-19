@@ -118,6 +118,13 @@ sub fancydate  {
       return strftime ("%A %B %e, %Y", localtime($_[0][0]));
 }
 
+#format takes a strftime format string as an argument
+sub format  {
+      return '' unless defined($_[0][0]) && length($_[1]);
+      local($ENV{TZ}) = ${$_[0][1]}; tzset();
+      return strftime ($_[1], localtime($_[0][0]));
+}
+
 sub midnight{
       my $self = shift;
 
