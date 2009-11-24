@@ -8,7 +8,7 @@ $| = 1;
 
 use lib './lib';
 use t::lib::Test;
-use Test::More tests => 52;
+use Test::More tests => 64;
 
 my $dbr = setup_schema_ok('rt_37');
 
@@ -47,6 +47,12 @@ for(1..2){
 
 	    $rv = eval{ $date < 1244926800 };
 	    ok(!$@, 'Less than') or diag($@);
+
+            my $date2 = eval { $date + '4 hours'};
+            ok(!$@ && defined($date2) , 'Object + "4 hours"') or diag($@);
+
+            $rv = eval { $date2 > $date };
+            ok(!$@, 'Object Less than Object') or diag($@);
 
       }
 
