@@ -6,6 +6,7 @@ use DBR::Util::Logger;
 use DBR::Config::ScanDB;
 use DBR::Config::SpecLoader;
 use DBR::Config::Schema;
+use File::Path qw(remove_tree);
 
 our @EXPORT = qw(connect_ok setup_schema_ok);
 our $VERSION = '1';
@@ -115,7 +116,7 @@ sub ready_sandbox{
       my $testid = shift;
       my $sandbox = "t/sandbox/$testid";
 
-      system("rm -rf $sandbox") if -e $sandbox;
+      remove_tree( $sandbox ) if -e $sandbox;
       mkdir $sandbox or return 0;
       return $sandbox;
 }
