@@ -25,10 +25,11 @@ for my $ct (1..2){
       while (my $album = $albums->next()) {
 	    ok( $album->date_released, 'fetch date_released' );
 
-	    ok ( $album->date_released( 'now' ) , 'set date_released'); # Do it nowwwww
+	    ok ( $album->date_released( 'now' ) ,        '->date_released("now")'     ); # Do it nowwwww
+	    ok ( $album->set( date_released => 'now' ) , 'set(date_released => "now")'); # Do it nowwwww
 
 	    ok($album->name, 'fetch name');
-
+	    ok ( $album->set( name => 'New name' ) , 'set(name => "New name")'); # Do it nowwwww
       }
 
 }
