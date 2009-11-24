@@ -23,23 +23,37 @@ DBR - Database Repository ORM (object-relational mapper).
     my $dbh = $dbr->connect( 'car_dealer' );  # instance handle
 
     # metadata access (dbr tools)
-    my $meta = $dbr->get_instance( 'dbrconf' );  # 
+    my $meta = $dbr->get_instance( 'dbrconf' );
 
-=head1 VERSION
-
-    1.06b
-
-    svn trunk is currently 266.
 
 =head1 DESCRIPTION
 
 DBR stands for Database Repository, and functions as an ORM
 (Object Relational Mapper) to your database.
 
-DBR tries to make your use of a Database resource safe, concise,
-efficient and clear.  The objective is to have your code access
-and use objects, not spend time expressing future needs (SQL, fields
-to pull, joins, etc) in one place and using them in another.
+DBR tries to make your use of a database safe, concise, efficient
+and clear. The objective is to treat your database records like
+objects, and deliver the most common functionality with a minimum
+of fuss. You shouldn't have wo worry about efficiency, readability 
+or value translation.
+
+Admittedly, DBR isn't going to be an instant solution for someone
+who wants to hit the ground running with a lightweight application.
+It is primarily designed for large applications with large schemas.
+(though it's just as capable of handling a two table SQLite database
+as it is a 1,000 table monster)
+
+In order to get much of any functionality, you'll have to spend a
+little time teaching it about your schema(s). The tools included
+will allow you to scan your schemas, enter relationships, and so on.
+After you've done this, you can begin to reap the benefits.
+
+A bit of a disclaimer: DBR isn't going to fit all people's tastes.
+It's not attempting to be a flexible foundation class or toolkit for
+you to build your schema specific modules on top of (as many other 
+ORM packages attempt to be.) The intent is to try to solve the ORM
+problem with a design where metadata is king, not code.
+
 
 =head2 FEATURES
 
@@ -47,12 +61,14 @@ to pull, joins, etc) in one place and using them in another.
 
 =item concise
 
-A one-liner will often suffice to prepare the data you need.
-After that, you just use the data and the DBR objects will
-do (or already have done) the right thing.  For example:
+Even when your task requires touching several tables in the underlying database, it takes surpsisingly little code to fetch the data you need. Then you just use the data and the DBR objects will attempt to do the "right thing"(TM). 
 
-    while ($dbrh->orders->where( 'customer.name' => LIKE '%Jones' )->next) {
-      print "Order ".$_->order_id." shipped ".$_->shipment.method.name."\n";
+For example:
+
+    my $orders = $dbrh->orders->where( 'customer.name' => LIKE '%Jones' );
+
+    while ( $orders->next ) {
+        print "Order " . $_->order_id . " shipped " . $_->shipment->method->name . "\n";
     }
 
 would be the equivalent of writing out some SQL like:
@@ -73,19 +89,19 @@ would be the equivalent of writing out some SQL like:
 
 =item smart
 
-DBR learns what your code will need, and will pre-fetch the data.
-
-In the example above, DBR learns about your access to the shipping
-method name the first time the code runs, and will build the equivalent
-query on subsequent runs.
+DBR automatically profiles your code. It remembers what fields you need,
+and fetches them for you next time. It also reads ahead in the resultset whenever
+fetching related records. Both of these features prevent it from issuing bazillions of
+tiny queries to the database.
 
 =item efficient
 
-Most performance-critical DBR objects are blessed arrayrefs instead
-of hashrefs.
+Most DBR objects are blessed arrayrefs instead of hashrefs. Using DBR to fetch
+your data is almost as fast as using fetchrow_arrayref, but far more powerful.
 
-Access to large quantities of data are automatically chunked behind
-the scenes.
+Access to large quantities of data are automatically chunked behind the scenes.
+Stop worrying about blowing up the memory on your server just because you need
+to retrieve a few million records in one shot.
 
 =item convenient
 
@@ -99,7 +115,7 @@ Currently available for Dollars, Unixtime, Percent and Enumeration.
 Table joins are replaced with the names of relationships associated with
 foreign keys.  All you end up doing is:
 
-    $car->model->make->name
+    $car->model->make->name # Don't worry about the underlying DB queries. It's efficient.
 
 or
 
