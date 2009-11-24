@@ -111,7 +111,7 @@ sub _prep{
 		  }
 		  $field ||= $checkfield;
 
-		  $flookup{$field->name} = $field;
+		  $flookup{ $field->name } = $field->clone( with_index => 1 ); # Make a clean copy of the field object in case this one has an alias
 	    }
 
 	    $tablemap{$table_id} = $table;

@@ -6,7 +6,7 @@ $| = 1;
 
 use lib './lib';
 use t::lib::Test;
-use Test::More tests => 10;
+use Test::More tests => 14;
 use DBR::Config::Scope;
 
 my $dbr = setup_schema_ok('rt_40');
