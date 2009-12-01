@@ -6,7 +6,7 @@ use DBR::Util::Logger;
 use DBR::Config::ScanDB;
 use DBR::Config::SpecLoader;
 use DBR::Config::Schema;
-use File::Path qw(remove_tree);
+use File::Path;
 
 our @EXPORT = qw(connect_ok setup_schema_ok);
 our $VERSION = '1';
@@ -65,7 +65,7 @@ sub setup_schema_ok{
 
       write_dbrconf( $sandbox ) or return fail ('Write DBR.conf');
 
-      my $logger = new DBR::Util::Logger(-logpath => '/tmp/dbr_test.log', -logLevel => 'debug2')
+      my $logger = new DBR::Util::Logger(-logpath => 'dbr_test.log', -logLevel => 'debug2')
 	or return fail ('Logger');
       my $dbr    = new DBR( -logger => $logger, -conf   => "$sandbox/DBR.conf", -admin => 1 )
 	or return fail('DBR library');
@@ -116,7 +116,7 @@ sub ready_sandbox{
       my $testid = shift;
       my $sandbox = "t/sandbox/$testid";
 
-      remove_tree( $sandbox ) if -e $sandbox;
+      File::Path::remove_tree( $sandbox ) if -e $sandbox;
       mkdir $sandbox or return 0;
       return $sandbox;
 }
