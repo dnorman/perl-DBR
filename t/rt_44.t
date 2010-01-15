@@ -8,7 +8,7 @@ $| = 1;
 
 use lib './lib';
 use t::lib::Test;
-use Test::More tests => 23;
+use Test::More tests => 29;
 
 my $dbr = setup_schema_ok('rt_44');
 
@@ -18,7 +18,8 @@ ok($dbh, 'dbr connect');
 my $items = eval{ $dbh->cart->all };
 ok( defined($items), 'items = dbh->cart->all ... ' . $@ );
 
-my $total = 0;
+my $total_bucks = 0;
+my $total_cents = 0;
 
 while (my $item = $items->next()) {
 
@@ -30,10 +31,21 @@ while (my $item = $items->next()) {
   my $price = eval{ $item->price };
   ok( defined($price), 'price = item->price (' . $price . ') ... ' . $@ );
 
-  eval{ $total += $price };
-  ok( $total, 'total += price  (' . $total . ') ... ' . $@ );
+  # add bucks
 
-  my $foo;  # an undefined value
-  eval{ $foo += $price };
-  ok( defined($foo), 'foo += price (' . $foo . ') ... ' . $@ );
+  eval{ $total_bucks += $price };
+  ok( $total_bucks, 'total_bucks += price  (' . $total_bucks . ') ... ' . $@ );
+
+  my $foo_bucks;  # an undefined value
+  eval{ $foo_bucks += $price };
+  ok( defined($foo_bucks), 'foo_bucks += price (' . $foo_bucks . ') ... ' . $@ );
+
+  # add cents
+
+  eval{ $total_cents += $price->cents };
+  ok( $total_cents, 'total_cents += price->cents  (' . $total_cents . ') ... ' . $@ );
+
+  my $foo_cents;  # an undefined value
+  eval{ $foo_cents += $price->cents };
+  ok( defined($foo_cents), 'foo_cents += price->cents (' . $foo_cents . ') ... ' . $@ );
 }
