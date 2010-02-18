@@ -8,7 +8,7 @@ $| = 1;
 
 use lib './lib';
 use t::lib::Test;
-use Test::More tests => 29;
+use Test::More;
 
 my $dbr = setup_schema_ok('rt_44');
 
@@ -49,3 +49,5 @@ while (my $item = $items->next()) {
   eval{ $foo_cents += $price->cents };
   ok( defined($foo_cents), 'foo_cents += price->cents (' . $foo_cents . ') ... ' . $@ );
 }
+
+done_testing();

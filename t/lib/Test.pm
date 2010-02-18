@@ -67,7 +67,12 @@ sub setup_schema_ok{
 
       my $logger = new DBR::Util::Logger(-logpath => 'dbr_test.log', -logLevel => 'debug2')
 	or return fail ('Logger');
-      my $dbr    = new DBR( -logger => $logger, -conf   => "$sandbox/DBR.conf", -admin => 1 )
+      my $dbr    = new DBR(
+			   -logger => $logger,
+			   -conf   => "$sandbox/DBR.conf",
+			   -admin => 1,
+			   -fudge_tz => 1,
+			  )
 	or return fail('DBR library');
 
       my $conf_instance = $dbr->get_instance('dbrconf') or return fail( "No config found for confdb");

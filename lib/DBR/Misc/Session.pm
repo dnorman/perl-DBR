@@ -5,14 +5,14 @@ use base 'DBR::Common';
 use DateTime::TimeZone;
 use Carp;
 
-
 sub new {
       my( $package ) = shift;
 
       my %params = @_;
       my $self = {
-		  logger  => $params{logger},
-		  admin   => $params{admin} ? 1 : 0,
+		  logger   => $params{logger},
+		  admin    => $params{admin} ? 1 : 0,
+		  fudge_tz => $params{fudge_tz},
 		 };
 
       bless( $self, $package );
@@ -34,8 +34,18 @@ sub timezone {
       return ${$self->{tzref}} unless defined($tz);
 
       if($tz eq 'server' ){
-	    my $tzobj = DateTime::TimeZone->new( name => 'local');
-	    $tz = $tzobj->name;
+	    eval {
+		  my $tzobj = DateTime::TimeZone->new( name => 'local');
+		  $tz = $tzobj->name;
+	    };
+	    if($@){
+		  if($self->{fudge_tz}){
+			$self->_log( "Failed to determine local timezone. Fudging to UTC");
+			$tz = 'UTC';
+		  }else{
+			return $self->_error( "Failed to determine local timezone ($@)" );
+		  }
+	    }
       }
 
       DateTime::TimeZone->is_valid_name( $tz ) or return $self->_error( "Invalid Timezone '$tz'" );
