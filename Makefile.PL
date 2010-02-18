@@ -33,6 +33,7 @@ WriteMakefile(
 				  'FileHandle'         => 0,
 				  'POSIX'              => 0,
 				  'Scalar::Util'       => 0,
+				  'Switch'	       => 0,
 				  'Symbol'             => 0,
 				  'Test::More'         => 0,
 				  'Time::HiRes'        => 0,
