@@ -162,7 +162,7 @@ sub dumptable{
 				   cmd     => 'ENUMOPT',
 				   handle  => $enum->{handle},
 				   enum_id =>$enum->{enum_id},
-				   override_id => $enum->{override_id} || 'NULL',
+				   override_id => defined($enum->{override_id})? $enum->{override_id} : 'NULL',
 				   name    => $enum->{name},
 				  );
 			}
