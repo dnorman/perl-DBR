@@ -31,6 +31,7 @@ WriteMakefile(
 				  'Digest::MD5'        => 0,
 				  'Error'              => 0,
 				  'FileHandle'         => 0,
+				  'Moose'              => 0,
 				  'POSIX'              => 0,
 				  'Scalar::Util'       => 0,
 				  'Switch'	       => 0,

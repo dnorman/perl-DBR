@@ -1,93 +1,96 @@
-# the contents of this file are Copyright (c) 2004-2009 David Blood
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation.
 
-
-
 package DBR::Admin::Window;
+use Moose;
 
-use strict;
-use Class::Std;
-use Data::Dumper;
+has 'conf_instance' => (is => 'ro', required => 1);
+has 'parent'        => (is => 'ro', required => 1);
+#has 'parenttitle' => (is => 'ro');
+has 'id'            => (is => 'ro');
+has 'win'           => (is => 'rw');
+has 'bordercolor'   => (is => 'ro');
+has 'title'         => (is => 'ro');
+has 'dimensions'    => (is => 'ro');
+has 'height'        => (is => 'ro');
 
+# Basic window construction goes here ( base class )
+sub BUILD {
+      my $self = shift;
+      print STDERR "BUILD Window\n";
 
-use vars qw($VERSION $PKG);
-
-$VERSION = 1.0;
-
-$PKG = __PACKAGE__;
-
-{
-    #######################
-    # member data
-    my %parent_of : ATTR( :get<parent> :set<parent>);
-    my %id_of : ATTR( :get<id> :set<id>);
-    my %win_of : ATTR( :get<win> :set<win>);
-
-    ##########################
-    sub BUILD {
-
-	my ($self, $ident, $_args) = @_;
-
-	my $w = $_args->{parent}->root->add(
-				      $_args->{id}, 'Window',
-				      -border => 1,
-				      -y    => 1,
-				      -bfg  => 'green',
-				      -title => ucfirst($_args->{id}),
-				      -titlereverse => 0,
-				     );
+      my %extra;
+      if($self->dimensions){
+	    my ($width,$height) = split(/\D+/, $self->dimensions);
+	    $extra{-width}   = $width;
+	    $extra{-height}  = $height;
+	    $extra{-centered} = 1;
+      }
 
 
-	my $close_label = ($_args->{parent_title} ? "Back To " . $_args->{parent_title} : 'Close');
-	$w->add(
-		'close', 'Buttonbox',
-		-buttons   => [
-			     { 
-			      -label => "< $close_label >",
-			      -value => 1,
-			      -shortcut => 1 ,
-			      -onpress => sub {$self->close}
-			      
-			     }
-			      ]
-	       );
+      my $w = $self->parent->add(
+				 $self->id, 'Window',
+				 -border => 1, -bfg => $self->bordercolor,
+				 -title  => $self->title || ucfirst($self->id),
+				 -titlereverse => 0,
+				 #-y      => 1,
+				 %extra
+				);
 
-	$self->set_parent($_args->{parent}->root);
-	$self->set_win($w);
-	$self->set_id($_args->{id});
+      $w->add( 'close', 'Buttonbox',
+	       -buttons => [{  -label    => "[ X ]",
+			       -onpress  => sub { $self->close }
+			    }],
+	       -x => $w->width - 8
+	     );
+      $w->set_binding( sub { $self->close }  , "\e");
+      $self->win( $w );
 
-	$w->focus();
-    }
+      $w->focus();
+}
 
-    ###################
-    sub close {
+sub spawn {
+      my ($self, $module, %params) = @_;
 
-	my ($self, $_args) = @_;
+      my $class = __PACKAGE__ . '::' . $module;
+      eval "require $class" or die "Failed to load $class\n$@";
 
-	if ($self->get_id eq 'DBR Admin Main Menu') {
-	    my $return = $self->get_win->root->dialog(
-			      -message   => "Do you really want to quit?",
-			      -title     => "Are you sure???", 
-			      -buttons   => ['yes', 'no'],
-				      
-			     );
-
-	    exit(0) if $return;
-	}
-
-	$self->get_parent->delete($self->get_id);
-	$self->get_parent->draw();
-	$self->get_parent->focus();
-    }
-
-
-
-
+      print STDERR "SPAWN '$module'\n" ;
+      return $class->new(
+			 id           => $module,
+			 parent       => $self->parent,
+			 parent_title => ucfirst($self->id),
+			 conf_instance => $self->conf_instance,
+			 %params
+			);
 
 }
 
+sub add{
+      shift->win->add(@_);
+}
+
+
+###################
+sub close {
+      my $self = shift;
+
+       if ($self->id eq 'DBR Admin Main Menu') {
+	     # my $return = $self->win->root->dialog(
+	     # 					  -message   => "Do you really want to quit?",
+	     # 					  -title     => "Are you sure???", 
+	     # 					  -buttons   => ['yes', 'no'],
+	     # 					 );
+	     #
+	     #exit(0) if $return;
+	     exit;
+       }
+
+      $self->parent->delete($self->id);
+      $self->parent->focus();
+      $self->parent->draw();
+}
 
 
 

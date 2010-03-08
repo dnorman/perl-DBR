@@ -1,41 +1,51 @@
 #!/usr/bin/perl
 
-# the contents of this file are Copyright (c) 2004-2009 David Blood
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation.
 
 use strict;
 use Curses::UI;
-
-use lib qw'../lib ../../lib';
+use DBR;
+use DBR::Util::Logger;
 use DBR::Admin::Window::MainMenu;
-use DBR::Admin::Utility;
 
+my ($conffile) = @ARGV;
+my $confdb = 'dbrconf';
 
-
-my $conf = shift;
-my $logfile = shift || '/tmp/dbr-admin_lastrun_debug.txt';
-
-# stderr gets messed up by curses, so put stuff in a logfile for easier reading
-open STDERR, ">$logfile";
-
-if (!$conf) {
+if (!$conffile) {
     print "you must supply the path to the dbr config file as the first argument\n";
     exit;
 }
 
-DBR::Admin::Utility::get_dbrh($conf);
+my $logger = new DBR::Util::Logger(-logpath => '/tmp/dbr_admin.log', -logLevel => 'debug2') or die "Failed to create logger";
 
-my $cui = new Curses::UI( 
+my $dbr    = new DBR(
+		     -logger => $logger,
+		     -conf   => $conffile,
+		     -admin  => 1,         # This flag allows us to update definitions through the DBR::Conf objects
+		    ) or die "Failed to create DBR";
+
+
+
+my $conf_instance = $dbr->get_instance($confdb) or die "No config found for confdb $confdb";
+
+open STDERR, ">>/tmp/dbr_admin.err"; # stderr gets messed up by curses, so put stuff in a logfile for easier reading
+
+my $cui = new Curses::UI(
 			 -color_support => 1,
 			 -mouse_support => 1,
 			);
 
-DBR::Admin::Window::MainMenu->new({ id => 'DBR Admin Main Menu', parent => $cui});
+DBR::Admin::Window::MainMenu->new(
+				  conf_instance => $conf_instance,
+				  id     => 'DBR Admin Main Menu',
+				  parent => $cui
+				 );
 
 $cui->set_binding( \&exit_dialog , "\cQ");
-$cui->set_binding( \&exit_dialog , "\cC");
+$cui->set_binding( sub { exit } , "\cC");
+
 
 $cui->mainloop();
 
