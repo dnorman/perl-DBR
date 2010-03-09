@@ -22,19 +22,24 @@ sub BUILD {
       my $listbox = $self->add( 'schemalistbox', 'Listbox',
 				-y => 2, -width => 25, -vscrollbar => 1,
 				-title => "Schemas", -border => 1,
-				-onchange => sub { $self->list_tables ( $_[0]->get )  },
+				-onchange => sub {
+				      my $schema_id = $_[0]->get;
+				      my $schema = $self->schemas->{$schema_id} or die "Failed to look up schema";
+				      $self->spawn('Tables',
+						   title       => "$schema->{handle} tables",
+						   schema_id   => $schema_id,
+						   schema_name => $schema->{handle},
+						  )
+				},
+				-onselchange => sub { print STDERR "Active is: " . $_[0]->get_active_value . "\n" }
 			      );
 
       $self->update_schema_list($listbox);
 
       $listbox->focus();
-      $listbox->onFocus(sub {
-			      $listbox->clear_selection;
-			});
-      $self->win->set_focusorder('fieldlistbox','tablelistbox','schemalistbox', 'newschema', 'close');
+      $listbox->onFocus(sub { $listbox->clear_selection });
+      #$self->win->set_focusorder('fieldlistbox','tablelistbox','schemalistbox', 'newschema', 'close');
 }
-
-
 
 sub update_schema_list{
       my $self = shift;
@@ -54,58 +59,6 @@ sub update_schema_list{
 
       $listbox->values( [ sort { lc($labels{$a}) cmp lc($labels{$b}) } keys %labels ]); # Curses::UI sucks
       $listbox->labels( \%labels );
-}
-
-
-
-sub list_tables{
-      my $self = shift;
-      my $schema_id = shift;
-      print STDERR "LIST TABLES - schema_id $schema_id\n";
-
-      my $schema = $self->schemas->{$schema_id} or die "Failed to look up schema";
-
-      $self->vis_tables(1);
-
-      my $dbrh = $self->conf_instance->connect or die "Failed to connect";
-      my $tables = $dbrh->select( -table  => 'dbr_tables',
-				  -fields => 'table_id schema_id name display_name is_cachable',
-				  -where  => { schema_id => ['d',$schema_id] },
-				 ) or throw DBR::Admin::Exception( message => "failed to select from dbr_tables $!",
-								   root_window => $self->win->root );
-
-      my %labels = map { $_->{table_id} => $_->{name} } @$tables;
-
-      my $skip = 0;
-
-      $self->win->delete('tablelistbox');
-      my $listbox = $self->add( 'tablelistbox', 'Listbox',
-				-y => 2, -x => 26, -width => 25, -vscrollbar => 1,
-				-title => "Tables", -border => 1,
-				-values => [ sort { lc($labels{$a}) cmp lc($labels{$b}) } keys %labels ],
-				-labels => \%labels,
-				-onchange => sub {
-				      my $tid = shift->get;
-				      $self->list_fields (
-							  $tid,
-							  $schema->{display_name}, # Schema name
-							  $labels{$tid} #table name
-							 );
-				}
-			      );
-      $listbox->draw;
-      $listbox->focus;
-
-      $listbox->onFocus(sub {
-			      $listbox->clear_selection;
-			});
-      $listbox->onBlur(sub{
-			     if(! $self->vis_fields ){
-				   # $self->win->focus('schemalistbox');
-				   $self->win->delete('tablelistbox') && $self->vis_tables(0);
-			     }
-		       });
-
 }
 
 sub list_fields{
