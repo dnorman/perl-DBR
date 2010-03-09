@@ -76,14 +76,7 @@ sub add{
 sub close {
       my $self = shift;
 
-       if ($self->id eq 'DBR Admin Main Menu') {
-	     # my $return = $self->win->root->dialog(
-	     # 					  -message   => "Do you really want to quit?",
-	     # 					  -title     => "Are you sure???", 
-	     # 					  -buttons   => ['yes', 'no'],
-	     # 					 );
-	     #
-	     #exit(0) if $return;
+       if ($self->id eq 'main') {
 	     exit;
        }
 

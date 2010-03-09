@@ -37,7 +37,7 @@ sub BUILD {
       $self->update_schema_list($listbox);
 
       $listbox->focus();
-      $listbox->onFocus(sub { $listbox->clear_selection });
+      $listbox->onFocus(sub { $listbox->clear_selection; $self->update_schema_list($listbox) });
       #$self->win->set_focusorder('fieldlistbox','tablelistbox','schemalistbox', 'newschema', 'close');
 }
 

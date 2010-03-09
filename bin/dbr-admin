@@ -39,28 +39,16 @@ my $cui = new Curses::UI(
 
 DBR::Admin::Window::MainMenu->new(
 				  conf_instance => $conf_instance,
-				  id     => 'DBR Admin Main Menu',
+				  id     => 'main',
+				  title  => 'DBR Admin Main Menu',
 				  parent => $cui
 				 );
 
-$cui->set_binding( \&exit_dialog , "\cQ");
+$cui->set_binding( sub { exit } , "\cQ");
 $cui->set_binding( sub { exit } , "\cC");
 
 
 $cui->mainloop();
-
-################################
-sub exit_dialog
-{
-    my $return = $cui->dialog(
-			      -message   => "Do you really want to quit?",
-			      -title     => "Are you sure???", 
-			      -buttons   => ['yes', 'no'],
-
-			     );
-
-    exit(0) if $return;
-}
 
 
 
