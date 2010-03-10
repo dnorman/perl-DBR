@@ -14,7 +14,7 @@ sub new{
       scalar(@_) || croak('must provide at least one set');
 
       for (@_){
-	  ref($_) eq 'DBR::Query::Part::Set' || croak('arguments must be Sets');XS
+	  ref($_) eq 'DBR::Query::Part::Set' || croak('arguments must be Sets');
       }
 
       return bless( [@_], $pkg );
@@ -23,9 +23,8 @@ sub new{
 sub _validate_self{ 1 } # I don't exist unless I'm valid
 sub children{ @{$_[0]} }
 
-sub sql   {
+sub sql {
     my ($self, $conn) = @_;
-
     return join (', ', map { $_->sql( $conn ) } $self->children );
 }
 

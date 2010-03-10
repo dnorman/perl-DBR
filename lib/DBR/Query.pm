@@ -6,8 +6,8 @@
 package DBR::Query;
 
 use strict;
-no strict 'subs';
 use base 'DBR::Common';
+
 use DBR::Query::ResultSet::DB;
 
 sub new {
@@ -28,46 +28,65 @@ sub new {
 			lock    => $params{lock} ? 1:0,
 		       };
 
-      $self->{lastidx} = -1;
-
-      $self->_tables( $params{tables} ) or return $self->_error('failed to prepare tables');
-
-
       if ($params{limit}){
  	    return $self->_error('invalid limit') unless $params{limit} =~ /^\d+$/;
 	    $self->{limit} = $params{limit};
       }
 
-      $self->insert ( $params{select} ) if $params{select};
-      $self->insert ( $params{insert} ) if $params{insert};
-      $self->update ( $params{update} ) if $params{update};
-      $self->delete ( 1 ) if $params{delete};
-      $self->count  ( 1 ) if $params{count};
-
-      $self->where ( $params{where} ) if $params{where};
+      $self->select ( $params{select} );
+      $self->insert ( $params{insert} );
+      $self->update ( $params{update} );
+      $self->delete ( $params{delete} ? 1 : 0 );
+      $self->count  ( $params{count}  ? 1 : 0 );
+      $self->tables ( $params{tables} );
+      $self->where  ( $params{where}  );
 
       return( $self );
 }
 
+sub select{
+  my $self = shift;
+  exists( $_[0] ) or return $self->{select} || undef;
+  my $part = shift;
+
+  !$part || ref($part) eq 'DBR::Query::Part::Select' || croak "Select must be an ::Part::Select object";
+  $self->{select} = $part || undef;
+}
 
 sub insert{
   my $self = shift;
-  my $part = shift or return $self->{insert} || undef;
+  exists( $_[0] ) or return $self->{insert} || undef;
+  my $part = shift;
 
-  ref($part) eq 'DBR::Query::Part::Insert' || croak "Insert must be an Insert part object";
-  $self->{insert} = $part;
-
+  !$part || ref($part) eq 'DBR::Query::Part::Insert' || croak "Insert must be an ::Part::Insert object";
+  $self->{insert} = $part || undef;
 }
 
-sub get_field {
+sub update{
+  my $self = shift;
+  exists( $_[0] )  or return $self->{update} || undef;
+  my $part = shift;
+
+  !$part || ref($part) eq 'DBR::Query::Part::Update' || croak "Update must be a ::Part::Update object";
+  $self->{update} = $part || undef;
+}
+#delete
+#count
+
+
+sub where{
       my $self = shift;
-      my $fieldname = shift;
+      exists( $_[0] )  or return $self->{where} || undef;
+      my $part = shift;
 
-      return $self->{fieldmap}->{ $fieldname } || undef;
+      !$part || ref($part) =~ /^DBR::Query::Part::(And|Or|Compare|Subquery|Join)$/ ||
+	croak('param must be an AND/OR/COMPARE/SUBQUERY/JOIN object');
 
+      $self->{where} = $part || undef;
 }
 
 sub scope { $_[0]->{scope} }
+
 sub check_table{
       my $self  = shift;
       my $alias = shift;
@@ -100,71 +119,6 @@ sub _tables{
       return 1;
 }
 
-sub _where{
-      my $self = shift;
-      my $param = shift;
-
-      return $self->_error('param must be an AND/OR/COMPARE/SUBQUERY/JOIN object') unless ref($param) =~ /^DBR::Query::Part::(And|Or|Compare|Subquery|Join)$/;
-
-      $param->validate($self) or return $self->_error('Where clause validation failed');
-
-      my $conn = $self->{instance}->connect('conn') or return $self->_error('failed to connect');
-
-      my $where = $param->sql( $conn ) or return $self->_error('Failed to retrieve sql');
-
-      return $where || '';
-}
-
-
-sub _select{
-      my $self   = shift;
-      my $params = shift;
-
-      my $sql;
-
-      if( $params->{count} ){
-	  $sql .= 'count(*) ';
-	  $self->{flags}->{is_count} = 1;
-
-      }elsif($params->{fields}){
-	    my $fields = $params->{fields};
-
-	    my $conn = $self->{instance}->connect('conn') or return $self->_error('failed to connect');
-	    if (ref($fields) eq 'ARRAY') {
-		  my @fieldsql;
-		  foreach my $field (@{$fields}) {
-
-			return $self->_error('must specify field as a DBR::Config::Field object') unless ref($field) =~ /^DBR::Config::Field/; # Could also be ::Anon
-
-			if ($field->table_alias) {
-			      return $self->_error("table alias is invalid without a join") unless $self->{aliasmap};
-			      return $self->_error('invalid table alias "' . $field->table_alias . '" in -fields')        unless $self->{aliasmap}->{ $field->table_alias };
-			}
-
-			$self->{fieldmap}->{ $field->name } = $field;
-
-			push @fieldsql, $field->sql( $conn );
-			$field->index( ++$self->{lastidx} ) or return $self->_error('failed to set field index');
-
-			$self->{flags}->{can_be_subquery} = 1 if scalar(@fieldsql) == 1;
-
-		  }
-		  return $self->_error('No valid fields specified') unless @fieldsql;
-		  $sql .= join(', ',@fieldsql);
-
-	    } else {
-		  return $self->_error('No valid fields specified');
-	    }
-
-	    $self->{fields} = $fields;
-      }
-
-      $self->{main_sql} = $sql;
-
-      return 1;
-}
-
-sub lastidx{ $_[0]->{lastidx} }
 
 # sub _insert{
 #       my $self = shift;
@@ -176,9 +130,7 @@ sub lastidx{ $_[0]->{lastidx} }
 
 #       my $conn = $self->{instance}->connect('conn') or return $self->_error('failed to connect');
 
-#       if($params->{quiet_error}){
-# 	    $self->{quiet_error} = 1;
-#       }
+
 
 #   return 1;
 
@@ -198,7 +150,7 @@ sub sql{
 	    $sql .= "SELECT " . $self->{select}->sql . "FROM $tables";
 	    $sql .= " WHERE " . $self->{where} ->sql if $self->{where};
       }elsif($self->{insert}){
-	    $sql .= "INSERT INTO $tables " . $self->{main_sql}";
+	    $sql .= "INSERT INTO $tables " . $self->{main_sql};
       }elsif($type eq 'update'){
 	    $sql .= "UPDATE $tables SET $self->{main_sql} WHERE $self->{where_sql}";
       }elsif($type eq 'delete'){
@@ -213,21 +165,21 @@ sub sql{
       return $sql;
 }
 
-sub where_is_emptyset{
-    my $self = shift;
-    return 0 unless $self->{where_tree};
-    return $self->{where_tree}->is_emptyset;
-}
-
 sub can_be_subquery {
       my $self = shift;
-      return $self->{flags}->{can_be_subquery} ? 1:0;
+      my $select = $self->{select} || return 0;   # must be a select
+      return scalar($select->fields) == 1 || 0; # and have exactly one field
 }
 
-sub fields{ $_[0]->{fields} }
-
+sub validate{
+      #$part->validate($self) or return $self->_error('Where clause validation failed');
+}
 sub prepare {
       my $self = shift;
+
+      #       if($params->{quiet_error}){
+      # 	    $self->{quiet_error} = 1;
+      #       }
 
       return $self->_error('can only call resultset on a select') unless $self->{type} eq 'select';
 

@@ -64,12 +64,11 @@ sub _prep{
       my $class = $BASECLASS . $self->{classidx};
       $self->{recordclass} = $class;
 
-      my $fields = $self->{query}->fields or return $self->_error('Failed to get query fields');
-      $fields = [ @$fields ]; #Shallow clone
+      my @fields = $self->{query}->select->fields or return $self->_error('Failed to get query fields');
 
       my @table_ids;
       # It's important that we preserve the specific field objects from the query. They have payloads that new ones do not.
-      foreach my $field (@$fields){
+      foreach my $field (@fields){
 	    my $field_id = $field->field_id or next; # Anon fields have no field_id
 	    my $table_id = $field->table_id;
 	    $self->{fieldmap}->{ $field_id } = $field;
@@ -105,7 +104,7 @@ sub _prep{
 			push @pk, $field->clone( with_index => 1 ); # Make a clean copy of the field object in case this one has an alias
 		  }else{
 			if(!$field){
-			      push @$fields, $checkfield; #not in the resultset, but we should still know about it
+			      push @fields, $checkfield; #not in the resultset, but we should still know about it
 			      $self->{fieldmap}->{ $checkfield->field_id } = $checkfield;
 			}
 		  }
@@ -130,12 +129,12 @@ sub _prep{
 					      pkmap    => \%pkmap,        # V
 					      flookup  => \%flookup,      # V
 					      scope    => $self->{scope}, # V
-					      lastidx  => $self->{query}->lastidx,# V
+					      lastidx  => $self->{query}->select->lastidx,# V
 					      rowcache => $self->{rowcache}, #X
 					     ) or return $self->_error('Failed to create RecHelper object');
 
       my $mode = 'rw';
-      foreach my $field (@$fields){
+      foreach my $field (@fields){
 	    my $mymode = $mode;
 	    $mymode = 'ro' if $field->is_readonly or $self->{instance}->is_readonly;
 	    $self->_mk_accessor(

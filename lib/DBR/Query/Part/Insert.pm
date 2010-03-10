@@ -14,7 +14,7 @@ sub new{
       scalar(@_) || croak('must provide at least one set');
 
       for (@_){
-	  ref($_) eq 'DBR::Query::Part::Set' || croak('arguments must be Sets');XS
+	  ref($_) eq 'DBR::Query::Part::Set' || croak('arguments must be Sets');
       }
 
       return bless( [@_], $pkg );
