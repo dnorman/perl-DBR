@@ -15,14 +15,14 @@ sub new {
       my %params = @_;
 
       my $self = {
-		  instance   => $params{instance},
-		  session => $params{session},
-		  scope  => $params{scope},
+		  instance => $params{instance},
+		  session  => $params{session},
+		  scope    => $params{scope},
 		 };
 
       bless( $self, $package );
 
-      return $self->_error('instance object is required') unless $self->{instance};
+      $self->{instance} || croak "instance is required";
 
       $self->{flags} = {
 			lock    => $params{lock} ? 1:0,
@@ -32,37 +32,31 @@ sub new {
 
       $self->_tables( $params{tables} ) or return $self->_error('failed to prepare tables');
 
-      if($params{where}){
-	    $self->{where_tree} = $params{where};
-	    $self->{where_sql} = $self->_where ( $params{where} ) or return $self->_error('failed to prepare where');
-      }
 
       if ($params{limit}){
  	    return $self->_error('invalid limit') unless $params{limit} =~ /^\d+$/;
 	    $self->{limit} = $params{limit};
       }
 
-      if ( $params{select} ){
+      $self->insert ( $params{select} ) if $params{select};
+      $self->insert ( $params{insert} ) if $params{insert};
+      $self->update ( $params{update} ) if $params{update};
+      $self->delete ( 1 ) if $params{delete};
+      $self->count  ( 1 ) if $params{count};
 
-	    $self->_select($params{select}) or return $self->_error('_select failed');
-	    $self->{type} = 'select';
-
-      }elsif( $params{insert} ){
-	    $self->{type} = 'insert';
-	    $self->_insert($params{insert}) or return $self->_error('_insert failed');
-
-      }elsif( $params{update} ){
-	    $self->{type} = 'update';
-	    $self->_update($params{update}) or return $self->_error('_update failed');
-
-      }elsif( $params{delete} ){
-	    $self->{type} = 'delete';
-	    #Nada
-      }else{
-	    return $self->_error('must specify select, insert, update or delete');
-      }
+      $self->where ( $params{where} ) if $params{where};
 
       return( $self );
+}
+
+
+sub insert{
+  my $self = shift;
+  my $part = shift or return $self->{insert} || undef;
+
+  ref($part) eq 'DBR::Query::Part::Insert' || croak "Insert must be an Insert part object";
+  $self->{insert} = $part;
+
 }
 
 sub get_field {
@@ -172,56 +166,23 @@ sub _select{
 
 sub lastidx{ $_[0]->{lastidx} }
 
-sub _update{
-      my $self = shift;
-      my $params = shift;
+# sub _insert{
+#       my $self = shift;
+#       my $params = shift;
 
-      return $self->_error('No set parameter specified') unless $params->{set};
-      my $sets = $params->{set};
-      $sets = [$sets] unless ref($sets) eq 'ARRAY';
+#       return $self->_error('No set parameter specified') unless $params->{set};
+#       my $sets = $params->{set};
+#       $sets = [$sets] unless ref($sets) eq 'ARRAY';
 
-      my $conn = $self->{instance}->connect('conn') or return $self->_error('failed to connect');
+#       my $conn = $self->{instance}->connect('conn') or return $self->_error('failed to connect');
 
-      my @sql;
-      foreach my $set (@$sets) {
-	    ref($set) eq 'DBR::Query::Part::Set'
-	      or return $self->_error('Set parameter must contain only set objects');
+#       if($params->{quiet_error}){
+# 	    $self->{quiet_error} = 1;
+#       }
 
-	    push @sql, $set->sql( $conn );
-      }
+#   return 1;
 
-      $self->{main_sql} = join (', ', @sql);
-}
-
-sub _insert{
-      my $self = shift;
-      my $params = shift;
-
-      return $self->_error('No set parameter specified') unless $params->{set};
-      my $sets = $params->{set};
-      $sets = [$sets] unless ref($sets) eq 'ARRAY';
-
-      my $conn = $self->{instance}->connect('conn') or return $self->_error('failed to connect');
-
-      my @fields;
-      my @values;
-      foreach my $set (@$sets) {
-	    ref($set) eq 'DBR::Query::Part::Set'
-	      or return $self->_error('Set parameter must contain only set objects');
-
-	    push @fields, $set->field->sql( $conn );
-	    push @values, $set->value->sql( $conn );
-      }
-
-      $self->{main_sql} = '(' . join (', ', @fields) . ') values (' . join (', ', @values) . ')';
-
-      if($params->{quiet_error}){
-	    $self->{quiet_error} = 1;
-      }
-
-  return 1;
-
-}
+# }
 
 sub sql{
       my $self = shift;
@@ -233,11 +194,11 @@ sub sql{
       my $tables = join(',',@{$self->{tparts}});
       my $type = $self->{type};
 
-      if ($type eq 'select'){
-	    $sql .= "SELECT $self->{main_sql} FROM $tables";
-	    $sql .= " WHERE $self->{where_sql}" if $self->{where_sql};
-      }elsif($type eq 'insert'){
-	    $sql .= "INSERT INTO $tables $self->{main_sql}";
+      if ($self->{select}){
+	    $sql .= "SELECT " . $self->{select}->sql . "FROM $tables";
+	    $sql .= " WHERE " . $self->{where} ->sql if $self->{where};
+      }elsif($self->{insert}){
+	    $sql .= "INSERT INTO $tables " . $self->{main_sql}";
       }elsif($type eq 'update'){
 	    $sql .= "UPDATE $tables SET $self->{main_sql} WHERE $self->{where_sql}";
       }elsif($type eq 'delete'){

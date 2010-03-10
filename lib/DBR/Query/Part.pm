@@ -31,6 +31,7 @@ sub validate{
 }
 
 sub _session { undef }
+sub _validate_self{ 0 } # I'm not valid unless I'm overridden
 
 sub children{ return () }
 
