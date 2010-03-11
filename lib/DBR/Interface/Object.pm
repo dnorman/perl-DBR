@@ -108,11 +108,124 @@ sub where{
 }
 
 
-sub _buildwhere{
+sub insert {
       my $self = shift;
-      my $inwhere = shift;
-      my $tables_ref = shift;
+      my %fields = @_;
+
       my $table = $self->{table};
+      my @sets;
+      foreach my $fieldname (keys %fields){
+
+ 	    my $field = $table->get_field( $fieldname ) or return $self->_error("invalid field $fieldname");
+ 	    my $value = $field->makevalue( $fields{ $fieldname } ) or return $self->_error("failed to build value object for $fieldname");
+
+	    my $set = DBR::Query::Part::Set->new($field,$value) or return $self->_error('failed to create set object');
+	    push @sets, $set;
+      }
+
+
+      my $query = DBR::Query->new(
+				  instance   => $self->{instance},
+				  session => $self->{session},
+				  insert => {
+					     set => \@sets,
+					    },
+				  tables => $table,
+				 ) or return $self->_error('failed to create query object');
+
+      return $query->execute( void => !defined(wantarray) );
+
+      # HERE HERE HERE - consider changing behavior. Use wantarray to determine if we are being executed in a void context or not ( wantarray == undef )
+}
+
+
+#Fetch by Primary key
+sub get{
+      my $self = shift;
+      my $pkval = shift;
+      croak('get only accepts one argument. Use an arrayref to specify multiple pkeys.') if shift;
+
+      my $table = $self->{table};
+      my $pk = $table->primary_key or return $self->_error('Failed to fetch primary key');
+      scalar(@$pk) == 1 or return $self->_error('the get method can only be used with a single field pkey');
+      my $field = $pk->[0];
+
+      my $scope = DBR::Config::Scope->new(
+					  session        => $self->{session},
+					  conf_instance => $table->conf_instance
+					 ) or return $self->_error('Failed to get calling scope');
+
+      my $prefields = $scope->fields or return $self->_error('Failed to determine fields to retrieve');
+
+      my %uniq;
+      my @fields = grep { !$uniq{ $_->field_id }++ } (@$pk, @$prefields);
+
+      my $value = $field->makevalue( $pkval ) or return $self->_error("failed to build value object for ${\$field->name}");
+
+      my $outwhere = DBR::Query::Part::Compare->new( field => $field, value => $value ) or return $self->_error('failed to create compare object');
+
+      my $query = DBR::Query->new(
+				  session => $self->{session},
+				  instance => $self->{instance},
+				  select => { fields => \@fields },
+				  tables => $table,
+				  where  => $outwhere,
+				  scope  => $scope,
+				 ) or return $self->_error('failed to create Query object');
+
+      my $resultset = $query->resultset or return $self->_error('failed to get resultset');
+
+      if(ref($pkval)){
+	    return $resultset;
+      }else{
+	    return $resultset->next;
+      }
+}
+
+sub enum{
+      my $self = shift;
+      my $fieldname = shift;
+
+      my $table = $self->{table};
+      my $field = $table->get_field( $fieldname ) or return $self->_error("invalid field $fieldname");
+
+      my $trans = $field->translator or return $self->_error("Field '$fieldname' has no translator");
+      $trans->module eq 'Enum' or return $self->_error("Field '$fieldname' is not an enum");
+
+      my $opts = $trans->options or return $self->_error('Failed to get opts');
+
+      return wantarray?@{$opts}:$opts;
+}
+
+
+sub parse{
+      my $self = shift;
+      my $fieldname = shift;
+      my $value = shift;
+
+      my $table = $self->{table};
+      my $field = $table->get_field( $fieldname ) or return $self->_error("invalid field $fieldname");
+      my $trans = $field->translator or return $self->_error("Field '$fieldname' has no translator");
+
+      my $obj = $trans->parse( $value );
+      defined($obj) || return $self->_error(
+					    "Invalid value " .
+					    ( defined $value ? "'$value'" : '(undef)' ) .
+					    " for " . $field->name
+					   );
+
+      return $obj;
+}
+
+
+#### _buildWhere
+#### Pre-process where parameters. Validate relationship names and field names.
+#### Prepare them to be merged together and built into a query hierarchy.
+sub _buildwhere{
+      my $self       = shift;
+      my $inwhere    = shift;
+      my $tables_ref = shift;
+      my $table      = $self->{table}; # The primary table
 
       !(scalar(@$inwhere) % 2) or return $self->_error('Odd number of arguments in where parameters');
 
@@ -122,7 +235,7 @@ sub _buildwhere{
 
       my $aliascount = 0;
 
-      while(@$inwhere){
+      while(@$inwhere){ # Iterate over key/value pairs
 	    my $key    = shift @$inwhere;
 	    my $rawval = shift @$inwhere;
 
@@ -130,15 +243,15 @@ sub _buildwhere{
 
 	    my $outpart;
 
-	    my @parts = split(/\s*\.\s*/,$key);
+	    my @parts = split(/\s*\.\s*/,$key); # Break down each key into parts
 	    my $ref = \%grouping;
 	    my $tablect;
 
-	    my $cur_table = $table;
+	    my $cur_table = $table; # Start
 	    while ( my $part = shift @parts ){
 		  my $last = (scalar(@parts) == 0)?1:0;
 
-		  if($last){
+		  if($last){ # The last part should always be a field
 			die('Sanity error. Duplicate field ' .$part ) if $ref->{fields}->{$part};
 
 			my $field = $cur_table->get_field( $part ) or return $self->_error("invalid field $part");
@@ -151,7 +264,7 @@ sub _buildwhere{
 			#test for relation?
 			$ref = $ref->{kids}->{$part} ||= {}; # step deeper into the tree
 
-			if($ref->{been_here}){ # Dejavu - merge any common paths together
+			if( $ref->{been_here} ){ # Dejavu - merge any common paths together
 
 			      $cur_table = $ref->{table};  # next!
 
@@ -264,115 +377,95 @@ sub _reljoin{
 
 }
 
-sub insert {
-      my $self = shift;
-      my %fields = @_;
-
-      my $table = $self->{table};
-      my @sets;
-      foreach my $fieldname (keys %fields){
-
- 	    my $field = $table->get_field( $fieldname ) or return $self->_error("invalid field $fieldname");
- 	    my $value = $field->makevalue( $fields{ $fieldname } ) or return $self->_error("failed to build value object for $fieldname");
-
-	    my $set = DBR::Query::Part::Set->new($field,$value) or return $self->_error('failed to create set object');
-	    push @sets, $set;
-      }
-
-
-      my $query = DBR::Query->new(
-				  instance   => $self->{instance},
-				  session => $self->{session},
-				  insert => {
-					     set => \@sets,
-					    },
-				  tables => $table,
-				 ) or return $self->_error('failed to create query object');
-
-      return $query->execute( void => !defined(wantarray) );
-
-      # HERE HERE HERE - consider changing behavior. Use wantarray to determine if we are being executed in a void context or not ( wantarray == undef )
-}
-
-
-#Fetch by Primary key
-sub get{
-      my $self = shift;
-      my $pkval = shift;
-      croak('get only accepts one argument. Use an arrayref to specify multiple pkeys.') if shift;
-
-      my $table = $self->{table};
-      my $pk = $table->primary_key or return $self->_error('Failed to fetch primary key');
-      scalar(@$pk) == 1 or return $self->_error('the get method can only be used with a single field pkey');
-      my $field = $pk->[0];
-
-      my $scope = DBR::Config::Scope->new(
-					  session        => $self->{session},
-					  conf_instance => $table->conf_instance
-					 ) or return $self->_error('Failed to get calling scope');
-
-      my $prefields = $scope->fields or return $self->_error('Failed to determine fields to retrieve');
-
-      my %uniq;
-      my @fields = grep { !$uniq{ $_->field_id }++ } (@$pk, @$prefields);
-
-      my $value = $field->makevalue( $pkval ) or return $self->_error("failed to build value object for ${\$field->name}");
-
-      my $outwhere = DBR::Query::Part::Compare->new( field => $field, value => $value ) or return $self->_error('failed to create compare object');
-
-      my $query = DBR::Query->new(
-				  session => $self->{session},
-				  instance => $self->{instance},
-				  select => { fields => \@fields },
-				  tables => $table,
-				  where  => $outwhere,
-				  scope  => $scope,
-				 ) or return $self->_error('failed to create Query object');
-
-      my $resultset = $query->resultset or return $self->_error('failed to get resultset');
-
-      if(ref($pkval)){
-	    return $resultset;
-      }else{
-	    return $resultset->next;
-      }
-}
 
 1;
 
+__END__
+
+=pod
+
+=head1 NAME
+
+DBR::Interface::Object
+An object representing a table about to be queried. This object is the entry point for executing queries against a given table
+
+=head1 SYNOPSIS
+
+ $dbrh->tableA->all();
+ $dbrh->tableA->get( $primary_key );
+ $dbrh->tableA->where( field => 'value' );
+ $dbrh->tableA->where( 'relationshipB.field' => 'value' );
+
+=head1 Methods
 
 
-sub enum{
-      my $self = shift;
-      my $fieldname = shift;
+=head2 B<new>
 
-      my $table = $self->{table};
-      my $field = $table->get_field( $fieldname ) or return $self->_error("invalid field $fieldname");
+Constructor for DBR::Interface::Object - 
+Called by DBR::Handle->tablename (autoloaded)
 
-      my $trans = $field->translator or return $self->_error("Field '$fieldname' has no translator");
-      $trans->module eq 'Enum' or return $self->_error("Field '$fieldname' is not an enum");
+=head2 B<where>
 
-      my $opts = $trans->options or return $self->_error('Failed to get opts');
+Initiates a database query based on provided constraints.
 
-      return wantarray?@{$opts}:$opts;
-}
+Arguments: Key value pairs of relationships/fields and values.
+
+Returns: DBR::Query::ResultSet object containing resultant query
+
+ # Simple use case:
+ $dbrh->tableA->where( fieldname => $somevalue );
+
+ # Constrain by related data:
+ $dbrh->tableA->where( 'relationshipB.fieldX' => $somevalue );
+
+ # Constrain by more related data:
+ $dbrh->tableA->where(
+                      'relB.fieldX' => 'value',
+                      'relB.fieldY' => $somevalue, # same relationship twice, different fields - do the right thing
+                      'relC.relD.relE.fieldZ' => $far_removed_value, # ...ad infinitum
+                     );
 
 
-sub parse{
-      my $self = shift;
-      my $fieldname = shift;
-      my $value = shift;
+By default, equality comparisons are assumed. ( field = 'value')
+For other types of comparisons:
 
-      my $table = $self->{table};
-      my $field = $table->get_field( $fieldname ) or return $self->_error("invalid field $fieldname");
-      my $trans = $field->translator or return $self->_error("Field '$fieldname' has no translator");
+ use DBR::Util::Operator; # Imports operators into your scope
+ $dbrh->tableA->where( fieldname => NOT 'value' );
+ $dbrh->tableA->where( fieldname => GT 123 );
+ $dbrh->tableA->where( fieldname => LT 123 );
+ $dbrh->tableA->where( fieldname => LIKE 'value%' );
+ # And so on
 
-      my $obj = $trans->parse( $value );
-      defined($obj) || return $self->_error(
-					    "Invalid value " .
-					    ( defined $value ? "'$value'" : '(undef)' ) .
-					    " for " . $field->name
-					   );
+For more details, See: L<DBR::Util::Operator>
 
-      return $obj;
-}
+
+
+=head2 B<get>
+
+Initiates a database queryFetch all rows from a given table.
+
+Arguments: single scalar value, or one arrayref of primary key ids.
+
+ my $single_record = $dbrh->tablename->get( 123 ); # pkey 123
+ my $resultset_obj = $dbrh->tablename->get( [ 123, 456 ] );
+
+If given arrayref, Returns a single L<DBR::Query::ResultSet> object containing resultant query
+
+If given single value, Returns a single L<DBR::Query::Record> object  (dynamically created)
+
+
+=head2 B<all>
+
+Initiates a database query with NO constraints. Fetch all rows from a given table.
+
+Arguments: None
+
+Returns: L<DBR::Query::ResultSet> object containing resultant query
+
+=head2 B<insert>
+
+=head2 B<enum>
+
+=head2 B<parse>
+
+=cut

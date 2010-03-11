@@ -73,28 +73,7 @@ sub update{
 #delete
 #count
 
-
-sub where{
-      my $self = shift;
-      exists( $_[0] )  or return $self->{where} || undef;
-      my $part = shift;
-
-      !$part || ref($part) =~ /^DBR::Query::Part::(And|Or|Compare|Subquery|Join)$/ ||
-	croak('param must be an AND/OR/COMPARE/SUBQUERY/JOIN object');
-
-      $self->{where} = $part || undef;
-}
-
-sub scope { $_[0]->{scope} }
-
-sub check_table{
-      my $self  = shift;
-      my $alias = shift;
-
-      return $self->{aliasmap}->{$alias} ? 1 : 0;
-}
-
-sub _tables{
+sub tables{
       my $self   = shift;
       my $tables = shift;
 
@@ -120,21 +99,25 @@ sub _tables{
 }
 
 
-# sub _insert{
-#       my $self = shift;
-#       my $params = shift;
+sub where{
+      my $self = shift;
+      exists( $_[0] )  or return $self->{where} || undef;
+      my $part = shift;
 
-#       return $self->_error('No set parameter specified') unless $params->{set};
-#       my $sets = $params->{set};
-#       $sets = [$sets] unless ref($sets) eq 'ARRAY';
+      !$part || ref($part) =~ /^DBR::Query::Part::(And|Or|Compare|Subquery|Join)$/ ||
+	croak('param must be an AND/OR/COMPARE/SUBQUERY/JOIN object');
 
-#       my $conn = $self->{instance}->connect('conn') or return $self->_error('failed to connect');
+      $self->{where} = $part || undef;
+}
 
+sub scope { $_[0]->{scope} }
 
+sub check_table{
+      my $self  = shift;
+      my $alias = shift;
 
-#   return 1;
-
-# }
+      return $self->{aliasmap}->{$alias} ? 1 : 0;
+}
 
 sub sql{
       my $self = shift;
