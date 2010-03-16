@@ -6,23 +6,19 @@
 package DBR::Query;
 
 use strict;
+use Carp;
 use base 'DBR::Common';
 
 use DBR::Query::ResultSet::DB;
 
 sub new {
-      my( $package ) = shift;
-      my %params = @_;
+      my( $package, %params ) = @_;
 
-      my $self = {
-		  instance => $params{instance},
-		  session  => $params{session},
-		  scope    => $params{scope},
-		 };
-
-      bless( $self, $package );
-
-      $self->{instance} || croak "instance is required";
+      my $self = bless({
+			instance => $params{instance} || croak "instance is required",
+			session  => $params{session}  || croak "session is required",
+			scope    => $params{scope}    || croak "scope is required",
+		       }, $package );
 
       $self->{flags} = {
 			lock    => $params{lock} ? 1:0,
@@ -33,13 +29,9 @@ sub new {
 	    $self->{limit} = $params{limit};
       }
 
-      $self->select ( $params{select} );
-      $self->insert ( $params{insert} );
-      $self->update ( $params{update} );
-      $self->delete ( $params{delete} ? 1 : 0 );
-      $self->count  ( $params{count}  ? 1 : 0 );
-      $self->tables ( $params{tables} );
-      $self->where  ( $params{where}  );
+      for ('select insert update delete tables where'){
+	    $self->$_($params{$_}) if exists $params{$_};
+      }
 
       return( $self );
 }
@@ -47,19 +39,23 @@ sub new {
 sub select{
   my $self = shift;
   exists( $_[0] ) or return $self->{select} || undef;
-  my $part = shift;
+  my $part = shift || undef;
 
   !$part || ref($part) eq 'DBR::Query::Part::Select' || croak "Select must be an ::Part::Select object";
-  $self->{select} = $part || undef;
+  $self->{select} = $part;
+
+  @$self{qw'select insert update delete'} = ($part,undef,undef,undef);
 }
 
 sub insert{
   my $self = shift;
   exists( $_[0] ) or return $self->{insert} || undef;
-  my $part = shift;
+  my $part = shift || undef;
 
   !$part || ref($part) eq 'DBR::Query::Part::Insert' || croak "Insert must be an ::Part::Insert object";
-  $self->{insert} = $part || undef;
+  $self->{insert} = $part;
+
+  @$self{qw'select insert update delete'} = (undef,$part,undef,undef);
 }
 
 sub update{
@@ -69,30 +65,37 @@ sub update{
 
   !$part || ref($part) eq 'DBR::Query::Part::Update' || croak "Update must be a ::Part::Update object";
   $self->{update} = $part || undef;
+
+  @$self{qw'select insert update delete'} = (undef,undef,$part,undef);
 }
-#delete
-#count
+
+sub delete{
+  my $self = shift;
+  exists( $_[0] ) or return $self->{delete} || undef;
+  my $bool = shift ? 1 : 0;
+
+  @$self{qw'select insert update delete'} = (undef,undef,undef,$bool);
+}
+
 
 sub tables{
       my $self   = shift;
       my $tables = shift;
 
       $tables = [$tables] unless ref($tables) eq 'ARRAY';
-      return $self->_error('At least one table must be specified') unless @$tables;
+      scalar(@$tables) || croak "must provide at least one table";
 
       my @tparts;
       my %aliasmap;
       foreach my $table (@$tables){
-	    return $self->_error('must specify table as a DBR::Config::Table object') unless ref($table) =~ /^DBR::Config::Table/; # Could also be ::Anon
+	    croak('must specify table as a DBR::Config::Table object') unless ref($table) =~ /^DBR::Config::Table/; # Could also be ::Anon
 
 	    my $name  = $table->name or return $self->_error('failed to get table name');
 	    my $alias = $table->alias;
 	    $aliasmap{$alias} = $name if $alias;
-
-	    push @tparts, $table->sql;
       }
 
-      $self->{tparts}   = \@tparts;
+      $self->{tables}   = [@$tables]; # shallow clone
       $self->{aliasmap} = \%aliasmap;
 
       return 1;
@@ -102,12 +105,12 @@ sub tables{
 sub where{
       my $self = shift;
       exists( $_[0] )  or return $self->{where} || undef;
-      my $part = shift;
+      my $part = shift || undef;
 
       !$part || ref($part) =~ /^DBR::Query::Part::(And|Or|Compare|Subquery|Join)$/ ||
 	croak('param must be an AND/OR/COMPARE/SUBQUERY/JOIN object');
 
-      $self->{where} = $part || undef;
+      $self->{where} = $part;
 }
 
 sub scope { $_[0]->{scope} }
@@ -178,23 +181,6 @@ sub prepare {
       return $sth;
 
 }
-
-
-sub resultset{
-      my $self = shift;
-
-      return $self->_error('can only call resultset on a select') unless $self->{type} eq 'select';
-
-      my $resultset = DBR::Query::ResultSet::DB->new(
-						     session   => $self->{session},
-						     query    => $self,
-						     #instance => $self->{instance},
-						    ) or return $self->_error('Failed to create resultset');
-
-      return $resultset;
-
-}
-
 sub is_count{
       my $self = shift;
       return $self->{flags}->{is_count} || 0,

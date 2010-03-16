@@ -92,17 +92,18 @@ sub where{
       }
 
       my $query = DBR::Query->new(
-				  session => $self->{session},
-				  instance   => $self->{instance},
-				  select => {
-					     fields => \@fields
-					    },
+				  session  => $self->{session},
+				  instance => $self->{instance},
+				  scope    => $scope,
+				  select => \@fields
 				  tables => \@tables,
 				  where  => $where,
-				  scope  => $scope,
 				 ) or return $self->_error('failed to create Query object');
 
-      my $resultset = $query->resultset or return $self->_error('failed to get resultset');
+      my $resultset = DBR::Query::ResultSet::DB->new(
+						     session   => $self->{session},
+						     query    => $query,
+						    ) or return $self->_error('Failed to create resultset');
 
       return $resultset;
 }
