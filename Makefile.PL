@@ -22,6 +22,7 @@ WriteMakefile(
 				  'Clone'              => 0,
 				  'Curses::UI'         => 0,
 				  'Data::Dumper'       => 0,
+				  'DateTime'           => 0,
 				  'DateTime::TimeZone' => 0,
 				  $has_mysql ? (# If we have mysql, it needs to be a good version
 				    'DBD::mysql' => '4.002',
