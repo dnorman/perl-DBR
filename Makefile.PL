@@ -37,7 +37,7 @@ WriteMakefile(
 				  'Scalar::Util'       => 0,
 				  'Switch'	       => 0,
 				  'Symbol'             => 0,
-				  'Test::More'         => 0,
+				  'Test::More'         => '0.87',
 				  'Time::HiRes'        => 0,
 				  'Time::ParseDate'    => 0,
 				  'File::Path'         => '2.07',
