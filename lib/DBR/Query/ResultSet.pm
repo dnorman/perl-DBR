@@ -162,13 +162,15 @@ sub _mem_iterator{
 sub _makerecord{
       my $self = shift;
 
-      $self->{record} ||= $self->{query}->makerecord(
-						     rowcache => $self->{rowcache} # Consider passing rowcache only to the record buddy object
-						    ) or return $self->_error('failed to setup record');
+      $self->{record} = DBR::Query::RecMaker->new(
+						  session  => $self->{session},
+						  query    => $self->{query},
+						  rowcache => $self->{rowcache},
+						 ) or confess ('failed to create record class');
 
       $self->{buddy} ||= $self->{record}->buddy(
 						rowcache => $self->{rowcache}
-					       ) or return $self->_error('Failed to make buddy object');
+					       ) or confess ('Failed to make buddy object');
 
       return 1;
 }

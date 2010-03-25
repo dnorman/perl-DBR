@@ -10,6 +10,7 @@ use base 'DBR::Common';
 use DBR::Query::Part;
 use DBR::Config::Scope;
 use DBR::Query::ResultSet::Empty;
+use DBR::Query::Part;
 use Carp;
 
 sub new {
@@ -46,16 +47,14 @@ sub all{
       my @fields = grep { !$uniq{ $_->field_id }++ } (@$pk, @$prefields);
 
       my $query = DBR::Query->new(
-				  session => $self->{session},
-				  instance   => $self->{instance},
-				  select => {
-					     fields => \@fields
-					    },
-				  tables => $table,
-				  scope  => $scope,
+				  session  => $self->{session},
+				  instance => $self->{instance},
+				  scope    => $scope,
+				  select   => DBR::Query::Part::Select->new( @fields ),
+				  tables   => $table,
 				 ) or return $self->_error('failed to create Query object');
 
-      my $resultset = $query->resultset or return $self->_error('failed to get resultset');
+      my $resultset = $query->resultset or croak('failed to create resultset');
 
       return $resultset;
 }
@@ -90,20 +89,18 @@ sub where{
       if($alias){
 	    map { $_->table_alias($alias) } @fields;
       }
+      my $select = DBR::Query::Part::Select->new( @fields );
 
       my $query = DBR::Query->new(
 				  session  => $self->{session},
 				  instance => $self->{instance},
 				  scope    => $scope,
-				  select => \@fields
-				  tables => \@tables,
-				  where  => $where,
-				 ) or return $self->_error('failed to create Query object');
+				  select   => $select,
+				  tables   => \@tables,
+				  where    => $where,
+				 ) or croak('failed to create Query object');
 
-      my $resultset = DBR::Query::ResultSet::DB->new(
-						     session   => $self->{session},
-						     query    => $query,
-						    ) or return $self->_error('Failed to create resultset');
+      my $resultset = $query->resultset or croak('failed to create resultset');
 
       return $resultset;
 }
@@ -174,7 +171,7 @@ sub get{
 				  scope  => $scope,
 				 ) or return $self->_error('failed to create Query object');
 
-      my $resultset = $query->resultset or return $self->_error('failed to get resultset');
+      my $resultset = $query->resultset or croak('failed to create resultset');
 
       if(ref($pkval)){
 	    return $resultset;

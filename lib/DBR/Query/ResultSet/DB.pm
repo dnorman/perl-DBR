@@ -11,14 +11,14 @@ sub new {
       my( $package ) = shift;
       my %params = @_;
       my $self = {
-		  session   => $params{session},
+		  session  => $params{session},
 		  query    => $params{query},
 		 };
 
       bless( $self, $package );
 
       return $self->_error('query object must be specified' )   unless $self->{query};
-      return $self->_error('session object must be specified')   unless $self->{session};
+      return $self->_error('session object must be specified')  unless $self->{session};
 
       #prime the pump
       $self->{next} = \&_first;
@@ -129,7 +129,7 @@ sub _execute{
 	    return $self->_error('You must call reset before executing');
       }
 
-      $self->{sth} ||= $self->{query}->prepare or croak "Failed to prepare query"; # only prepare once
+      $self->{sth} ||= $self->{query}->prepare or confess "Failed to prepare query"; # only prepare once
 
       my $rv = $self->{sth}->execute();
       return $self->_error('failed to execute statement (' . $self->{sth}->errstr. ')') unless defined($rv);

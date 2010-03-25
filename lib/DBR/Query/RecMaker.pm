@@ -18,7 +18,6 @@ sub new {
       my %params = @_;
       my $self = {
 		  session  => $params{session},
-		  instance => $params{instance},
 		  query    => $params{query},
 		  rowcache => $params{rowcache},
 		 };
@@ -26,7 +25,6 @@ sub new {
       bless( $self, $package ); # BS object
 
       $self->{session}   or return $self->_error('session is required');
-      $self->{instance} or return $self->_error('instance object must be specified');
       $self->{query}    or return $self->_error('query is required');
       $self->{rowcache} or return $self->_error('rowcache is required');
 
@@ -122,9 +120,11 @@ sub _prep{
       }
       $self->{name} = join('/',@tablenames);
 
+      my $instance = $self->{query}->instance;
+
       my $helper = DBR::Query::RecHelper->new(
-					      session   => $self->{session},
-					      instance => $self->{instance},
+					      session  => $self->{session},
+					      instance => $instance,
 					      tablemap => \%tablemap,     # V
 					      pkmap    => \%pkmap,        # V
 					      flookup  => \%flookup,      # V
@@ -136,7 +136,7 @@ sub _prep{
       my $mode = 'rw';
       foreach my $field (@fields){
 	    my $mymode = $mode;
-	    $mymode = 'ro' if $field->is_readonly or $self->{instance}->is_readonly;
+	    $mymode = 'ro' if $field->is_readonly or $instance->is_readonly;
 	    $self->_mk_accessor(
 				mode  => $mymode,
 				field => $field->clone(with_index => 1), # Make a clean copy of the field object in case this one has an alias

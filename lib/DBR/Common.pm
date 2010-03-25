@@ -87,6 +87,12 @@ sub _logDebug3  {
       return 1
 }
 
+sub _warn       {
+      my $s = shift->_session or return 1;
+      $s->_log( shift, 'WARN'  );
+      return 1
+}
+
 sub _error     {
       my $s = shift->_session;
       if($s){

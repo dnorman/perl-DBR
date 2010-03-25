@@ -13,6 +13,9 @@ use DBR::Query::Part::Compare;
 use DBR::Query::Part::Join;
 use DBR::Query::Part::Set;
 use DBR::Query::Part::Subquery;
+use DBR::Query::Part::Select;
+use DBR::Query::Part::Insert;
+use DBR::Query::Part::Update;
 use Carp;
 
 sub validate{

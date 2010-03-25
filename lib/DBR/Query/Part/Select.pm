@@ -4,16 +4,17 @@
 # published by the Free Software Foundation.
 
 ###########################################
-package DBR::Query::Part::Insert;
+package DBR::Query::Part::Select;
 
 use strict;
 use base 'DBR::Query::Part';
+use Carp;
 
 sub new{
       my( $pkg ) = shift;
       scalar(@_) || croak('must provide at least one field');
 
-      $lastidx = -1;
+      my $lastidx = -1;
       for (@_){
 	    ref($_) =~ /^DBR::Config::Field/ || croak('must specify field as a DBR::Config::Field object'); # Could also be ::Anon
 	    $_->index( ++$lastidx );
@@ -36,7 +37,7 @@ sub lastidx  { $_[0][1] }
 
 sub sql {
     my ($self, $conn) = @_;
-    return 'SELECT ' . join (', ', map { $_->sql( $conn ) } $self->children );
+    return join (', ', map { $_->sql( $conn ) } $self->children );
 }
 
 1;

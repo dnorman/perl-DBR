@@ -8,6 +8,7 @@ package DBR::Query::Part::Update;
 
 use strict;
 use base 'DBR::Query::Part';
+use Carp;
 
 sub new{
       my( $pkg ) = shift;

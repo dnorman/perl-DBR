@@ -10,26 +10,21 @@ use Carp;
 use base 'DBR::Common';
 
 use DBR::Query::ResultSet::DB;
+my $idx = 0;
+use constant ({
+	       map {'v_' . $_ => $idx++}
+	       qw(instance session scope select insert update delete tables where limit lock aliasmap quiet_error)
+	      });
 
 sub new {
       my( $package, %params ) = @_;
 
-      my $self = bless({
-			instance => $params{instance} || croak "instance is required",
-			session  => $params{session}  || croak "session is required",
-			scope    => $params{scope}    || croak "scope is required",
-		       }, $package );
+      my $self = bless([ $params{instance}, $params{session}, $params{scope} ], $package );
 
-      $self->{flags} = {
-			lock    => $params{lock} ? 1:0,
-		       };
+      $self->[v_instance] || croak "instance is required";
+      $self->[v_session]  || croak "session is required";
 
-      if ($params{limit}){
- 	    return $self->_error('invalid limit') unless $params{limit} =~ /^\d+$/;
-	    $self->{limit} = $params{limit};
-      }
-
-      for ('select insert update delete tables where'){
+      for (qw'select insert update delete tables where limit lock quiet_error'){
 	    $self->$_($params{$_}) if exists $params{$_};
       }
 
@@ -38,43 +33,43 @@ sub new {
 
 sub select{
   my $self = shift;
-  exists( $_[0] ) or return $self->{select} || undef;
+  exists( $_[0] ) or return $self->[v_select] || undef;
   my $part = shift || undef;
 
-  !$part || ref($part) eq 'DBR::Query::Part::Select' || croak "Select must be an ::Part::Select object";
-  $self->{select} = $part;
+  !$part || ref($part) eq 'DBR::Query::Part::Select' || croak "Select must be a ::Part::Select object (" . ref($part) . ')';
+  $self->[v_select] = $part;
 
-  @$self{qw'select insert update delete'} = ($part,undef,undef,undef);
+  @$self[v_select, v_insert, v_update, v_delete] = ($part,undef,undef,undef);
 }
 
 sub insert{
   my $self = shift;
-  exists( $_[0] ) or return $self->{insert} || undef;
+  exists( $_[0] ) or return $self->[v_insert] || undef;
   my $part = shift || undef;
 
   !$part || ref($part) eq 'DBR::Query::Part::Insert' || croak "Insert must be an ::Part::Insert object";
-  $self->{insert} = $part;
+  $self->[v_insert] = $part;
 
-  @$self{qw'select insert update delete'} = (undef,$part,undef,undef);
+  @$self[v_select, v_insert, v_update, v_delete] = (undef,$part,undef,undef);
 }
 
 sub update{
   my $self = shift;
-  exists( $_[0] )  or return $self->{update} || undef;
+  exists( $_[0] )  or return $self->[v_update] || undef;
   my $part = shift;
 
   !$part || ref($part) eq 'DBR::Query::Part::Update' || croak "Update must be a ::Part::Update object";
-  $self->{update} = $part || undef;
+  $self->[v_update] = $part || undef;
 
-  @$self{qw'select insert update delete'} = (undef,undef,$part,undef);
+  @$self[v_select, v_insert, v_update, v_delete] = (undef,undef,$part,undef);
 }
 
 sub delete{
   my $self = shift;
-  exists( $_[0] ) or return $self->{delete} || undef;
-  my $bool = shift ? 1 : 0;
+  exists( $_[0] ) or return $self->[v_delete] || undef;
+  my $bool = shift() ? 1 : 0;
 
-  @$self{qw'select insert update delete'} = (undef,undef,undef,$bool);
+  @$self[v_select, v_insert, v_update, v_delete] = (undef,undef,undef,$bool);
 }
 
 
@@ -95,81 +90,135 @@ sub tables{
 	    $aliasmap{$alias} = $name if $alias;
       }
 
-      $self->{tables}   = [@$tables]; # shallow clone
-      $self->{aliasmap} = \%aliasmap;
+      $self->[v_tables]   = [@$tables]; # shallow clone
+      $self->[v_aliasmap] = \%aliasmap;
 
-      return 1;
+      return $self;
 }
 
 
 sub where{
       my $self = shift;
-      exists( $_[0] )  or return $self->{where} || undef;
+      exists( $_[0] )  or return $self->[v_where] || undef;
       my $part = shift || undef;
 
       !$part || ref($part) =~ /^DBR::Query::Part::(And|Or|Compare|Subquery|Join)$/ ||
 	croak('param must be an AND/OR/COMPARE/SUBQUERY/JOIN object');
 
-      $self->{where} = $part;
+      $self->[v_where] = $part;
+
+      return $self;
 }
 
-sub scope { $_[0]->{scope} }
+sub limit{
+  my $self = shift;
+  exists( $_[0] ) or return $self->[v_limit] || undef;
+  $self->[v_limit] = shift || undef;
+
+  return $self;
+}
+
+sub lock{
+  my $self = shift;
+  exists( $_[0] ) or return $self->[v_lock] || undef;
+  $self->[v_lock] = shift() ? 1 : 0;
+
+  return $self;
+}
+
+sub quiet_error{
+  my $self = shift;
+  exists( $_[0] ) or return $self->[v_quiet_error] || undef;
+  $self->[v_quiet_error] = shift() ? 1 : 0;
+
+  return $self;
+}
+
+sub clone{
+      my $self = shift;
+      return bless([@$self],$self);
+}
+
+sub instance { $_[0][v_instance] }
+sub _session { $_[0][v_session] }
+sub session  { $_[0][v_session] }
+sub scope    { $_[0][v_scope] }
+
+sub can_be_subquery {
+      my $self = shift;
+      my $select = $self->[v_select] || return 0;   # must be a select
+      return scalar($select->fields) == 1 || 0; # and have exactly one field
+}
+
+sub validate{
+      my $self = shift;
+
+      my @parts = grep { defined } @$self{qw'select insert update delete'};
+      unless (scalar(@parts) == 1){
+	    $self->_error('Must specify one of: select, insert, update or delete');
+	    return 0;
+      }
+
+      return 0 unless $parts[0]->validate( $self );
+
+      if($self->[v_where]){
+	    return 0 unless $self->[v_where]->validate( $self );
+      }
+
+      return 1;
+}
 
 sub check_table{
       my $self  = shift;
       my $alias = shift;
 
-      return $self->{aliasmap}->{$alias} ? 1 : 0;
+      return $self->[v_aliasmap]->{$alias} ? 1 : 0;
 }
 
+sub resultset{
+      my $self = shift;
+
+      return DBR::Query::ResultSet::DB->new(
+					    session => $self->session,
+					    query   => $self,
+					   ) or croak('Failed to create resultset');
+}
+
+# do not run this until the last possible moment, and then only once
 sub sql{
       my $self = shift;
 
-      return $self->{sql} if exists($self->{sql});
-
+      my $conn   = $self->instance->connect('conn') or return $self->_error('failed to connect');
       my $sql;
+      my $tables = join(',', map {$_->sql} @{$self->[v_tables]} );
 
-      my $tables = join(',',@{$self->{tparts}});
-      my $type = $self->{type};
+      if (    $self->[v_select] ){
+	    $sql = "SELECT " . $self->[v_select]->sql($conn) . " FROM $tables";
 
-      if ($self->{select}){
-	    $sql .= "SELECT " . $self->{select}->sql . "FROM $tables";
-	    $sql .= " WHERE " . $self->{where} ->sql if $self->{where};
-      }elsif($self->{insert}){
-	    $sql .= "INSERT INTO $tables " . $self->{main_sql};
-      }elsif($type eq 'update'){
-	    $sql .= "UPDATE $tables SET $self->{main_sql} WHERE $self->{where_sql}";
-      }elsif($type eq 'delete'){
-	    $sql .= "DELETE FROM $tables WHERE $self->{where_sql}";
+      }elsif( $self->[v_insert] ){
+	    $sql = "INSERT INTO $tables " . $self->[v_insert]->sql($conn);
+
+      }elsif( $self->[v_update] ){
+	    $sql = "UPDATE $tables SET "  . $self->[v_update]->sql($conn);
+
+      }elsif( $self->[v_delete] ){
+	    $sql = "DELETE FROM $tables";
+
       }
 
-      $sql .= ' FOR UPDATE'           if $self->{flags}->{lock};
-      $sql .= " LIMIT $self->{limit}" if $self->{limit};
-
-      $self->{sql} = $sql;
+      $sql .= ' WHERE ' . $self->[v_where]->sql($conn) if $self->[v_where];
+      $sql .= ' FOR UPDATE'                            if $self->[v_lock];
+      $sql .= ' LIMIT ' . $self->[v_limit]             if $self->[v_limit];
 
       return $sql;
 }
 
-sub can_be_subquery {
-      my $self = shift;
-      my $select = $self->{select} || return 0;   # must be a select
-      return scalar($select->fields) == 1 || 0; # and have exactly one field
-}
-
-sub validate{
-      #$part->validate($self) or return $self->_error('Where clause validation failed');
-}
 sub prepare {
       my $self = shift;
 
-      #       if($params->{quiet_error}){
-      # 	    $self->{quiet_error} = 1;
-      #       }
+      croak('can only call prepare on a select') unless $self->[v_select];
 
-      return $self->_error('can only call resultset on a select') unless $self->{type} eq 'select';
-
-      my $conn   = $self->{instance}->connect('conn') or return $self->_error('failed to connect');
+      my $conn   = $self->instance->connect('conn') or return $self->_error('failed to connect');
 
       my $sql = $self->sql;
 
@@ -181,26 +230,23 @@ sub prepare {
       return $sth;
 
 }
-sub is_count{
-      my $self = shift;
-      return $self->{flags}->{is_count} || 0,
-}
 
 sub execute{
       my $self = shift;
       my %params = @_;
 
-      $self->_logDebug2( $self->sql );
+      my $sql = $self->sql;
+      $self->_logDebug2( $sql );
 
-      my $conn   = $self->{instance}->connect('conn') or return $self->_error('failed to connect');
+      my $conn   = $self->instance->connect('conn') or return $self->_error('failed to connect');
 
-      $conn->quiet_next_error if $self->{quiet_error};
+      $conn->quiet_next_error if $self->quiet_error;
 
-      if($self->{type} eq 'insert'){
+      if($self->[v_insert]){
 
 	    $conn->prepSequence() or return $self->_error('Failed to prepare sequence');
 
-	    my $rows = $conn->do($self->sql) or return $self->_error("Insert failed");
+	    my $rows = $conn->do( $sql ) or return $self->_error("Insert failed");
 
 	    # Tiny optimization: if we are being executed in a void context, then we
 	    # don't care about the sequence value. save the round trip and reduce latency.
@@ -209,45 +255,14 @@ sub execute{
 	    my ($sequenceval) = $conn->getSequenceValue();
 	    return $sequenceval;
 
-      }elsif($self->{type} eq 'update'){
+      }elsif($self->[v_update] || $self->[v_delete] ){
+	    return $conn->do( $sql ) || 0;
 
-	    my $rows = $conn->do($self->sql);
-
-	    return $rows || 0;
-
-      }elsif($self->{type} eq 'delete'){
-
-	    my $rows = $conn->do($self->sql);
-
-	    return $rows || 0;
-
-      }elsif($self->{type} eq 'select'){
+      }elsif($self->[v_select]){
 	    return $self->_error('cannot call execute on a select');
       }
 
-      return $self->_error('unknown query type')
+      return $self->_error('invalid query type')
 }
-
-sub makerecord{
-      my $self = shift;
-      my %params = @_;
-      return $self->_error('rowcache is required') unless $params{rowcache};
-
-      $self->_stopwatch();
-
-      my $handle = DBR::Query::RecMaker->new(
-					     instance => $self->{instance},
-					     session  => $self->{session},
-					     query    => $self,
-					     rowcache => $params{rowcache},
-					    ) or return $self->_error('failed to create record class');
-
-      # need to keep this in scope, because it removes the dynamic class when DESTROY is called
-      $self->_stopwatch('recmaker');
-
-      return $handle;
-
-}
-
 
 1;

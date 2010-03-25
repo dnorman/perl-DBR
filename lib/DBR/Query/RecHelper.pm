@@ -101,7 +101,7 @@ sub _set{
 				  instance => $self->{instance},
 				  tables => $table,
 				  where  => $outwhere,
-				  update => { set => $sets }
+				  update => DBR::Query::Part::Update->new( @$sets )
 				 ) or return $self->_error('failed to create Query object');
 
       my $rv = $query->execute() or return $self->_error('failed to execute');
@@ -164,7 +164,7 @@ sub getfield{
 				   instance => $self->{instance},
 				   tables   => $table,
 				   where    => $outwhere,
-				   select   => { fields => [ $newfield ] } # use the new cloned field
+				   select   => DBR::Query::Part::Select->new( $newfield ) # use the new cloned field
 				  ) or return $self->_error('failed to create Query object');
 
        my $sth = $query->prepare or return $self->_error('failed to execute');
@@ -248,7 +248,7 @@ sub getrelation{
 				  instance => $self->{instance},
 				  tables   => $maptable,
 				  where    => $outwhere,
-				  select   => { fields => \@fields },
+				  select   => DBR::Query::Part::Select->new( @fields ),
 				  scope    => $scope,
 				 ) or return $self->_error('failed to create Query object');
 
