@@ -42,7 +42,7 @@ sub class { $_[0]->{recordclass} }
 
 
 # This is just a stub to return some sort of buddy object, with the
-# idea of keeping the recmaker object in scope, and possibley also
+# idea of keeping the recmaker object in scope, and possibly also
 # for providing rowcache
 # This object will become element index 1 (second element) in EVERY record object returned by resultset
 sub buddy {
