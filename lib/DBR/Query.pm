@@ -13,7 +13,7 @@ use DBR::Query::ResultSet::DB;
 my $idx = 0;
 use constant ({
 	       map {'v_' . $_ => $idx++}
-	       qw(instance session scope select insert update delete tables where limit lock aliasmap quiet_error)
+	       qw(instance session scope action tables where limit lock aliasmap quiet_error)
 	      });
 
 sub new {
@@ -24,52 +24,21 @@ sub new {
       $self->[v_instance] || croak "instance is required";
       $self->[v_session]  || croak "session is required";
 
-      for (qw'select insert update delete tables where limit lock quiet_error'){
+      for (qw'action tables where limit lock quiet_error'){
 	    $self->$_($params{$_}) if exists $params{$_};
       }
 
       return( $self );
 }
 
-sub select{
+sub action{
   my $self = shift;
-  exists( $_[0] ) or return $self->[v_select] || undef;
-  my $part = shift || undef;
+  exists( $_[0] ) or return $self->[v_action] || undef;
+  my $action = shift;
 
-  !$part || ref($part) eq 'DBR::Query::Part::Select' || croak "Select must be a ::Part::Select object (" . ref($part) . ')';
-  $self->[v_select] = $part;
+  ref($action) =~ /^DBR::Query::Action::/ || croak "action must be a DBR::Query::Action:: object (" . ref($action) . ')';
+  $self->[v_action] = $action;
 
-  @$self[v_select, v_insert, v_update, v_delete] = ($part,undef,undef,undef);
-}
-
-sub insert{
-  my $self = shift;
-  exists( $_[0] ) or return $self->[v_insert] || undef;
-  my $part = shift || undef;
-
-  !$part || ref($part) eq 'DBR::Query::Part::Insert' || croak "Insert must be an ::Part::Insert object";
-  $self->[v_insert] = $part;
-
-  @$self[v_select, v_insert, v_update, v_delete] = (undef,$part,undef,undef);
-}
-
-sub update{
-  my $self = shift;
-  exists( $_[0] )  or return $self->[v_update] || undef;
-  my $part = shift;
-
-  !$part || ref($part) eq 'DBR::Query::Part::Update' || croak "Update must be a ::Part::Update object";
-  $self->[v_update] = $part || undef;
-
-  @$self[v_select, v_insert, v_update, v_delete] = (undef,undef,$part,undef);
-}
-
-sub delete{
-  my $self = shift;
-  exists( $_[0] ) or return $self->[v_delete] || undef;
-  my $bool = shift() ? 1 : 0;
-
-  @$self[v_select, v_insert, v_update, v_delete] = (undef,undef,undef,$bool);
 }
 
 
