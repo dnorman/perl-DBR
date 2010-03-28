@@ -1,11 +1,11 @@
-package DBR::Query::ResultSet;
+package DBR::ResultSet;
 
 use strict;
 use base 'DBR::Common';
 
-use DBR::Query::ResultSet::DB;
-use DBR::Query::ResultSet::Mem;
-use DBR::Query::Dummy;
+use DBR::ResultSet::DB;
+use DBR::ResultSet::Mem;
+use DBR::Misc::Dummy;
 
 use Carp;
 
@@ -38,13 +38,13 @@ sub split{
       eval $code;
 
       foreach my $key (keys %groupby){
-	    $groupby{$key} = DBR::Query::ResultSet::Mem->new(
-							     session  => $self->{session},
-							     rows    => $groupby{$key},
-							     record  => $self->{record},
-							     buddy   => $self->{buddy}, # use the same record buddy object
-							     query   => $self->{query},
-							    ) or return $self->_error('failed to create resultset lite object');
+	    $groupby{$key} = DBR::ResultSet::Mem->new(
+						      session  => $self->{session},
+						      rows    => $groupby{$key},
+						      record  => $self->{record},
+						      buddy   => $self->{buddy}, # use the same record buddy object
+						      query   => $self->{query},
+						     ) or return $self->_error('failed to create resultset lite object');
       }
 
       return \%groupby;
@@ -87,7 +87,7 @@ sub values {
       return wantarray?(@output):\@output;
 }
 
-sub dummy_record{ bless([],'DBR::Query::Dummy') }
+sub dummy_record{ bless([],'DBR::Misc::Dummy') }
 
 sub hashmap_multi { shift->_lookuphash('multi', @_) }
 sub hashmap_single{ shift->_lookuphash('single',@_) }
@@ -162,11 +162,11 @@ sub _mem_iterator{
 sub _makerecord{
       my $self = shift;
 
-      $self->{record} = DBR::Query::RecMaker->new(
-						  session  => $self->{session},
-						  query    => $self->{query},
-						  rowcache => $self->{rowcache},
-						 ) or confess ('failed to create record class');
+      $self->{record} = DBR::Record::Maker->new(
+						session  => $self->{session},
+						query    => $self->{query},
+						rowcache => $self->{rowcache},
+					       ) or confess ('failed to create record class');
 
       $self->{buddy} ||= $self->{record}->buddy(
 						rowcache => $self->{rowcache}

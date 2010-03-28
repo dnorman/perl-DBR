@@ -1,11 +1,11 @@
-package DBR::Query::RecMaker;
+package DBR::Record::Maker;
 
 use strict;
 use base 'DBR::Common';
 use Symbol qw( qualify_to_ref delete_package);
-use DBR::Query::RecHelper;
+use DBR::Record::Helper;
+use DBR::Record::Base;
 use DBR::Query::Part;
-use DBR::Query::Record;
 
 #IDPOOL is a revolving door of package ids... we do this to guard against memory leaks... juuust in case
 my @IDPOOL = (1..200);
@@ -122,16 +122,16 @@ sub _prep{
 
       my $instance = $self->{query}->instance;
 
-      my $helper = DBR::Query::RecHelper->new(
-					      session  => $self->{session},
-					      instance => $instance,
-					      tablemap => \%tablemap,     # V
-					      pkmap    => \%pkmap,        # V
-					      flookup  => \%flookup,      # V
-					      scope    => $self->{scope}, # V
-					      lastidx  => $self->{query}->select->lastidx,# V
-					      rowcache => $self->{rowcache}, #X
-					     ) or return $self->_error('Failed to create RecHelper object');
+      my $helper = DBR::Record::Helper->new(
+					    session  => $self->{session},
+					    instance => $instance,
+					    tablemap => \%tablemap,     # V
+					    pkmap    => \%pkmap,        # V
+					    flookup  => \%flookup,      # V
+					    scope    => $self->{scope}, # V
+					    lastidx  => $self->{query}->select->lastidx,# V
+					    rowcache => $self->{rowcache}, #X
+					   ) or return $self->_error('Failed to create Helper object');
 
       my $mode = 'rw';
       foreach my $field (@fields){
@@ -152,7 +152,7 @@ sub _prep{
       }
 
       my $isa = qualify_to_ref( $self->{recordclass} . '::ISA');
-      @{ *$isa } = ('DBR::Query::Record');
+      @{ *$isa } = ('DBR::Record::Base');
 
       $self->_mk_method(
 			method => 'set',

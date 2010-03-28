@@ -28,6 +28,10 @@ sub new{
 #       return $self->_error('invalid table alias "' . $field->table_alias . '" in -fields')        unless $self->{aliasmap}->{ $field->table_alias };
 # }
 
+sub can_be_subquery {
+      my $self = shift;
+      return scalar($select->fields) == 1 || 0; # and have exactly one field
+}
 
 sub _validate_self{ 1 } # I don't exist unless I'm valid
 

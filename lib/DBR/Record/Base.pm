@@ -2,7 +2,7 @@
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation.
 
-package DBR::Query::Record;
+package DBR::Record::Base;
 use strict;
 use Carp;
 

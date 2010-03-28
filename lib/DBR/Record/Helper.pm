@@ -1,10 +1,10 @@
-package DBR::Query::RecHelper;
+package DBR::Record::Helper;
 
 use strict;
 use base 'DBR::Common';
 use DBR::Query::Part;
-use DBR::Query::ResultSet::Empty;
-use DBR::Query::Dummy;
+use DBR::ResultSet::Empty;
+use DBR::Misc::Dummy;
 use Carp;
 
 sub new {
@@ -216,12 +216,12 @@ sub getrelation{
 	    @allvals = grep { defined } @allvals;
       }
 
-      my $dummy = bless([],'DBR::Query::Dummy');
+      my $dummy = bless([],'DBR::Misc::Dummy');
       if(!scalar @allvals){
 	    if($to1){
 		  return $dummy;
 	    }else{
-		  my $rv = DBR::Query::ResultSet::Empty->new() # Empty resultset
+		  my $rv = DBR::ResultSet::Empty->new() # Empty resultset
 		    or return $self->_error('failed to create ResultSet::Empty object');
 		  return $rv;
 	    }
@@ -276,12 +276,12 @@ sub getrelation{
 		  # look forward in the rowcache and assign the resultsets for whatever we find
 		  foreach my $row (@${$self->{rowcache}}) {
 
-			my $rs = $resultmap->{ $row->[$fidx] } || DBR::Query::ResultSet::Empty->new() # Empty resultset
+			my $rs = $resultmap->{ $row->[$fidx] } || DBR::ResultSet::Empty->new() # Empty resultset
 			  or return $self->_error('failed to create ResultSet::Empty object');
 			$self->_setlocalval($row,$relation,$rs) or return $self->_error('failed to _setlocalval');
 		  }
 
-		  $myresult = $resultmap->{$val} || DBR::Query::ResultSet::Empty->new() # Empty resultset
+		  $myresult = $resultmap->{$val} || DBR::ResultSet::Empty->new() # Empty resultset
 		    or return $self->_error('failed to create ResultSet::Empty object');
 	    }
 

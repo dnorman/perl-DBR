@@ -1,8 +1,8 @@
-package DBR::Query::ResultSet::DB;
+package DBR::ResultSet::DB;
 
 use strict;
-use base 'DBR::Query::ResultSet';
-use DBR::Query::RecMaker;
+use base 'DBR::ResultSet';
+use DBR::Record::Maker;
 use Carp;
 use constant { CLEAN => 1, ACTIVE => 2  };
 use Scalar::Util 'weaken';

@@ -1,7 +1,7 @@
-package DBR::Query::ResultSet::Mem;
+package DBR::ResultSet::Mem;
 
 use strict;
-use base 'DBR::Query::ResultSet';
+use base 'DBR::ResultSet';
 use Carp;
 
 sub new {

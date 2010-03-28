@@ -1,8 +1,8 @@
-package DBR::Query::ResultSet::Empty;
+package DBR::ResultSet::Empty;
 
 use strict;
 use base 'DBR::Common';
-use DBR::Query::Dummy;
+use DBR::Misc::Dummy;
 use Carp;
 
 sub new {
@@ -19,7 +19,7 @@ sub each { 1 }
 sub split { {} }
 sub values { wantarray?():[]; }
 
-sub dummy_record{ bless([],'DBR::Query::Dummy') }
+sub dummy_record{ bless([],'DBR::Misc::Dummy') }
 sub hashmap_multi { wantarray?():{} }
 sub hashmap_single{ wantarray?():{} }
 

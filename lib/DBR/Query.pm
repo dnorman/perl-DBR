@@ -13,34 +13,26 @@ use DBR::Query::ResultSet::DB;
 my $idx = 0;
 use constant ({
 	       map {'v_' . $_ => $idx++}
-	       qw(instance session scope action tables where limit lock aliasmap quiet_error)
+	       qw(instance session scopetables where limit lock aliasmap quiet_error)
 	      });
 
 sub new {
       my( $package, %params ) = @_;
+
+      croak "Can't create a query object directly, must create a subclass for the given query type"
+	if $package eq __PACKAGE__;
 
       my $self = bless([ $params{instance}, $params{session}, $params{scope} ], $package );
 
       $self->[v_instance] || croak "instance is required";
       $self->[v_session]  || croak "session is required";
 
-      for (qw'action tables where limit lock quiet_error'){
+      for (qw'tables where limit lock quiet_error'){
 	    $self->$_($params{$_}) if exists $params{$_};
       }
 
       return( $self );
 }
-
-sub action{
-  my $self = shift;
-  exists( $_[0] ) or return $self->[v_action] || undef;
-  my $action = shift;
-
-  ref($action) =~ /^DBR::Query::Action::/ || croak "action must be a DBR::Query::Action:: object (" . ref($action) . ')';
-  $self->[v_action] = $action;
-
-}
-
 
 sub tables{
       my $self   = shift;
@@ -113,11 +105,7 @@ sub _session { $_[0][v_session] }
 sub session  { $_[0][v_session] }
 sub scope    { $_[0][v_scope] }
 
-sub can_be_subquery {
-      my $self = shift;
-      my $select = $self->[v_select] || return 0;   # must be a select
-      return scalar($select->fields) == 1 || 0; # and have exactly one field
-}
+sub can_be_subquery { 0 }
 
 sub validate{
       my $self = shift;
