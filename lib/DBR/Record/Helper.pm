@@ -2,10 +2,13 @@ package DBR::Record::Helper;
 
 use strict;
 use base 'DBR::Common';
+use Carp;
 use DBR::Query::Part;
+use DBR::Query::Select;
+use DBR::Query::Update;
+use DBR::Query::Delete;
 use DBR::ResultSet::Empty;
 use DBR::Misc::Dummy;
-use Carp;
 
 sub new {
       my( $package ) = shift;
@@ -96,13 +99,13 @@ sub _set{
 
       my ($outwhere,$table) = $self->_pk_where($record,$table_id) or return $self->_error('failed to create where tree');
 
-      my $query = DBR::Query->new(
-				  session => $self->{session},
-				  instance => $self->{instance},
-				  tables => $table,
-				  where  => $outwhere,
-				  update => DBR::Query::Part::Update->new( @$sets )
-				 ) or return $self->_error('failed to create Query object');
+      my $query = DBR::Query::Update->new(
+					  session  => $self->{session},
+					  instance => $self->{instance},
+					  tables   => $table,
+					  where    => $outwhere,
+					  sets     => $sets
+					 ) or return $self->_error('failed to create Query object');
 
       my $rv = $query->execute() or return $self->_error('failed to execute');
 
@@ -125,13 +128,12 @@ sub delete{
 
        my ($outwhere,$table) = $self->_pk_where($record,$table_id) or return $self->_error('failed to create where tree');
 
-       my $query = DBR::Query->new(
-				   session  => $self->{session},
-				   instance => $self->{instance},
-				   tables   => $table,
-				   where    => $outwhere,
-				   delete   => 1,
-				  ) or return $self->_error('failed to create Query object');
+       my $query = DBR::Query::Delete->new(
+					   session  => $self->{session},
+					   instance => $self->{instance},
+					   tables   => $table,
+					   where    => $outwhere,
+					  ) or return $self->_error('failed to create Query object');
 
        $query->execute or return $self->_error('failed to execute');
 
@@ -159,13 +161,13 @@ sub getfield{
        # its fields, we must clone the field provided by the original query
        my $newfield = $field->clone;
 
-       my $query = DBR::Query->new(
-				   session  => $self->{session},
-				   instance => $self->{instance},
-				   tables   => $table,
-				   where    => $outwhere,
-				   select   => DBR::Query::Part::Select->new( $newfield ) # use the new cloned field
-				  ) or return $self->_error('failed to create Query object');
+       my $query = DBR::Query::Select->new(
+					   session  => $self->{session},
+					   instance => $self->{instance},
+					   tables   => $table,
+					   where    => $outwhere,
+					   fields   => [ $newfield ] # use the new cloned field
+					  ) or return $self->_error('failed to create Query object');
 
        my $sth = $query->prepare or return $self->_error('failed to execute');
 
@@ -243,14 +245,14 @@ sub getrelation{
       my %uniq;
       my @fields = grep { !$uniq{ $_->field_id }++ } ($mapfield, @$pk, @$prefields );
 
-      my $query = DBR::Query->new(
-				  session  => $self->{session},
-				  instance => $self->{instance},
-				  tables   => $maptable,
-				  where    => $outwhere,
-				  select   => DBR::Query::Part::Select->new( @fields ),
-				  scope    => $scope,
-				 ) or return $self->_error('failed to create Query object');
+      my $query = DBR::Query::Select->new(
+					  session  => $self->{session},
+					  instance => $self->{instance},
+					  tables   => $maptable,
+					  where    => $outwhere,
+					  fields   => \@fields,
+					  scope    => $scope,
+					 ) or return $self->_error('failed to create Query object');
 
       my $resultset = $query->resultset or return $self->_error('failed to retrieve resultset');
 

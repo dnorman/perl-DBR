@@ -7,7 +7,9 @@ package DBR::Interface::DBRv1;
 
 use strict;
 use base 'DBR::Common';
-use DBR::Query;
+use DBR::Query::Select;
+use DBR::Query::Insert;
+use DBR::Query::Update;
 use DBR::Config::Field::Anon;
 use DBR::Config::Table::Anon;
 use DBR::Query::Part;
@@ -50,8 +52,6 @@ sub select {
 						      ) or return $self->_error('Failed to create field object');
 	    push @Qfields, $Qfield;
       }
-      my $select = DBR::Query::Part::Select->new( @Qfields );
-
       my $where;
       if($params{-where}){
 	    $where = $self->_where($params{-where});
@@ -63,15 +63,16 @@ sub select {
 	    return $self->_error('invalid limit') unless $limit =~ /^\d+$/;
       }
 
-      my $query = DBR::Query->new(
-				  instance => $self->{instance},
-				  session  => $self->{session},
-				  # count  => $params{'-count'}?1:0, # takes precedence
-				  select   => $select,
-				  tables   => $Qtables,
-				  where    => $where,
-				  limit    => $limit,
-				 ) or return $self->_error('failed to create query object');
+      my $query = DBR::Query::Select->new(
+					  instance => $self->{instance},
+					  session  => $self->{session},
+
+					  # count  => $params{'-count'}?1:0, # takes precedence
+					  fields   => \@Qfields,
+					  tables   => $Qtables,
+					  where    => $where,
+					  limit    => $limit,
+					 ) or return $self->_error('failed to create query object');
 
       if ($params{-query}){
 
@@ -79,7 +80,7 @@ sub select {
 
       }elsif ($params{-rawsth}) {
 
-	    my $sth = $query->prepare or return $self->_error('failed to prepare');
+	    my $sth = $query->run or return $self->_error('failed to run');
 	    $sth->execute() or return $self->_error('failed to execute sth');
 
 	    return $sth;
@@ -136,14 +137,13 @@ sub insert {
 	    push @sets, $set;
       }
 
-      my $insert = DBR::Query::Part::Insert->new( @sets );
-      my $query = DBR::Query->new(
-				  instance => $self->{instance},
-				  session  => $self->{session},
-				  insert   => $insert,
-				  quiet_error => $params{-quiet} ? 1:0,
-				  tables => $Qtable,
-				 ) or return $self->_error('failed to create query object');
+      my $query = DBR::Query::Insert->new(
+					  instance => $self->{instance},
+					  session  => $self->{session},
+					  sets   => \@sets,
+					  quiet_error => $params{-quiet} ? 1:0,
+					  tables => $Qtable,
+					 ) or return $self->_error('failed to create query object');
 
       return $query->execute();
 
@@ -187,12 +187,10 @@ sub update {
 	    push @sets, $set;
       }
 
-      my $update = DBR::Query::Part::Update->new( @sets );
-
-      my $query = DBR::Query->new(
+      my $query = DBR::Query::Update->new(
 				  instance => $self->{instance},
 				  session   => $self->{session},
-				  update   => $update,
+				  sets   => \@sets ,
 				  quiet_error => $params{-quiet} ? 1:0,
 				  tables => $Qtable,
 				  where  => $where

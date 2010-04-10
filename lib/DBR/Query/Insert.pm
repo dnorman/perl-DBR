@@ -4,10 +4,15 @@
 # published by the Free Software Foundation.
 
 ###########################################
-package DBR::Query::Part::Insert;
+package DBR::Query::Insert;
 
 use strict;
-use base 'DBR::Query::Part';
+use base 'DBR::Query';
+use Carp;
+
+sub _params    { qw (sets table where limit quiet_error) }
+sub _reqparams { qw (sets table) }
+sub _validate_self{ 1 } # If I exist, I'm valid
 
 sub sets{
       my $self = shift;
@@ -31,22 +36,22 @@ sub sql{
 
       my @fields;
       my @values;
-      for ( $self->{sets} ) {
+      for ( @{$self->{sets}} ) {
 	    push @fields, $_->field->sql( $conn );
 	    push @values, $_->value->sql( $conn );
       }
 
       $sql = "INSERT INTO $tables (" . join (', ', @fields) . ') values (' . join (', ', @values) . ')';
 
-      $sql .= ' WHERE ' . $self->{where}->sql( $conn ) if $self->[v_where];
-      $sql .= ' FOR UPDATE'                            if $self->[v_lock];
-      $sql .= ' LIMIT ' . $self->{limit}               if $self->[v_limit];
+      $sql .= ' WHERE ' . $self->{where}->sql( $conn ) if $self->{where};
+      $sql .= ' FOR UPDATE'                            if $self->{lock};
+      $sql .= ' LIMIT ' . $self->{limit}               if $self->{limit};
 
       $self->_logDebug2( $sql );
       return $sql;
 }
 
-sub execute{
+sub run{
       my $self = shift;
       my %params = @_;
 

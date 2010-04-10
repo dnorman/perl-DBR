@@ -9,8 +9,9 @@ use strict;
 use base 'DBR::Common';
 use DBR::Query::Part;
 use DBR::Config::Scope;
-use DBR::Query::ResultSet::Empty;
-use DBR::Query::Part;
+use DBR::ResultSet::Empty;
+use DBR::Query::Select;
+use DBR::Query::Insert;
 use Carp;
 
 sub new {
@@ -46,13 +47,13 @@ sub all{
       my %uniq;
       my @fields = grep { !$uniq{ $_->field_id }++ } (@$pk, @$prefields);
 
-      my $query = DBR::Query->new(
-				  session  => $self->{session},
-				  instance => $self->{instance},
-				  scope    => $scope,
-				  select   => DBR::Query::Part::Select->new( @fields ),
-				  tables   => $table,
-				 ) or return $self->_error('failed to create Query object');
+      my $query = DBR::Query::Select->new(
+					  session  => $self->{session},
+					  instance => $self->{instance},
+					  scope    => $scope,
+					  fields   => \@fields,
+					  tables   => $table,
+					 ) or return $self->_error('failed to create Query object');
 
       my $resultset = $query->resultset or croak('failed to create resultset');
 
@@ -82,23 +83,22 @@ sub where{
       my $where = $self->_buildwhere(\@inwhere,\@tables) or return $self->_error("Failed to generate where for ${\$table->name}");
 
       if($where->is_emptyset){
-	  return DBR::Query::ResultSet::Empty->new(); # Empty resultset
+	  return DBR::ResultSet::Empty->new(); # Empty resultset
       }
 
       my $alias = $table->alias;
       if($alias){
 	    map { $_->table_alias($alias) } @fields;
       }
-      my $select = DBR::Query::Part::Select->new( @fields );
 
-      my $query = DBR::Query->new(
-				  session  => $self->{session},
-				  instance => $self->{instance},
-				  scope    => $scope,
-				  select   => $select,
-				  tables   => \@tables,
-				  where    => $where,
-				 ) or croak('failed to create Query object');
+      my $query = DBR::Query::Select->new(
+					  session  => $self->{session},
+					  instance => $self->{instance},
+					  scope    => $scope,
+					  fields   => \@fields ,
+					  tables   => \@tables,
+					  where    => $where,
+					 ) or croak('failed to create Query object');
 
       my $resultset = $query->resultset or croak('failed to create resultset');
 
@@ -122,18 +122,14 @@ sub insert {
       }
 
 
-      my $query = DBR::Query->new(
-				  instance   => $self->{instance},
-				  session => $self->{session},
-				  insert => {
-					     set => \@sets,
-					    },
-				  tables => $table,
-				 ) or return $self->_error('failed to create query object');
+      my $query = DBR::Query::Insert->new(
+					  instance => $self->{instance},
+					  session  => $self->{session},
+					  set      => \@sets,
+					  tables   => $table,
+					 ) or return $self->_error('failed to create query object');
 
-      return $query->execute( void => !defined(wantarray) );
-
-      # HERE HERE HERE - consider changing behavior. Use wantarray to determine if we are being executed in a void context or not ( wantarray == undef )
+      return $query->run( void => !defined(wantarray) );
 }
 
 
@@ -162,14 +158,14 @@ sub get{
 
       my $outwhere = DBR::Query::Part::Compare->new( field => $field, value => $value ) or return $self->_error('failed to create compare object');
 
-      my $query = DBR::Query->new(
-				  session => $self->{session},
-				  instance => $self->{instance},
-				  select => { fields => \@fields },
-				  tables => $table,
-				  where  => $outwhere,
-				  scope  => $scope,
-				 ) or return $self->_error('failed to create Query object');
+      my $query = DBR::Query::Select->new(
+					  session => $self->{session},
+					  instance => $self->{instance},
+					  fields => \@fields,
+					  tables => $table,
+					  where  => $outwhere,
+					  scope  => $scope,
+					 ) or return $self->_error('failed to create Query object');
 
       my $resultset = $query->resultset or croak('failed to create resultset');
 
@@ -343,13 +339,13 @@ sub _reljoin{
 			my @tables = $table;
 			my $where = $self->_reljoin($kid, \@tables) or return $self->_error('_reljoin failed');
 
- 			my $query = DBR::Query->new(
- 						    instance => $self->{instance},
- 						    session  => $self->{session},
- 						    select   => { fields => [$field] },
- 						    tables   => \@tables,
- 						    where    => $where,
- 						   ) or return $self->_error('failed to create query object');
+ 			my $query = DBR::Query::Select->new(
+							    instance => $self->{instance},
+							    session  => $self->{session},
+							    fields => [$field],
+							    tables   => \@tables,
+							    where    => $where,
+							   ) or return $self->_error('failed to create query object');
 
  			my $subquery = DBR::Query::Part::Subquery->new($prevfield, $query) or return $self->_error('failed to create subquery object');
 			push @and, $subquery;

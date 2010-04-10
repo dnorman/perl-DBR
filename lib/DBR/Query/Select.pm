@@ -6,9 +6,14 @@
 ###########################################
 package DBR::Query::Select;
 
-use DBR::Query::ResultSet::DB;
 use strict;
+use base 'DBR::Query';
 use Carp;
+use DBR::ResultSet::DB;
+
+sub _params    { qw (fields table where limit lock quiet_error) }
+sub _reqparams { qw (fields table) }
+sub _validate_self{ 1 } # If I exist, I'm valid
 
 sub fields{
       my $self = shift;
@@ -25,37 +30,7 @@ sub fields{
       return 1;
 }
 
-sub lastidx  { $_[0]{last_idx} }
-sub can_be_subquery { scalar( $_[0]->fields ) == 1 || 0 }; # Must have exactly one field
 
-sub check_table{
-      my $self  = shift;
-      my $alias = shift;
-
-      return $self->{aliasmap}->{$alias} ? 1 : 0;
-}
-
-sub resultset{
-      my $self = shift;
-
-      return DBR::Query::ResultSet::DB->new(
-					    session => $self->session,
-					    query   => $self,
-					   ) or croak('Failed to create resultset');
-}
-
-
-sub validate{
-      my $self = shift;
-
-      return 0 unless $self->_validate_self;
-
-      if($self->{where}){
-	    return 0 unless $self->{where}->validate( $self );
-      }
-
-      return 1;
-}
 sub sql{
       my $self = shift;
       my $conn   = $self->instance->connect('conn') or return $self->_error('failed to connect');
@@ -65,15 +40,15 @@ sub sql{
       my $fields = join(',', map { $_->sql($conn) } @{$self->{fields}} );
 
       $sql = "SELECT $fields FROM $tables";
-      $sql .= ' WHERE ' . $self->[v_where]->sql($conn) if $self->{where};
-      $sql .= ' FOR UPDATE'                            if $self->{lock};
-      $sql .= ' LIMIT ' . $self->[v_limit]             if $self->{limit};
+      $sql .= ' WHERE ' . $self->{where}->sql($conn) if $self->{where};
+      $sql .= ' FOR UPDATE'                          if $self->{lock};
+      $sql .= ' LIMIT ' . $self->{limit}             if $self->{limit};
 
       $self->_logDebug2( $sql );
       return $sql;
 }
 
-sub execute {
+sub run {
       my $self = shift;
 
       my $conn = $self->instance->connect('conn') or confess 'failed to connect';
@@ -83,11 +58,16 @@ sub execute {
 
 }
 
-# ????
-# if ($field->table_alias) {
-#       return $self->_error("table alias is invalid without a join") unless $self->{aliasmap};
-#       return $self->_error('invalid table alias "' . $field->table_alias . '" in -fields')        unless $self->{aliasmap}->{ $field->table_alias };
-# }
+sub lastidx  { $_[0]{last_idx} }
+sub can_be_subquery { scalar( $_[0]->fields ) == 1 || 0 }; # Must have exactly one field
+sub resultset{
+      my $self = shift;
+
+      return DBR::Query::ResultSet::DB->new(
+					    session => $self->session,
+					    query   => $self,
+					   ) or croak('Failed to create resultset');
+}
 
 
 1;

@@ -11,17 +11,26 @@ use Carp;
 sub new {
       my( $package, %params ) = @_;
 
-      croak "Can't create a query object directly, must create a subclass for the given query type"
-	if ref($self) eq __PACKAGE__;
+      ref($package) ne __PACKAGE__ || croak "Can't create a query object directly, must create a subclass for the given query type";
+      my $self = bless({},$package);
 
-      $self->{instance} || croak "instance is required";
-      $self->{session}  || croak "session is required";
+      $self->{instance} = $params{session}|| croak "instance is required";
+      $self->{session}  = $params{session} || croak "session is required";
 
-      for (qw'tables fields set where limit lock quiet_error'){
-	    $self->$_($params{$_}) if exists $params{$_};
+      my %req = map {$_ => 1} $self->_reqparams;
+      for my $key ( $self->_params ){
+
+	    if(  $params{$key} ){
+		  $self->$key( $params{$key} );
+
+	    }elsif($req{$key}){
+		  croak "$key is required";
+	    }
       }
 
-      return( $self );
+      $self->validate() or croak "Object is not valid"; # HERE - not enough info as to why
+
+      return $self;
 }
 
 sub tables{
@@ -47,6 +56,12 @@ sub tables{
       return $self;
 }
 
+sub check_table{
+      my $self  = shift;
+      my $alias = shift;
+
+      return $self->{aliasmap}->{$alias} ? 1 : 0;
+}
 
 sub where{
       my $self = shift;
@@ -96,6 +111,19 @@ sub session  { $_[0]{session} }
 sub scope    { $_[0]{scope} }
 
 sub can_be_subquery { 0 }
-sub validate{ 0 }         # Base class is never valid
+
+sub validate{
+      my $self = shift;
+
+      return 0 unless $self->_validate_self; # make sure I'm sane
+
+      # Now check my component objects
+      # Fields
+      # Tables
+      # Where
+      $self->{where} && $self->{where}->validate( $self ) or return 0;
+
+      return 1;
+}
 
 1;
