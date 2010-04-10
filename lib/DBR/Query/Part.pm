@@ -19,7 +19,7 @@ sub validate{
       my $self = shift;
       my $query = shift;
 
-      croak('Query object is required') unless ref($query) =~/^DBR::Query$/;
+      croak('Query object is required') unless ref($query) =~/^DBR::Query::/;
 
       $self->_validate_self($query) or return $self->_error('Failed to validate ' . ref($self) );
 

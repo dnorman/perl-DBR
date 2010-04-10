@@ -129,7 +129,7 @@ sub _execute{
 	    return $self->_error('You must call reset before executing');
       }
 
-      $self->{sth} ||= $self->{query}->prepare or confess "Failed to prepare query"; # only prepare once
+      $self->{sth} ||= $self->{query}->run or confess "Failed to run query"; # only prepare once
 
       my $rv = $self->{sth}->execute();
       return $self->_error('failed to execute statement (' . $self->{sth}->errstr. ')') unless defined($rv);

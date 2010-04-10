@@ -4,7 +4,7 @@
 # published by the Free Software Foundation.
 
 package DBR::Query;
-
+use base 'DBR::Common';
 use strict;
 use Carp;
 
@@ -14,8 +14,9 @@ sub new {
       ref($package) ne __PACKAGE__ || croak "Can't create a query object directly, must create a subclass for the given query type";
       my $self = bless({},$package);
 
-      $self->{instance} = $params{session}|| croak "instance is required";
-      $self->{session}  = $params{session} || croak "session is required";
+      $self->{instance} = $params{instance} || croak "instance is required";
+      $self->{session}  = $params{session}  || croak "session is required";
+      $self->{scope}    = $params{scope};
 
       my %req = map {$_ => 1} $self->_reqparams;
       for my $key ( $self->_params ){
@@ -35,14 +36,14 @@ sub new {
 
 sub tables{
       my $self   = shift;
-      my $tables = shift;
+      exists( $_[0] )  or return wantarray?( @$self->{tables} ) : $self->{tables} || undef;
+      my @tables = $self->_arrayify(@_);
 
-      $tables = [$tables] unless ref($tables) eq 'ARRAY';
-      scalar(@$tables) || croak "must provide at least one table";
+      scalar(@tables) || croak "must provide at least one table";
 
       my @tparts;
       my %aliasmap;
-      foreach my $table (@$tables){
+      foreach my $table (@tables){
 	    croak('must specify table as a DBR::Config::Table object') unless ref($table) =~ /^DBR::Config::Table/; # Could also be ::Anon
 
 	    my $name  = $table->name or return $self->_error('failed to get table name');
@@ -50,7 +51,7 @@ sub tables{
 	    $aliasmap{$alias} = $name if $alias;
       }
 
-      $self->{tables}   = [@$tables]; # shallow clone
+      $self->{tables}   = \@tables;
       $self->{aliasmap} = \%aliasmap;
 
       return $self;
@@ -118,10 +119,9 @@ sub validate{
       return 0 unless $self->_validate_self; # make sure I'm sane
 
       # Now check my component objects
-      # Fields
-      # Tables
-      # Where
-      $self->{where} && $self->{where}->validate( $self ) or return 0;
+      if($self->{where}){
+	    $self->{where}->validate( $self ) or croak "Invalid where clause";
+      }
 
       return 1;
 }

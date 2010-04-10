@@ -145,7 +145,7 @@ sub insert {
 					  tables => $Qtable,
 					 ) or return $self->_error('failed to create query object');
 
-      return $query->execute();
+      return $query->run();
 
 }
 
@@ -188,15 +188,15 @@ sub update {
       }
 
       my $query = DBR::Query::Update->new(
-				  instance => $self->{instance},
-				  session   => $self->{session},
-				  sets   => \@sets ,
-				  quiet_error => $params{-quiet} ? 1:0,
-				  tables => $Qtable,
-				  where  => $where
-				 ) or return $self->_error('failed to create query object');
+					  instance => $self->{instance},
+					  session  => $self->{session},
+					  sets     => \@sets,
+					  tables   => $Qtable,
+					  where    => $where,
+					  quiet_error => $params{-quiet} ? 1:0,
+					 ) or return $self->_error('failed to create query object');
 
-      return $query->execute();
+      return $query->run();
 
 }
 sub delete {

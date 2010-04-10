@@ -11,21 +11,24 @@ use base 'DBR::Query';
 use Carp;
 use DBR::ResultSet::DB;
 
-sub _params    { qw (fields table where limit lock quiet_error) }
-sub _reqparams { qw (fields table) }
+sub _params    { qw (fields tables where limit lock quiet_error) }
+sub _reqparams { qw (fields tables) }
 sub _validate_self{ 1 } # If I exist, I'm valid
 
 sub fields{
       my $self = shift;
-      scalar(@_) || croak('must provide at least one field');
+      exists( $_[0] ) or return wantarray?( @{$self->{fields}||[]} ) : $self->{fields} || undef;
+
+      my @fields = $self->_arrayify(@_);
+      scalar(@fields) || croak('must provide at least one field');
 
       my $lastidx = -1;
-      for (@_){
+      for (@fields){
 	    ref($_) =~ /^DBR::Config::Field/ || croak('must specify field as a DBR::Config::Field object'); # Could also be ::Anon
 	    $_->index( ++$lastidx );
       }
       $self->{last_idx} = $lastidx;
-      $self->{fields} = [ @_ ];
+      $self->{fields}   = \@fields;
 
       return 1;
 }
@@ -36,8 +39,8 @@ sub sql{
       my $conn   = $self->instance->connect('conn') or return $self->_error('failed to connect');
       my $sql;
 
-      my $tables = join(',', map { $_->sql($conn) } @{$self->{tables}} );
-      my $fields = join(',', map { $_->sql($conn) } @{$self->{fields}} );
+      my $tables = join(',', map { $_->sql( $conn ) } @{$self->{tables}} );
+      my $fields = join(',', map { $_->sql( $conn ) } @{$self->{fields}} );
 
       $sql = "SELECT $fields FROM $tables";
       $sql .= ' WHERE ' . $self->{where}->sql($conn) if $self->{where};
@@ -63,10 +66,10 @@ sub can_be_subquery { scalar( $_[0]->fields ) == 1 || 0 }; # Must have exactly o
 sub resultset{
       my $self = shift;
 
-      return DBR::Query::ResultSet::DB->new(
-					    session => $self->session,
-					    query   => $self,
-					   ) or croak('Failed to create resultset');
+      return DBR::ResultSet::DB->new(
+				     session => $self->session,
+				     query   => $self,
+				    ) or croak('Failed to create resultset');
 }
 
 

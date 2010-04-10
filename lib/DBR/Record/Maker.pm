@@ -2,7 +2,8 @@ package DBR::Record::Maker;
 
 use strict;
 use base 'DBR::Common';
-use Symbol qw( qualify_to_ref delete_package);
+use Carp;
+use Symbol qw(qualify_to_ref delete_package);
 use DBR::Record::Helper;
 use DBR::Record::Base;
 use DBR::Query::Part;
@@ -24,11 +25,11 @@ sub new {
 
       bless( $self, $package ); # BS object
 
-      $self->{session}   or return $self->_error('session is required');
-      $self->{query}    or return $self->_error('query is required');
-      $self->{rowcache} or return $self->_error('rowcache is required');
+      $self->{session}  or croak 'session is required';
+      $self->{query}    or croak 'query is required';
+      $self->{rowcache} or croak 'rowcache is required';
 
-      $self->{scope} = $self->{query}->scope  or return $self->_error('failed to fetch scope object');
+      $self->{scope} = $self->{query}->scope or croak 'failed to fetch scope object';
 
       $self->{classidx} = (shift @IDPOOL) || ++$classidx;
       #print STDERR "PACKAGEID: $self->{classidx}\n";
@@ -62,7 +63,7 @@ sub _prep{
       my $class = $BASECLASS . $self->{classidx};
       $self->{recordclass} = $class;
 
-      my @fields = $self->{query}->select->fields or return $self->_error('Failed to get query fields');
+      my @fields = $self->{query}->fields or confess 'Failed to get query fields';
 
       my @table_ids;
       # It's important that we preserve the specific field objects from the query. They have payloads that new ones do not.
@@ -129,7 +130,7 @@ sub _prep{
 					    pkmap    => \%pkmap,        # V
 					    flookup  => \%flookup,      # V
 					    scope    => $self->{scope}, # V
-					    lastidx  => $self->{query}->select->lastidx,# V
+					    lastidx  => $self->{query}->lastidx,# V
 					    rowcache => $self->{rowcache}, #X
 					   ) or return $self->_error('Failed to create Helper object');
 

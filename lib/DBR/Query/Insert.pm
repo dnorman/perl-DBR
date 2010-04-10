@@ -10,19 +10,21 @@ use strict;
 use base 'DBR::Query';
 use Carp;
 
-sub _params    { qw (sets table where limit quiet_error) }
-sub _reqparams { qw (sets table) }
+sub _params    { qw (sets tables where limit quiet_error) }
+sub _reqparams { qw (sets tables) }
 sub _validate_self{ 1 } # If I exist, I'm valid
 
 sub sets{
       my $self = shift;
-      scalar(@_) || croak('must provide at least one set');
+      exists( $_[0] )  or return wantarray?( @$self->{sets} ) : $self->{sets} || undef;
+      my @sets = $self->_arrayify(@_);
+      scalar(@sets) || croak('must provide at least one set');
 
-      for (@_){
+      for (@sets){
 	    ref($_) eq 'DBR::Query::Part::Set' || croak('arguments must be Sets');
       }
 
-      $self->{sets} = [@_];
+      $self->{sets} = \@sets;
 
       return 1;
 }

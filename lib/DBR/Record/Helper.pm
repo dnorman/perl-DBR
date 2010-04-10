@@ -169,7 +169,7 @@ sub getfield{
 					   fields   => [ $newfield ] # use the new cloned field
 					  ) or return $self->_error('failed to create Query object');
 
-       my $sth = $query->prepare or return $self->_error('failed to execute');
+       my $sth = $query->run or return $self->_error('failed to execute');
 
        $sth->execute() or return $self->_error('Failed to execute sth');
        my $row  = $sth->fetchrow_arrayref() or return $self->_error('Failed to fetchrow');

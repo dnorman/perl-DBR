@@ -4,30 +4,15 @@
 # published by the Free Software Foundation.
 
 ###########################################
-package DBR::Query::Update;
+package DBR::Query::Delete;
 
 use strict;
 use base 'DBR::Query';
 use Carp;
 
-sub _params    { qw (sets tables where limit quiet_error) }
-sub _reqparams { qw (sets tables) }
+sub _params    { qw (tables where limit quiet_error) }
+sub _reqparams { qw (tables where) }
 sub _validate_self{ 1 } # If I exist, I'm valid
-
-sub sets{
-      my $self = shift;
-      exists( $_[0] )  or return wantarray?( @$self->{sets} ) : $self->{sets} || undef;
-      my @sets = $self->_arrayify(@_);
-      scalar(@sets) || croak('must provide at least one set');
-
-      for (@sets){
-	    ref($_) eq 'DBR::Query::Part::Set' || croak('arguments must be Sets');
-      }
-
-      $self->{sets} = \@sets;
-
-      return 1;
-}
 
 # do not run this until the last possible moment, and then only once
 sub sql{
@@ -38,7 +23,7 @@ sub sql{
       my $tables = join(',', map { $_->sql( $conn ) } @{$self->{tables}} );
       my $sets   = join(',', map { $_->sql( $conn ) } @{$self->{sets}}   );
 
-      $sql = "UPDATE $tables SET $sets";
+      $sql = "DELETE FROM $tables";
       $sql .= ' WHERE ' . $self->{where}->sql($conn) if $self->{where};
       $sql .= ' LIMIT ' . $self->{limit}             if $self->{limit};
 
