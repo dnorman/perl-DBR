@@ -101,9 +101,12 @@ sub quiet_error{
   return $self;
 }
 
-sub clone{
+sub transpose{
       my $self = shift;
-      return bless({%$self},$self);
+      my $module = shift;
+
+      my $class = __PACKAGE__ . '::' . $module;
+      return $class->new( map { $_ => $self->{$_}} (qw'instance session scope',$self->_params) ) or croak "Failed to create new $class object";
 }
 
 sub instance { $_[0]{instance} }

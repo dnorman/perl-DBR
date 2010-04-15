@@ -38,20 +38,16 @@ sub next { $_[0]->{next}->( $_[0] ) }
 sub count{
       my $self = shift;
 
-      return $self->{real_count} if $self->{real_count};
+      return $self->{real_count} if defined $self->{real_count};
+      return $self->{rows_hint}  if defined $self->{rows_hint}; # If it's defined, we can trust it
 
-      my $count;
-      if ($self->{query}->is_count){
-	    $self->_execute or return $self->_error('failed to execute');
-	    ($count) = $self->{sth}->fetchrow_array();
-	    $self->{real_count} = $count;
+      my $cquery = $self->{query}->transpose('Count') or croak "Failed to transpose query to a Count";
 
-	    $self->reset(); # don't use _end
-      }else{
-	    return $self->{rows_hint} || 0; #If we've gotten here, all we have is the rows_hint
-      }
+      return $self->{real_count} = $cquery->run;
+      
+      # Consider profiling min/max/avg rows returned for the scope in question
+      # IF max / avg  is < 1000 just fetch all rows instead of executing another query
 
-      return $count;
 }
 
 
@@ -129,12 +125,16 @@ sub _execute{
 	    return $self->_error('You must call reset before executing');
       }
 
-      $self->{sth} ||= $self->{query}->run or confess "Failed to run query"; # only prepare once
+      $self->{sth} ||= $self->{query}->run;# or confess "Failed to run query"; # only prepare once
 
       my $rv = $self->{sth}->execute();
       return $self->_error('failed to execute statement (' . $self->{sth}->errstr. ')') unless defined($rv);
 
-      $self->{rows_hint} = $rv + 0;
+      my $conn = $self->{query}->instance->connect('conn') or croak "Failed to fetch connection handle";
+      if($conn->can_trust_execute_rowcount){
+	    $self->{rows_hint} = $rv + 0;
+      }
+
       $self->_logDebug3("ROWS: $self->{rows_hint}");
       $self->{state} = ACTIVE;
 
@@ -212,7 +212,7 @@ sub _end_safe{
 
 sub _end{
       my $self = shift;
-      $self->{real_count} ||= $self->{sth}->rows; # Sqlite doesn't give any rowcount, so we have to use this as a fallback
+      $self->{real_count} ||= $self->{sth}->rows || 0; # Sqlite doesn't give any rowcount, so we have to use this as a fallback
 
       $self->reset;
 

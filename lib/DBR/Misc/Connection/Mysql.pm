@@ -13,4 +13,6 @@ sub getSequenceValue{
 
 }
 
+sub can_trust_execute_rowcount{ 1 } # NOTE: This should be variable when mysql_use_result is implemented
+
 1;

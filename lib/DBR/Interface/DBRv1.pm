@@ -8,8 +8,10 @@ package DBR::Interface::DBRv1;
 use strict;
 use base 'DBR::Common';
 use DBR::Query::Select;
+use DBR::Query::Count;
 use DBR::Query::Insert;
 use DBR::Query::Update;
+use DBR::Query::Delete;
 use DBR::Config::Field::Anon;
 use DBR::Config::Table::Anon;
 use DBR::Query::Part;
@@ -38,9 +40,8 @@ sub select {
       my $tables = $self->_split( $params{-table} || $params{-tables} ) or
 	return $self->_error("No -table[s] parameter specified");
 
-      my $fields = $self->_split( $params{-fields} || $params{-field}) or
+      my $fields = $self->_split( $params{-fields} || $params{-field}) or $params{'-count'} or
 	return $self->_error('No -field[s] parameter specified');
-
 
       my $Qtables = $self->_tables($tables) or return $self->_error('tables failed');
 
@@ -63,19 +64,21 @@ sub select {
 	    return $self->_error('invalid limit') unless $limit =~ /^\d+$/;
       }
 
-      my $query = DBR::Query::Select->new(
-					  instance => $self->{instance},
-					  session  => $self->{session},
+      my $class =  'DBR::Query::' . ($params{'-count'} ? 'Count':'Select');
+      my $query = $class->new(
+			      instance => $self->{instance},
+			      session  => $self->{session},
 
-					  # count  => $params{'-count'}?1:0, # takes precedence
-					  fields   => \@Qfields,
-					  tables   => $Qtables,
-					  where    => $where,
-					  limit    => $limit,
-					 ) or return $self->_error('failed to create query object');
+			      fields   => \@Qfields,
+			      tables   => $Qtables,
+			      where    => $where,
+			      limit    => $limit,
+			     ) or return $self->_error('failed to create query object');
 
-      if ($params{-query}){
+      if ($params{-count}) {
+	    return $query->run; # Returns the count directly
 
+      } elsif ($params{-query}){
 	    return $query;
 
       }elsif ($params{-rawsth}) {
@@ -90,8 +93,6 @@ sub select {
 
 	    if ($params{'-object'}) { # new way - hybrid
 		  return $resultset;
-	    } elsif ($params{-count}) {
-		  return $resultset->count();
 	    } elsif ($params{-arrayref}) {
 		  return $resultset->raw_arrayrefs;
 	    } elsif ($params{-keycol}) {
