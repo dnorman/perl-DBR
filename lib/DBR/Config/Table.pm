@@ -16,6 +16,7 @@ my %TABLES_BY_ID;
 my %FIELDS_BY_NAME;
 my %RELATIONS_BY_NAME;
 my %PK_FIELDS;
+my %REQ_FIELDS;
 
 sub load{
       my( $package ) = shift;
@@ -56,6 +57,7 @@ sub load{
 	    #Purge in case this is a reload
 	    $FIELDS_BY_NAME{  $table->{table_id} } = {};
 	    $PK_FIELDS{       $table->{table_id} } = [];
+	    $REQ_FIELDS{      $table->{table_id} } = [];
       }
 
       if(@table_ids){
@@ -88,9 +90,8 @@ sub _register_field{
 
       $FIELDS_BY_NAME{ $table_id } -> { $name } = $field_id;
 
-      if($params{is_pkey}){
-	    push @{$PK_FIELDS{ $table_id }}, $field_id;
-      }
+      if( $params{is_pkey} ){  push @{$PK_FIELDS{ $table_id }},  $field_id }
+      if( $params{is_req}  ){  push @{$REQ_FIELDS{ $table_id }}, $field_id }
 
       return 1;
 }
@@ -144,33 +145,31 @@ sub get_field{
 
 sub fields{
       my $self  = shift;
-
-      my @fields;
-
-      foreach my $field_id (    values %{$FIELDS_BY_NAME{$self->{table_id}}}   ) {
-
-	    my $field = DBR::Config::Field->new(
-						session   => $self->{session},
-						field_id => $field_id,
-					       ) or return $self->_error('failed to create field object');
-	    push @fields, $field;
-      }
-
-
-      return \@fields;
+      [
+       map {
+	     DBR::Config::Field->new(session   => $self->{session}, field_id => $_ ) or return $self->_error('failed to create field object')
+	   } values %{$FIELDS_BY_NAME{$self->{table_id}}}
+      ];
 }
 
+sub req_fields{
+      my $self = shift;
+      [
+       map {
+	     DBR::Config::Field->new(session   => $self->{session}, field_id => $_ ) or return $self->_error('failed to create field object')
+	   } @{ $REQ_FIELDS{ $self->{table_id} } }
+      ];
+
+}
 sub primary_key{
       my $self = shift;
       [
        map {
-	     DBR::Config::Field->new(session   => $self->{session}, field_id => $_ )
-		 or return $self->_error('failed to create field object')
+	     DBR::Config::Field->new(session   => $self->{session}, field_id => $_ ) or return $self->_error('failed to create field object')
 	   } @{ $PK_FIELDS{ $self->{table_id} } }
       ];
 
 }
-
 sub get_relation{
       my $self  = shift;
       my $name = shift or return $self->_error('name is required');

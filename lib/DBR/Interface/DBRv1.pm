@@ -220,16 +220,15 @@ sub delete {
 	    return $self->_error('-where hashref/arrayref must be specified');
       }
 
-      my $query = DBR::Query->new(
-				  instance => $self->{instance},
-				  session   => $self->{session},
-				  delete   => 1,
-				  tables   => $Qtable,
-				  where    => $where,
-				  quiet_error => $params{-quiet} ? 1:0
-				 ) or return $self->_error('failed to create query object');
+      my $query = DBR::Query::Delete->new(
+					  instance => $self->{instance},
+					  session   => $self->{session},
+					  tables   => $Qtable,
+					  where    => $where,
+					  quiet_error => $params{-quiet} ? 1:0
+					 ) or return $self->_error('failed to create query object');
 
-      return $query->execute();
+      return $query->run();
 
 }
 

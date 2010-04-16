@@ -116,8 +116,8 @@ sub load{
 						name     => $field->[C_name],
 						field_id => $field->[C_field_id],
 						is_pkey  => $field->[C_is_pkey] ? 1 : 0,
+						is_req   => !$field->[C_is_nullable],
 					       ) or die('failed to register field');
-
 
 	    $field->[C_testsub] = _gen_valcheck($field) or die('failed to generate value checking routine');
 

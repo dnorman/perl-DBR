@@ -8,10 +8,14 @@ use base 'DBR::Common';
 use strict;
 use Carp;
 
+sub _params{ confess "Shouldn't get here" }
+sub _reqparams{ confess "Shouldn't get here" }
+
+
 sub new {
       my( $package, %params ) = @_;
 
-      ref($package) ne __PACKAGE__ || croak "Can't create a query object directly, must create a subclass for the given query type";
+      $package ne __PACKAGE__ || croak "Can't create a query object directly, must create a subclass for the given query type";
       my $self = bless({},$package);
 
       $self->{instance} = $params{instance} || croak "instance is required";

@@ -12,7 +12,6 @@ use Carp;
 
 sub _params    { qw (sets tables where limit quiet_error) }
 sub _reqparams { qw (sets tables) }
-sub _validate_self{ 1 } # If I exist, I'm valid
 
 sub sets{
       my $self = shift;
@@ -25,6 +24,29 @@ sub sets{
       }
 
       $self->{sets} = \@sets;
+
+      return 1;
+}
+
+sub _validate_self{
+      my $self = shift;
+
+      @{$self->{tables}} == 1 or croak "Must have exactly one table";
+      my $table = $self->{tables}[0];
+
+      # Make sure we have sets for all required fields
+      # It may be slightly more efficient to enforce this in ::Interface::Object->insert, but it seems more correct here.
+      my $reqfields = $table->req_fields();
+      if(@$reqfields){
+	    my %fids = map {$_->field->field_id => 1} @{$self->{sets}};
+
+	    my @missing = grep { !$fids{ $_->field_id } } @$reqfields;
+
+	    if(@missing > 0){
+		  croak "Invalid insert. Missing fields (" .
+		    join(', ', map { $_->name } @missing) . ")";
+	    }
+      }
 
       return 1;
 }

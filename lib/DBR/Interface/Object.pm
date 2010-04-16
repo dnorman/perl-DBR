@@ -112,6 +112,7 @@ sub insert {
 
       my $table = $self->{table};
       my @sets;
+
       foreach my $fieldname (keys %fields){
 
  	    my $field = $table->get_field( $fieldname ) or return $self->_error("invalid field $fieldname");
@@ -121,11 +122,10 @@ sub insert {
 	    push @sets, $set;
       }
 
-
       my $query = DBR::Query::Insert->new(
 					  instance => $self->{instance},
 					  session  => $self->{session},
-					  set      => \@sets,
+					  sets     => \@sets,
 					  tables   => $table,
 					 ) or return $self->_error('failed to create query object');
 
