@@ -246,7 +246,7 @@ sub _mk_relation{
 
       my $field = $self->{fieldmap}->{ $field_id } or return $self->_error("field_id '$field_id' is not valid");
 
-      my $code = "\$h->getrelation( $record, \$r, \$f )";
+      my $code = "\$h->getrelation( $record, \$r, \$f, \@_ )";
 
       $code = "sub {$code}";
       $self->_logDebug3("$method = $code");

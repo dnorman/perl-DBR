@@ -191,14 +191,12 @@ sub getrelation{
       # Check to see if this record has a cached version of the resultset
       return $record->[$ridx] if defined($ridx) && exists($record->[$ridx]); # skip the rest if we have that
 
-      #print STDERR "ROWCACHE  getrelation $self->{rowcache} ${$self->{rowcache}}\n";
-
       my $fidx = $field->index();
       my $val;
 
-      my $to1 = $relation->is_to_one;
-      my $maptable = $relation->maptable or return $self->_error('Failed to fetch maptable');
-      my $mapfield = $relation->mapfield or return $self->_error('Failed to fetch mapfield');
+      my $to1 = $relation->is_to_one; # Candidate for pre-processing
+      my $maptable = $relation->maptable or return $self->_error('Failed to fetch maptable');# Candidate for pre-processing
+      my $mapfield = $relation->mapfield or return $self->_error('Failed to fetch mapfield');# Candidate for pre-processing
 
       my @allvals; # For uniq-ing
 
@@ -206,15 +204,16 @@ sub getrelation{
 	    $val = $record->[ $fidx ]; # My value
 	    @allvals = $self->_uniq( $val, map { $_->[ $fidx ] } @${$self->{rowcache}} ); # look forward in the rowcache and add those too
       }else{
+	    # I forget, I think I'm using scalar ref as a way to represent undef and still have a true rvalue *ugh*
 	    my $sref = $self->getfield($record,$field, 1 ); # go fetch the value in the form of a scalarref
 	    defined ($sref) or return $self->_error("failed to fetch the value of ${\ $field->name }");
 	    $val = $$sref;
 	    $fidx ||= $field->index;
-	    return $self->_error('field object STILL does not have an index') unless defined($fidx);
+	    confess('field object STILL does not have an index') unless defined($fidx);
 	    push @allvals, $val;
       }
 
-      unless($mapfield->is_nullable){
+      unless($mapfield->is_nullable){ # Candidate for pre-defined global
 	    @allvals = grep { defined } @allvals;
       }
 
@@ -223,7 +222,7 @@ sub getrelation{
 	    if($to1){
 		  return $dummy;
 	    }else{
-		  my $rv = DBR::ResultSet::Empty->new() # Empty resultset
+		  my $rv = DBR::ResultSet::Empty->new() # Empty resultset # Candidate for pre-defined global
 		    or return $self->_error('failed to create ResultSet::Empty object');
 		  return $rv;
 	    }

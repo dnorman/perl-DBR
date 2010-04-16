@@ -54,6 +54,7 @@ sub process_spec{
 	    switch ( uc($spec->{cmd}) ){
 		  case 'TRANSLATOR' { $self->_do_translator( $schema, $table, $field, $spec ) }
 		  case 'RELATION'   { $self->_do_relation  ( $schema, $table, $field, $spec ) }
+		  case 'REGEX'      { $self->_do_regex     ( $schema, $table, $field, $spec ) }
 		  case 'ENUMOPT'    { $self->_do_enumopt   ( $schema, $table, $field, $spec, ++$sortval ) }
 		  else { die "Invalid spec: unknown command $spec->{cmd}"}
 	    }
@@ -64,11 +65,7 @@ sub process_spec{
 
 # Did this one the new way cus it was easy, the rest will be redone at some point
 sub _do_translator {
-      my $self = shift;
-      my $schema = shift;
-      my $table = shift;
-      my $field = shift;
-      my $spec = shift;
+      my ($self, $schema, $table, $field, $spec) = @_;
 
       my $transname = uc($spec->{translator}) or die "Missing parameter: translator";
       my $new_trans = $trans_lookup{ uc($transname) } or die "Invalid translator '$spec->{translator}'";
@@ -79,12 +76,17 @@ sub _do_translator {
 
 }
 
+sub _do_regex {
+      my ($self, $schema, $table, $field, $spec) = @_;
+
+      $spec->{regex} or die "Missing parameter: translator";
+      $field->update_regex($spec->{regex}) or die "Failed to update field regex for $spec->{table}.$spec->{field}";
+
+      return 1;
+
+}
 sub _do_relation   {
-      my $self = shift;
-      my $schema = shift;
-      my $table = shift;
-      my $field = shift;
-      my $spec = shift;
+      my ($self, $schema, $table, $field, $spec) = @_;
 
       map { $spec->{$_} or die("Parameter '$_' must be specified") } qw'relname reltable relfield type reverse_name';
 
@@ -144,12 +146,7 @@ sub _do_relation   {
 
 #This needs to be made smarter
 sub _do_enumopt    {
-      my $self = shift;
-      my $schema  = shift;
-      my $table   = shift;
-      my $field   = shift;
-      my $spec    = shift;
-      my $sortval = shift;
+      my ($self, $schema, $table, $field, $spec, $sortval) = @_;
 
       map { length($spec->{$_}) or die("Parameter '$_' must be specified") } qw'handle enum_id override_id name';
 

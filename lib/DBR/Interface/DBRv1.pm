@@ -40,19 +40,22 @@ sub select {
       my $tables = $self->_split( $params{-table} || $params{-tables} ) or
 	return $self->_error("No -table[s] parameter specified");
 
-      my $fields = $self->_split( $params{-fields} || $params{-field}) or $params{'-count'} or
-	return $self->_error('No -field[s] parameter specified');
-
       my $Qtables = $self->_tables($tables) or return $self->_error('tables failed');
-
       my @Qfields;
-      foreach my $field (@$fields){
-	    my $Qfield = DBR::Config::Field::Anon->new(
-						       session => $self->{session},
-						       name   => $field
-						      ) or return $self->_error('Failed to create field object');
-	    push @Qfields, $Qfield;
+
+      if(!$params{'-count'}){
+	    my $fields = $self->_split( $params{-fields} || $params{-field}) or
+	      return $self->_error('No -field[s] parameter specified');
+
+	    foreach my $field (@$fields){
+		  my $Qfield = DBR::Config::Field::Anon->new(
+							     session => $self->{session},
+							     name   => $field
+							    ) or return $self->_error('Failed to create field object');
+		  push @Qfields, $Qfield;
+	    }
       }
+
       my $where;
       if($params{-where}){
 	    $where = $self->_where($params{-where});

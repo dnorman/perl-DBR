@@ -115,10 +115,10 @@ sub insert {
 
       foreach my $fieldname (keys %fields){
 
- 	    my $field = $table->get_field( $fieldname ) or return $self->_error("invalid field $fieldname");
- 	    my $value = $field->makevalue( $fields{ $fieldname } ) or return $self->_error("failed to build value object for $fieldname");
+ 	    my $field = $table->get_field( $fieldname ) or croak "invalid field $fieldname";
+ 	    my $value = $field->makevalue( $fields{ $fieldname } ) or croak "failed to build value object for $fieldname";
 
-	    my $set = DBR::Query::Part::Set->new($field,$value) or return $self->_error('failed to create set object');
+	    my $set = DBR::Query::Part::Set->new($field,$value) or confess 'failed to create set object';
 	    push @sets, $set;
       }
 
@@ -127,7 +127,7 @@ sub insert {
 					  session  => $self->{session},
 					  sets     => \@sets,
 					  tables   => $table,
-					 ) or return $self->_error('failed to create query object');
+					 ) or confess 'failed to create query object';
 
       return $query->run( void => !defined(wantarray) );
 }
@@ -193,24 +193,24 @@ sub enum{
 
 
 sub parse{
-      my $self = shift;
-      my $fieldname = shift;
-      my $value = shift;
+      my ($self, $fieldname, $value) = @_;
 
-      my $table = $self->{table};
-      my $field = $table->get_field( $fieldname ) or return $self->_error("invalid field $fieldname");
-      my $trans = $field->translator or return $self->_error("Field '$fieldname' has no translator");
+      my $field = $self->{table}->get_field( $fieldname ) or croak "Invalid field $fieldname";
+      my $trans = $field->translator;
 
-      my $obj = $trans->parse( $value );
-      defined($obj) || return $self->_error(
-					    "Invalid value " .
-					    ( defined $value ? "'$value'" : '(undef)' ) .
-					    " for " . $field->name
-					   );
-
-      return $obj;
+      if($trans){
+	    my $obj = $trans->parse( $value );
+	    defined($obj) || return $self->_error("Invalid value " .
+						  ( defined($value) ? "'$value'" : '(undef)' ) .
+						  " for " . $field->name );
+	    return $obj;
+      }else{
+	    $field->testsub->($value) || return $self->_error("Invalid value " .
+							      ( defined($value) ? "'$value'" : '(undef)' ) .
+							      " for " . $field->name );
+	    return $value;
+      }
 }
-
 
 #### _buildWhere
 #### Pre-process where parameters. Validate relationship names and field names.

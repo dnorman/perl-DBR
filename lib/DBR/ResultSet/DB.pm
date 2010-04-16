@@ -133,9 +133,9 @@ sub _execute{
       my $conn = $self->{query}->instance->connect('conn') or croak "Failed to fetch connection handle";
       if($conn->can_trust_execute_rowcount){
 	    $self->{rows_hint} = $rv + 0;
+	    $self->_logDebug3("ROWS: $self->{rows_hint}");
       }
 
-      $self->_logDebug3("ROWS: $self->{rows_hint}");
       $self->{state} = ACTIVE;
 
       return 1;
