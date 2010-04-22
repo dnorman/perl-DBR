@@ -56,9 +56,7 @@ use overload
       new ($_[2] ? $b / $a : $a / $b);
 },
 
-'fallback' => 1,
-'nomethod' => sub {croak "Dollar object: Invalid operation '$_[3]' The ways you can use dollar objects are restricted"}
-;
+'fallback' => 1;
 
 sub cents   {
       return '' unless defined($_[0][0]);

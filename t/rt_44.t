@@ -21,6 +21,7 @@ ok( defined($items), 'items = dbh->cart->all ... ' . $@ );
 my $total_bucks = 0;
 my $total_cents = 0;
 
+my $rv;
 while (my $item = $items->next()) {
 
   ok( defined( $item), 'item = items->next' );
@@ -34,20 +35,27 @@ while (my $item = $items->next()) {
   # add bucks
 
   eval{ $total_bucks += $price };
-  ok( $total_bucks, 'total_bucks += price  (' . $total_bucks . ') ... ' . $@ );
+  ok( !$@ && $total_bucks, 'total_bucks += price  (' . $total_bucks . ') ... ' . $@ );
 
   my $foo_bucks;  # an undefined value
   eval{ $foo_bucks += $price };
-  ok( defined($foo_bucks), 'foo_bucks += price (' . $foo_bucks . ') ... ' . $@ );
+  ok( !$@ &&  defined($foo_bucks), 'foo_bucks += price (' . $foo_bucks . ') ... ' . $@ );
+
+  $rv = eval{ $price eq '' };
+  ok( !$@ , "dollar value eq ''" . $@ );
+
+  $rv = eval{ $price ne '' };
+  ok( !$@ , "dollar value ne ''" . $@ );
+
 
   # add cents
 
-  eval{ $total_cents += $price->cents };
-  ok( $total_cents, 'total_cents += price->cents  (' . $total_cents . ') ... ' . $@ );
+  eval{ no warnings; $total_cents += $price->cents };
+  ok( !$@ && $total_cents, 'total_cents += price->cents  (' . $total_cents . ') ... ' . $@ );
 
   my $foo_cents;  # an undefined value
-  eval{ $foo_cents += $price->cents };
-  ok( defined($foo_cents), 'foo_cents += price->cents (' . $foo_cents . ') ... ' . $@ );
+  eval{ no warnings; $foo_cents += $price->cents };
+  ok( !$@ && defined($foo_cents), 'foo_cents += price->cents (' . $foo_cents . ') ... ' . $@ );
 }
 
 done_testing();

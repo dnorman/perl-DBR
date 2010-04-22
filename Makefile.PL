@@ -18,7 +18,6 @@ WriteMakefile(
               EXE_FILES    => [qw'bin/dbr-admin bin/dbr-dump-spec bin/dbr-load-spec bin/dbr-scan-db'],
 	      PREREQ_PM       => {
 				  'Carp'               => 0,
-				  'Class::Std'         => 0,
 				  'Clone'              => 0,
 				  'Curses::UI'         => 0,
 				  'Data::Dumper'       => 0,
@@ -30,7 +29,6 @@ WriteMakefile(
 				  'DBD::SQLite'        => '1.20',
 				  'DBI'                => 0,
 				  'Digest::MD5'        => 0,
-				  'Error'              => 0,
 				  'FileHandle'         => 0,
 				  'Moose'              => 0,
 				  'POSIX'              => 0,
