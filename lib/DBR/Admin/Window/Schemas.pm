@@ -23,6 +23,7 @@ sub BUILD {
 				-y => 2, -width => 25, -vscrollbar => 1,
 				-title => "Schemas", -border => 1,
 				-onchange => sub {
+
 				      my $schema_id = $_[0]->get;
 				      my $schema = $self->schemas->{$schema_id} or die "Failed to look up schema";
 				      $self->spawn('Tables',
@@ -30,6 +31,7 @@ sub BUILD {
 						   schema_id   => $schema_id,
 						   schema_name => $schema->{handle},
 						  )
+
 				},
 				#-onselchange => sub { print STDERR "Active is: " . $_[0]->get_active_value . "\n" }
 			      );

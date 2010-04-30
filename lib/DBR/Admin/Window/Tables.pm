@@ -11,6 +11,12 @@ extends 'DBR::Admin::Window';
 has schema_id   => (is => 'ro', required => 1);
 has schema_name => (is => 'ro', required => 1);
 
+my $dtlist = DBR::Config::Field->list_datatypes;
+my %dtmap = map { $_->{id} => $_ } @$dtlist;
+
+my $trans = DBR::Config::Trans::list_translators();
+my %transmap = map { $_->{id} => $_ } @$trans;
+
 sub BUILD {
       my $self = shift;
 
@@ -24,24 +30,17 @@ sub BUILD {
       my %labels = map { $_->{table_id} => $_->{name} } @$tables;
 
       my $listbox = $self->add( 'tablelist', 'Listbox',
-				-y => 1, -width => 25, -vscrollbar => 1,
+				-y => 1, -width => 26, -vscrollbar => 1,
 				-title => "Tables", -border => 1,
 				-values => [ sort { lc($labels{$a}) cmp lc($labels{$b}) } keys %labels ],
 				-labels => \%labels,
-				-onchange => sub {
-				      # $self->spawn('Fields',
-				      # 		   title       => $self->schema_name.'.'.$labels{$table_id} . ' fields',
-				      # 		   table_id    => $table_id,
-				      # 		   table_name  => $labels{ $table_id },
-				      # 		   schema_id   => $self->schema_id,
-				      # 		   schema_name => $self->schema_name,
-				      # 		  )
-				      $self->win->getobj('fieldlist')->focus;
-				},
-				-onselchange => sub { 
+				-onchange => sub { $self->win->getobj('fieldlist')->focus },
+				-onselchange => sub {
+
 				      my $table_id = $_[0]->get_active_value;
 				      $self->list_relationships( $table_id, $labels{$table_id} );
 				      $self->list_fields( $table_id, $labels{$table_id} );
+
 				}
 			      );
       $listbox->draw;
@@ -134,6 +133,7 @@ sub list_fields{
 								  root_window => $self->win->root()
 								);
       my %labels = map { $_->{field_id} => $_->{name} } @$fields;
+      my %fields = map { $_->{field_id} => $_         } @$fields;
 
       $self->win->delete('fieldlist');
       my $listbox = $self->add( 'fieldlist', 'Listbox',
@@ -142,19 +142,75 @@ sub list_fields{
 				-values => [ sort { lc($labels{$a}) cmp lc($labels{$b}) } keys %labels ],
 				-labels => \%labels,
 				-onchange => sub {
-				      my $fid = $_[0]->get;
+				      my $field_id = $_[0]->get;
 				      $self->spawn( 'Field',
-						    field_id => $fid,
+						    field_id => $field_id,
 						    title    =>
-						    $self->schema_name . '.' . $table_name . '.' . $labels{$fid},
+						    $self->schema_name . '.' . $table_name . '.' . $labels{$field_id},
 						    dimensions  => '50x15',
 						    bordercolor => 'blue'
 						  ) },
+				-onselchange => sub {
+
+				      my $field_id = $_[0]->get_active_value;
+				      $self->field_detail( $fields{$field_id}, $table_name );
+
+				}
 			      );
 
       $listbox->onFocus( sub { $listbox->clear_selection });
       $listbox->set_binding( sub { $self->focus_t } , KEY_LEFT);
       $listbox->draw;
+}
+
+sub field_detail{
+      my $self = shift;
+      my $field = shift;
+      my $table_name = shift;
+
+      my $box = $self->detail_box( $table_name . '.' . $field->{name} );
+
+      my @lines;
+      push @lines, '"'. $field->{display_name} .'"' if $field->{display_name};
+
+      my $typeref = $dtmap{ $field->{data_type} } || {};
+      push @lines, 'Type:  ' . $typeref->{handle} . "($field->{max_value})";
+
+
+      my @parts;
+      push @parts, $field->{is_signed}   ? 'SIG'  : 'UNSIG';
+      push @parts, $field->{is_nullable} ? 'NULL' : 'NOTNULL';
+      push @parts, 'PK' if $field->{is_pkey};
+
+      push @lines, 'Flags: ' . join(' ', @parts);
+
+      if( $field->{trans_id} ){
+	    my $trans = $transmap{ $field->{trans_id} };
+	    push @lines, "Trans: $trans->{name}";
+      }
+
+      $box->add('field_basics', 'Label',  -text => join("\n", @lines) );
+      $box->draw;
+
+      return 1;
+
+}
+
+sub detail_box{
+      my $self = shift;
+      my $title = shift;
+      print STDERR "DETAIL BOX\n";
+
+      $self->win->delete('detail_box');
+      $self->{detail_box} = $self->add(
+				       'detail_box', 'Window',
+				       -border => 1, -bfg => $self->bordercolor,
+				       -title  => $title || 'Details',
+				       -titlereverse => 1,
+				       -y      => 1,
+				       -x      => 51,
+				      );
+      return $self->{detail_box};
 }
 
 1;

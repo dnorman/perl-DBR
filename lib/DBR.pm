@@ -31,7 +31,7 @@ sub new {
       return $self->_error("Failed to create DBR::Util::Session object") unless
 	$self->{session} = DBR::Misc::Session->new(
 						   logger   => $self->{logger},
-						   admin    => $params{-admin} ? 1 : 0, # make the user jomp through some hoops for updating metadata
+						   admin    => $params{-admin} ? 1 : 0, # make the user jump through some hoops for updating metadata
 						   fudge_tz => $params{-fudge_tz},
 						  );
 
