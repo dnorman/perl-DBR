@@ -25,8 +25,7 @@ Mouse may be supported depending on your terminal program#;
 
 
 my %menu_labels = (
-		   'Schemas'    => 'Schemas',
-		   'EnumList'   => 'Enums',
+		   'SchemaList'    => 'Schemas',
 		  );
 my @menu_values = keys %menu_labels;
 

@@ -2,7 +2,7 @@
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation.
 
-package DBR::Admin::Window::Tables;
+package DBR::Admin::Window::Schema;
 use Moose;
 use Curses;
 
@@ -49,7 +49,8 @@ sub BUILD {
       $self->win->set_binding( sub { $self->focus_t } , 't');
       $self->win->set_binding( sub { $self->focus_r } , 'r');
       $self->win->set_binding( sub { $self->focus_f } , 'f');
-      $listbox->onFocus(sub { $listbox->clear_selection });
+      $listbox->set_binding( sub { $self->close } , KEY_LEFT   );
+      $listbox->onFocus(     sub { $listbox->clear_selection } );
 
       $self->win->set_focusorder('tablelist', 'rellist','fieldlist', 'close');
 }

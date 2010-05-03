@@ -2,8 +2,9 @@
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation.
 
-package DBR::Admin::Window::Schemas;
+package DBR::Admin::Window::SchemaList;
 use Moose;
+use Curses;
 extends 'DBR::Admin::Window';
 
 has 'vis_tables'  => (is => 'rw', isa => 'Bool', default => 0);
@@ -13,34 +14,45 @@ has 'schemas'     => (is => 'rw');
 sub BUILD {
       my $self = shift;
 
+      my $listbox;
       my $button = $self->add( 'newschema', 'Buttonbox',
        			       -y => 0, -width => 20,
        			       -buttons   => [{ -label => '< Add New Schema >',
-       						-onpress => sub {$self->add_edit_schema(add => 1)}
+       						-onpress => sub {
+						      $self->spawn('EditSchema',  dimensions  => '50x15', isnew => 1);
+						      $self->update_schema_list($listbox);
+						}
        					      }],
+			     );
+      $self->add( 'info', 'Label',
+       			       -y => 10, -x => 26,
+       			       -text => "Press e to edit the schema name,\nor press enter to select."
 			      );
-      my $listbox = $self->add( 'schemalistbox', 'Listbox',
-				-y => 2, -width => 25, -vscrollbar => 1,
-				-title => "Schemas", -border => 1,
-				-onchange => sub {
 
-				      my $schema_id = $_[0]->get;
-				      my $schema = $self->schemas->{$schema_id} or die "Failed to look up schema";
-				      $self->spawn('Tables',
-						   title       => "Schema: $schema->{handle}",
-						   schema_id   => $schema_id,
-						   schema_name => $schema->{handle},
-						  )
+      $listbox = $self->add( 'schemalistbox', 'Listbox',
+			     -y => 2, -width => 25, -vscrollbar => 1,
+			     -title => "Schemas", -border => 1,
+			     -onchange => sub {
+				   my $schema_id = $_[0]->get;
+				   my $schema = $self->schemas->{$schema_id} or die "Failed to look up schema";
+				   $self->spawn('Schema',
+						title       => "Schema: $schema->{handle}",
+						schema_id   => $schema_id,
+						schema_name => $schema->{handle},
+					       )
 
-				},
-				#-onselchange => sub { print STDERR "Active is: " . $_[0]->get_active_value . "\n" }
-			      );
+			     },
+			   );
 
       $self->update_schema_list($listbox);
 
       $listbox->focus();
       $listbox->onFocus(sub { $listbox->clear_selection; $self->update_schema_list($listbox) });
-      #$self->win->set_focusorder('fieldlistbox','tablelistbox','schemalistbox', 'newschema', 'close');
+      $listbox->set_binding( sub {
+				   $self->spawn('EditSchema',  dimensions  => '50x15', schema_id => $_[0]->get_active_value);
+				   $self->update_schema_list($listbox);
+			     } , 'e'        );
+      $listbox->set_binding( sub { $self->close } , KEY_LEFT   );
 }
 
 sub update_schema_list{
