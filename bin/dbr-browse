@@ -179,9 +179,12 @@ sub dumprecs {
       my $max = $args{dumpmax};
       while (my $rec = $recs->next) {
             my $vals = $rec->get( @fields );
-            my $rows = [ map { { field => $_, value => shift @{ $vals } } } @fields ];
+            my @refs = map { ref $_ } @{$vals};
+            my @more = map { ref $_ eq 'DBR::_ENUM' ? join( ' / ', $_->id, $_->handle, $_->name ) :
+                               ref $_ eq 'DBR::_UXTIME' ? join( ' / ', $_->unixtime, $_->fancydatetime ) : '' } @{$vals};
+            my $rows = [ map { { field => $_, value => shift @{ $vals }, 'ref' => shift @refs, 'more' => shift @more } } @fields ];
             print "\n";
-            &grid( $rows, [ 'field', 'value' ] );
+            &grid( $rows, [ 'field', 'value', 'ref', 'more' ] );
             unless (--$max) {
                   print "listing stopped!  (max of $args{dumpmax} matching rows will be dumped)\n";
                   last;
@@ -258,7 +261,7 @@ sub sample_field {
                   );
       $query{-where} = $where if $where;
 
-      my $sth = $dbh->select( %query );
+      my $sth = $dbh->select( %query ) or print "select failed with query:\n" . Dumper( \%query ) and return 0;
       my $chunker = &make_chunker( 5000, $sth, 'arrayref' );
 
       my $slurped = 0;
