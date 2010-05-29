@@ -7,11 +7,11 @@ package DBR::Interface::Object;
 
 use strict;
 use base 'DBR::Common';
-use DBR::Query::Part;
 use DBR::Config::Scope;
 use DBR::ResultSet::Empty;
 use DBR::Query::Select;
 use DBR::Query::Insert;
+use DBR::Interface::Where;
 use Carp;
 
 sub new {
@@ -79,8 +79,16 @@ sub where{
       my %uniq;
       my @fields = grep { !$uniq{ $_->field_id }++ } (@$pk, @$prefields);
 
-      my @tables = ($table);
-      my $where = $self->_buildwhere(\@inwhere,\@tables) or return $self->_error("Failed to generate where for ${\$table->name}");
+
+      my $builder = DBR::Interface::Where->new(
+					       session       => $self->{session},
+					       instance      => $self->{instance},
+					       primary_table => $table,
+					      ) or return $self->_error("Failed to generate where for ${\$table->name}");
+
+      my $where = $builder->build(
+				  input         => \@inwhere
+				 );
 
       if($where->is_emptyset){
 	  return DBR::ResultSet::Empty->new(); # Empty resultset
@@ -96,7 +104,7 @@ sub where{
 					  instance => $self->{instance},
 					  scope    => $scope,
 					  fields   => \@fields ,
-					  tables   => \@tables,
+					  tables   => $builder->tables,
 					  where    => $where,
 					 ) or croak('failed to create Query object');
 
@@ -211,166 +219,6 @@ sub parse{
 	    return $value;
       }
 }
-
-#### _buildWhere
-#### Pre-process where parameters. Validate relationship names and field names.
-#### Prepare them to be merged together and built into a query hierarchy.
-sub _buildwhere{
-      my $self       = shift;
-      my $inwhere    = shift;
-      my $tables_ref = shift;
-      my $table      = $self->{table}; # The primary table
-
-      !(scalar(@$inwhere) % 2) or return $self->_error('Odd number of arguments in where parameters');
-
-      my %grouping = (
-		      table => $table # prime the pump
-		     );
-
-      my $aliascount = 0;
-
-      while(@$inwhere){ # Iterate over key/value pairs
-	    my $key    = shift @$inwhere;
-	    my $rawval = shift @$inwhere;
-
-	    $key =~ /^\s+|\s+$/g; # trim junk
-
-	    my $outpart;
-
-	    my @parts = split(/\s*\.\s*/,$key); # Break down each key into parts
-	    my $ref = \%grouping;
-	    my $tablect;
-
-	    my $cur_table = $table; # Start
-	    while ( my $part = shift @parts ){
-		  my $last = (scalar(@parts) == 0)?1:0;
-
-		  if($last){ # The last part should always be a field
-			die('Sanity error. Duplicate field ' .$part ) if $ref->{fields}->{$part};
-
-			my $field = $cur_table->get_field( $part ) or return $self->_error("invalid field $part");
-			my $value = $field->makevalue( $rawval ) or return $self->_error("failed to build value object for $part");
-
-			my $out = DBR::Query::Part::Compare->new( field => $field, value => $value ) or return $self->_error('failed to create compare object');
-			$ref->{fields}->{$part} = $out;
-
-		  }else{
-			#test for relation?
-			$ref = $ref->{kids}->{$part} ||= {}; # step deeper into the tree
-
-			if( $ref->{been_here} ){ # Dejavu - merge any common paths together
-
-			      $cur_table = $ref->{table};  # next!
-
-			}else{
-
-			      my $relation = $cur_table->get_relation($part) or return $self->_error("invalid relationship $part");
-			      my $maptable = $relation->maptable             or return $self->_error("failed to get maptable");
-
-			      # Any to_one relationship results in a join. we'll need some table aliases for later.
-			      # Do them now so everything is in sync. I originally assigned the alias in _reljoin,
-			      # but it didn't always alias the fields that needed to be aliased due to the order of execution.
-			      if($relation->is_to_one){
-				    return $self->_error('No more than 25 tables allowed in a join') if $aliascount > 24;
-
-				    $cur_table ->alias() || $cur_table ->alias( chr(97 + $aliascount++)  ); # might be doing this one again
-				    $maptable  ->alias( chr(97 + $aliascount++)  );
-			      }
-
-			      $ref->{relation}  = $relation;
-			      $ref->{prevtable} = $cur_table;
-			      $ref->{table}     = $maptable;
-			      $ref->{been_here} = 1;
-
-			      $cur_table = $maptable; # next!
-			}
-		  }
-
-	    };
-      }
-
-      my $where = $self->_reljoin(\%grouping, $tables_ref) or return $self->_error('_reljoin failed');
-
-      return $where;
-}
-
-sub _reljoin{
-      my $self = shift;
-      my $ref  = shift;
-      my $tables_ref = shift;
-
-      return $self->_error('ref must be hash') unless ref($ref) eq 'HASH';
-
-      my @and;
-
-      if($ref->{kids}){
-	    foreach my $key (keys %{$ref->{kids}}){
-		  my $kid = $ref->{kids}->{ $key };
-		  my $relation = $kid->{relation};
-
-		  # it's important we use the same table objects to preserve aliases
-
-		  my $table     = $kid->{table}      or return $self->_error("failed to get table");
-		  my $prevtable = $kid->{prevtable}  or return $self->_error("failed to get prev_table");
-
-		  my $field     = $relation->mapfield or return $self->_error('Failed to fetch field');
-		  my $prevfield = $relation->field    or return $self->_error('Failed to fetch prevfield');
-
-		  my $prevalias = $prevtable ->alias();
-		  my $alias     = $table     ->alias();
-
-		  $prevfield ->table_alias( $prevalias ) if $prevalias;
-		  $field     ->table_alias( $alias     ) if $alias;
-
-		  if ($relation->is_to_one) { # Do a join
-
-			$prevalias or die('Sanity error: prevtable alias is required');
-			$alias     or die('Sanity error: table alias is required');
-
-			push @$tables_ref, $table;
-
-			my $where = $self->_reljoin($kid, $tables_ref) or return $self->_error('_reljoin failed');
-			push @and, $where;
-
-			my $join = DBR::Query::Part::Join->new($field,$prevfield) or return $self->_error('failed to create join object');
-			push @and, $join;
-
-		  }else{ # if it's a to_many relationship, then subqery
-			my @tables = $table;
-			my $where = $self->_reljoin($kid, \@tables) or return $self->_error('_reljoin failed');
-
- 			my $query = DBR::Query::Select->new(
-							    instance => $self->{instance},
-							    session  => $self->{session},
-							    fields => [$field],
-							    tables   => \@tables,
-							    where    => $where,
-							   ) or return $self->_error('failed to create query object');
-
- 			my $subquery = DBR::Query::Part::Subquery->new($prevfield, $query) or return $self->_error('failed to create subquery object');
-			push @and, $subquery;
-		  }
-
-	    }
-      }
-
-      # It's important that fields are evaluated after all relationships are processed for this node
-      if($ref->{fields}){
-	    my $alias = $ref->{table}->alias;
-
-	    foreach my $key (keys %{$ref->{fields}}){
-		  my $compare = $ref->{fields}->{ $key };
-		  $compare->field->table_alias( $alias ) if $alias;
-		  push @and, $compare;
-	    }
-      }
-
-      return $and[0] if @and == 1;
-      return DBR::Query::Part::And->new(@and) || $self->_error('failed to create And object');
-
-
-}
-
 
 1;
 

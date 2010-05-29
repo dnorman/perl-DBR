@@ -3,7 +3,7 @@ package DBR::Util::Operator;
 use strict;
 require Exporter;
 our @ISA = qw(Exporter);
-our @EXPORT = qw(GT LT GE LE NOT LIKE NOTLIKE BETWEEN NOTBETWEEN);
+our @EXPORT = qw(GT LT GE LE NOT LIKE NOTLIKE BETWEEN NOTBETWEEN AND OR);
 
 # Object oriented
 sub new{
@@ -31,5 +31,9 @@ sub NOTLIKE ($) { __PACKAGE__->new('notlike',$_[0]) }
 
 sub BETWEEN    ($$) { __PACKAGE__->new('between',   [ $_[0],$_[1] ]) }
 sub NOTBETWEEN ($$) { __PACKAGE__->new('notbetween',[ $_[0],$_[1] ]) }
+
+
+#sub AND ($) { __PACKAGE__->new('and',[ @_ ]) }
+sub OR  ($) { __PACKAGE__->new('ormarker', [ @_ ]) }
 
 1;
