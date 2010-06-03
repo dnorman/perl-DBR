@@ -13,10 +13,8 @@ use Carp;
 sub new{
       my( $package ) = shift;
 
-      return $package->_error('cannot call new on DBR::Query::Part::AndOr directly') if $package eq 'DBR::Query::Part::AndOr';
-
       for (@_){
-	    ref($_) =~ /^DBR::Query::Part::/ || return croak('arguments must be part objects')
+	    ref($_) =~ /^DBR::Query::Part::/ || croak('arguments must be part objects')
       };
 
       my $self = [@_];

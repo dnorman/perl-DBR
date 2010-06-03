@@ -26,66 +26,67 @@ sub new {
 
 sub tables { shift->{tables} }
 
+sub _andify{ 
+      my $self = shift;
+      return $_[0] if @_ == 1;
+      return DBR::Query::Part::And->new( @_ );
+}
+
 sub build{
       my $self = shift;
-      my %params = @_;
-      my $inwhere    = $params{input}   || croak "input is required";
+      my $input = shift || croak "input is required";
+      print STDERR "BUILD\n";
 
+      my $pendgroup = { table => $self->{table} }; # prime the pump.
 
-      !(scalar(@$inwhere) % 2) or croak('Odd number of arguments in where parameters');
-
-      my %grouping = (
-		      table => $self->{table} # prime the pump
-		     );
-
-
+      my @andparts = (); # Storage for finished query part objects
       my $ct;
-      while(@$inwhere){ # Iterate over key/value pairs
-	    my $next    = shift @$inwhere;
-
-	    if( ref($next) eq 'DBR::Util::Operator' ){ # Kaboom! OR is very disruptive
+      while (@$input){ # Iterate over key/value pairs
+	    my $next    = shift @$input;
+	    if(ref($next) eq 'DBR::_LOP'){ # Logical OPerator
+		  $ct || croak('Cannot use an operator without a preceeding comparison');
 		  my $op = $next->operator;
-		  croak "Invalid operator '$op'" unless $op eq 'ormarker';
 
+		  if ($op eq 'And'){ # Yayy... shortcut. A and ( B and C ) == A and B and C
+		  	push @andparts, $self->build( $next->value ); # Important that this is array context
+			#push @$input, @{$next->value}; # Collapse HERE HERE HERE --- This alllllllmost works, but not quite
+		  } elsif ( $op eq 'Or' ){
+			push @andparts, $self->_reljoin( $pendgroup ); # Everything before me (pending)...
+			my $A = $self->_andify( @andparts );
+			my $B = $self->build( $next->value );         # Compared to everything inside
 
-		  my @ors;
-		  croak "Can't use 'OR' divider operator without something preceeding it" unless $ct; # did we actually get anything?
+			@andparts = ( DBR::Query::Part::Or->new( $A, $B ) ); # Russian dolls... Get in mahh belly
 
-		  #Everything before me...
-		  my $whereA = $self->_reljoin( \%grouping );
-		  # OR
-		  # The contents of the operator a OR (b) ... other stuff
-		  my $whereB = $self->build( input => $next->value );
-
-		  my $or = DBR::Query::Part::Or->new($whereA,$whereB) || confess('failed to create Or object');
-
-		  # anything left?
-		  if(@$inwhere){
-			my $remainder = $self->build( input => $inwhere );
-			return DBR::Query::Part::And->new($or,$remainder) || confess('failed to create And object');
+			$pendgroup = { table => $self->{table} };      # Reset
+			$ct = 0;                                       # Reset
 		  }else{
-			return $or;
+			confess "Sanity error"
 		  }
 
-	    }else{
-		  my $rawval = shift @$inwhere;
-		  $self->_process_comparison($next, $rawval, \%grouping);
+
+		  next;
 	    }
 
+	    my $rawval = shift @$input;
 	    $ct++;
+ 	    $self->_process_comparison($next, $rawval, $pendgroup); # add it to the hopper
+
       }
 
-      my $where = $self->_reljoin( \%grouping ) or confess('_reljoin failed');
+      scalar(@$input) and croak('Odd number of arguments in where parameters'); # I hate leftovers
 
-      return $where;
+      push @andparts, $self->_reljoin( $pendgroup );
+
+      #return $self->_andify(@andparts);
+      return wantarray?(@andparts):$self->_andify(@andparts); # don't wrap it in an and if we want an array
 }
+
 sub _process_comparison{
       my $self = shift;
 
       my $key = shift;
       my $rawval = shift;
       my $ref = shift;
-
 
       $key =~ /^\s+|\s+$/g; # trim junk
       my @parts = split(/\s*\.\s*/,$key); # Break down each key into parts
@@ -211,8 +212,9 @@ sub _reljoin{
 	    }
       }
 
-      return $and[0] if @and == 1;
-      return DBR::Query::Part::And->new(@and) || confess('failed to create And object');
+      return @and;
+      #return $and[0] if @and == 1;
+      #return DBR::Query::Part::And->new(@and) || confess('failed to create And object');
 
 
 }
