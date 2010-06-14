@@ -10,15 +10,25 @@ use DBR::Config::Relation;
 use DBR;
 use strict;
 
-my ($conffile, $schemaname, $tablenames) = @ARGV;
-my $confdb ||= 'dbrconf';
+my ($conffile, $schemaname, $tablenames, $outfile) = @ARGV;
 
-my $logger = new DBR::Util::Logger(-logpath => '/tmp/dbr_dumpspec.log', -logLevel => 'debug3');
+usage() && exit unless $conffile;
+
+my $logger = new DBR::Util::Logger(-logpath => '/tmp/dbr_dumpspec.log', -logLevel => 'warn');
 my $dbr    = new DBR(
 		     -logger => $logger,
 		     -conf   => $conffile,
-		    );
+		    )
+  or usage() and die "ERROR: failed to create DBR - check config file path or spec\n";
 
+schemas() unless $schemaname;
+exit unless $schemaname;
+
+my $confdb ||= 'dbrconf';
+
+my @tablenames = split(/,/,$tablenames);
+@tablenames = tables() unless @tablenames;
+exit unless @tablenames;
 
 my $trans_defs = DBR::Config::Trans->list_translators or die 'Failed to get translator list';
 my %trans_lookup; map {$trans_lookup{$_->{id}} = $_}  @$trans_defs;
@@ -26,13 +36,17 @@ my %trans_lookup; map {$trans_lookup{$_->{id}} = $_}  @$trans_defs;
 my $relationtype_defs = DBR::Config::Relation->list_types or die 'Failed to get relationship type list';
 my %relationtype_lookup; map {$relationtype_lookup{$_->{type_id}} = $_}  @$relationtype_defs;
 
+if ($outfile) {
+      open( OUTFILE, ">$outfile" ) or die "failed to open output file [$outfile]\n";
+}
 
+@tablenames = all_tables() if @tablenames == 1 && $tablenames[0] eq 'ALL';
 
-my @tablenames = split(/,/,$tablenames);
-foreach my $tablename (@tablenames){
+foreach my $tablename (uniq( @tablenames )){
       dumptable($tablename);
 }
 
+print "Tables have been dumped to: $outfile\n" if $outfile;
 
 
 sub dumptable{
@@ -198,7 +212,8 @@ sub line{
 	    die "Illegal character in value"     if $value =~ /\t/;
 	    push @pairs, $field . '=' . $value;
       }
-      print join("\t",@pairs) . "\n";
+      my $outline = join("\t",@pairs) . "\n";
+      $outfile ? print OUTFILE $outline : print $outline;
 }
 
 
@@ -208,4 +223,89 @@ sub uniq{
 
       return grep {!$uniq{$_}++} @_;
 
+}
+
+sub tables {
+      print <<"EOF";
+Specify tables to dump:
+  Enter  to quit entry and perform dump,
+  QUIT   to exit without any dump,
+  ALL    to dump all schema tables,
+  *      in name to show matching table names (and add if '!' appended),
+         or full names separated by commas to add to the dump list.
+EOF
+
+      my @all = all_tables();
+      my %allmap = map { $_ => 1 } @all;
+
+      print "schema has " . scalar( @all ) . " tables...\n";
+
+      my @names = ();
+      while (1) {
+            print "\nTABLE> "; chomp( my $tspec = <STDIN> );
+            last unless $tspec;
+            if ($tspec eq 'QUIT') { @names = (); last; }
+            print "No spaces!\n" and next if $tspec =~ m!\s!;
+            @names = @all and last if $tspec eq 'ALL';
+            if ($tspec =~ m!\*!) {
+                  my ($addflag) = $tspec =~ s!(\!)$!!;
+                  $tspec = '^'.$tspec unless $tspec =~ m!^\*!;
+                  $tspec = $tspec.'$' unless $tspec =~ m!\*$!;
+                  $tspec =~ s!\*!.\*!g;
+                  my @matched = grep { $_ =~ m!$tspec!i } @all;
+                  print "MATCHES: " . (@matched ? join( ',', @matched ) : '(none)');
+                  push @names, @matched if $addflag;
+            }
+            else {
+                  my @entered = split( /\s*,\s*/, $tspec );
+                  push @names, grep { $allmap{$_} } @entered;  # prevent bad table names
+            }
+            print "\nDump: " . (@names ? join(',',@names) : '(empty list)' ) . "\n";
+      }
+      make_outfile();
+      return @names;
+}
+
+sub all_tables {
+      my $inst = $dbr->get_instance( $schemaname ) or die "failed to get instance!\n";
+      my $schema = $inst->schema or die "failed to get schema from instance!\n";
+      my $tables = $schema->tables or die "failed to get tables from schema!\n";
+      my @all = map { $_->name } @{$tables};
+      return @all;
+}
+
+sub schemas {
+      print "\nAvailable Schemas:\n   ";
+      print join( "\n   ", map { $_->{handle} } @{ DBR::Config::Schema->list_schemas } );
+      print "\n\nSCHEMA> "; chomp( $schemaname = <STDIN> );
+      make_outfile();
+      return 1;
+}
+
+# if we're interactive, we don't want to output to STDOUT anymore
+sub make_outfile {
+      $outfile ||= $$ . '_' . time . '.dbr';
+}
+
+sub usage {
+      print <<"EOF";
+
+usage:
+
+  $0 <conf-file> [ <schema-handle> [ <table-name>[,<table-name>...] <out-file-path> ] ]
+
+  If either schema-handle or table-name is omitted, enters interactive mode.
+  Interactive mode will output to a file in the current working directory.
+  If a single table name of "ALL" is specified, all tables are dumped.
+  Table names must be comma-separated without whitespace.
+
+  example:
+    $0 DBR.conf               (interactive mode)
+    $0 DBR.conf cars          (interactive mode)
+    $0 DBR.conf cars ALL
+    $0 DBR.conf cars car,model,make
+    $0 DBR.conf cars car,model,make ./metadata/cars.dbr
+
+EOF
+      return 1;
 }
