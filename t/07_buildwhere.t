@@ -43,12 +43,19 @@ my $builder = DBR::Interface::Where->new(
   #      date_released => GT '1 year ago',
   #     );
 
+ test(2,
+       album_id => 2,
+       OR name     => 'Track BA2',
+       OR rating   => 'earbleed',
+       OR date_released => GT '1 year ago',
+      );
  # test(2,
- #      album_id => 2,
- #      AND name     => 'Track BA2',
- #      AND rating   => 'earbleed',
- #      AND date_released => GT '1 year ago',
- #     );
+ #       album_id => 2,
+ #       AND name     => 'Track BA2',
+ #       AND rating   => 'earbleed',
+ #       AND date_released => GT '1 year ago',
+ #      );
+exit;
 
 # test(3,
 #      album_id => 1,
@@ -74,7 +81,7 @@ my $builder = DBR::Interface::Where->new(
 # 	  album_id => 1,
 # 	  OR (album_id => 2, rating => 'earbleed'),
 # 	  OR (album_id => 3)
-# 	 ),
+ #	 ),
 #     );
 
 sub test{
