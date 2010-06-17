@@ -31,11 +31,27 @@ sub NOTLIKE ($) { __PACKAGE__->new('notlike',$_[0]) }
 sub BETWEEN    ($$) { __PACKAGE__->new('between',   [ $_[0],$_[1] ]) }
 sub NOTBETWEEN ($$) { __PACKAGE__->new('notbetween',[ $_[0],$_[1] ]) }
 
-
-sub AND {  DBR::_LOP->new( 'And', [ @_ ] ) }
-sub OR  {  DBR::_LOP->new( 'Or' , [ @_ ] ) }
+# Yes, having an AND operator is a little silly,
+# given that AND is the default operation,
+# but it's necessary to represent some of the more
+# esoteric queries out there now that OR is in the mix.
+# A AND (B OR C) is not equivelant to A AND B OR C
+sub AND {
+      bless ([
+	      'And', [ @_ ],
+	      (scalar ( grep { !(ref($_) eq 'DBR::_LOP') || $_->operator eq 'And' } @_ ) == @_) ? 1 : 0, # calculate only_contains_and
+	     ], 'DBR::_LOP');
+}
+sub OR {
+      bless ([
+	      'Or', [ @_ ],
+	      (scalar (  grep { !(ref($_) eq 'DBR::_LOP') || $_->operator eq 'And' } @_ ) == @_) ? 1 : 0, # calculate only_contains_and
+	     ], 'DBR::_LOP' );
+     }
 
 package DBR::_LOP;
 use base 'DBR::Util::Operator';
+
+sub only_contains_and{ $_[0][2] }
 
 1;

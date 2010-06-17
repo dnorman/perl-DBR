@@ -9,12 +9,13 @@ package DBR::Query::Part::AndOr;
 use strict;
 use base 'DBR::Query::Part';
 use Carp;
+use Data::Dumper;
 
 sub new{
       my( $package ) = shift;
 
       for (@_){
-	    ref($_) =~ /^DBR::Query::Part::/ || croak('arguments must be part objects')
+	    ref($_) =~ /^DBR::Query::Part::/ || confess("arguments must be part objects ($_)")
       };
 
       my $self = [@_];

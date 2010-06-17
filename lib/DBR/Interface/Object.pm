@@ -86,9 +86,7 @@ sub where{
 					       primary_table => $table,
 					      ) or return $self->_error("Failed to generate where for ${\$table->name}");
 
-      my $where = $builder->build(
-				  input         => \@inwhere
-				 );
+      my $where = $builder->build( @inwhere );
 
       if($where->is_emptyset){
 	  return DBR::ResultSet::Empty->new(); # Empty resultset

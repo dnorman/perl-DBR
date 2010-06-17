@@ -3,6 +3,7 @@ package DBR::Interface::Where;
 use strict;
 use Carp;
 use DBR::Query::Part;
+use Clone;
 
 sub new {
       my( $package ) = shift;
@@ -14,7 +15,7 @@ sub new {
       $self->{instance} = $params{instance}      or croak "instance is required";
       $self->{table}    = $params{primary_table} or croak "primary_table is required";
 
-      return croak('primary_table object must be specified') unless ref($self->{table}) eq 'DBR::Config::Table';
+      croak('primary_table object must be specified') unless ref($self->{table}) eq 'DBR::Config::Table';
 
       bless( $self, $package );
 
@@ -28,56 +29,66 @@ sub tables { shift->{tables} }
 
 sub _andify{ 
       my $self = shift;
-      return $_[0] if @_ == 1;
+      return $_[0] if (@_ == 1);
       return DBR::Query::Part::And->new( @_ );
 }
 
 sub build{
       my $self = shift;
-      my $input = shift || croak "input is required";
-      print STDERR "BUILD\n";
+      my @input = @_;
+      scalar (@input) || croak "input is required";
 
       my $pendgroup = { table => $self->{table} }; # prime the pump.
 
       my @andparts = (); # Storage for finished query part objects
-      my $ct;
-      while (@$input){ # Iterate over key/value pairs
-	    my $next    = shift @$input;
+      my $pendct;
+      while (@input){ # Iterate over key/value pairs
+	    my $next    = shift @input;
 	    if(ref($next) eq 'DBR::_LOP'){ # Logical OPerator
-		  $ct || croak('Cannot use an operator without a preceeding comparison');
 		  my $op = $next->operator;
+		  scalar(@andparts) || $pendct || croak('Cannot use an operator without a preceeding comparison');
 
-		  if ($op eq 'And'){ # Yayy... shortcut. A and ( B and C ) == A and B and C
-		  	push @andparts, $self->build( $next->value ); # Important that this is array context
-			#push @$input, @{$next->value}; # Collapse HERE HERE HERE --- This alllllllmost works, but not quite
+		  if ($op eq 'And'){
+			if( $next->only_contains_and ){
+			      # This is an optomisation to prevent unnecessary recusion,
+			      # and to avoid duplication of subqueries when possible.
+			      # Because: A and ( B and C ) is equivelant to A and B and C...
+			      # We are able to collapse the contents of the AND into the current context,
+			      # provided the sequence is maintained. Thus unshift, not push
+			      unshift @input, @{$next->value};
+			}else{
+			      # We have to recurse to handle this situation properly
+			      # A AND (B OR C) is not equivelant to A AND B OR C
+			      push @andparts,  $self->build( @{ $next->value } );
+			}
 		  } elsif ( $op eq 'Or' ){
-			push @andparts, $self->_reljoin( $pendgroup ); # Everything before me (pending)...
+			if($pendct){
+			      push @andparts, $self->_reljoin( $pendgroup ); # Everything before me (pending)...
+			}
 			my $A = $self->_andify( @andparts );
-			my $B = $self->build( $next->value );         # Compared to everything inside
+			my $B = $self->build( @{ $next->value } );         # Compared to everything inside
 
 			@andparts = ( DBR::Query::Part::Or->new( $A, $B ) ); # Russian dolls... Get in mahh belly
 
 			$pendgroup = { table => $self->{table} };      # Reset
-			$ct = 0;                                       # Reset
+			$pendct = 0;                                   # Reset
 		  }else{
-			confess "Sanity error"
+			confess "Sanity error. Invalid operator."
 		  }
-
 
 		  next;
 	    }
 
-	    my $rawval = shift @$input;
-	    $ct++;
+	    my $rawval = shift @input;
+	    $pendct++;
  	    $self->_process_comparison($next, $rawval, $pendgroup); # add it to the hopper
 
       }
 
-      scalar(@$input) and croak('Odd number of arguments in where parameters'); # I hate leftovers
+      scalar(@input) and croak('Odd number of arguments in where parameters'); # I hate leftovers
 
       push @andparts, $self->_reljoin( $pendgroup );
 
-      #return $self->_andify(@andparts);
       return wantarray?(@andparts):$self->_andify(@andparts); # don't wrap it in an and if we want an array
 }
 
@@ -99,12 +110,14 @@ sub _process_comparison{
 	    my $last = (scalar(@parts) == 0)?1:0;
 
 		  if($last){ # The last part should always be a field
-			die('Sanity error. Duplicate field ' .$part ) if $ref->{fields}->{$part};
+			croak ('Duplicate field ' .$part ) if $ref->{fields}->{$part};
 
 			my $field = $cur_table->get_field( $part ) or croak("invalid field $part");
 			my $value = $field->makevalue( $rawval )   or croak("failed to build value object for $part");
 
 			my $out = DBR::Query::Part::Compare->new( field => $field, value => $value ) or confess('failed to create compare object');
+			my $conn = $self->{instance}->connect;
+
 			$ref->{fields}->{$part} = $out;
 
 		  }else{
@@ -151,7 +164,7 @@ sub _reljoin{
       my @and;
 
       if($ref->{kids}){
-	    foreach my $key (keys %{$ref->{kids}}){
+	    foreach my $key (sort keys %{$ref->{kids}}){ # sort for consistent sql ordering
 		  my $kid = $ref->{kids}->{ $key };
 		  my $relation = $kid->{relation};
 
@@ -205,18 +218,14 @@ sub _reljoin{
       if($ref->{fields}){
 	    my $alias = $ref->{table}->alias;
 
-	    foreach my $key (keys %{$ref->{fields}}){
+	    foreach my $key (sort keys %{$ref->{fields}}){
 		  my $compare = $ref->{fields}->{ $key };
 		  $compare->field->table_alias( $alias ) if $alias;
 		  push @and, $compare;
 	    }
       }
 
-      return @and;
-      #return $and[0] if @and == 1;
-      #return DBR::Query::Part::And->new(@and) || confess('failed to create And object');
-
-
+      return wantarray?(@and):$self->_andify(@and); # don't wrap it in an and if we want an array
 }
 
 1;
