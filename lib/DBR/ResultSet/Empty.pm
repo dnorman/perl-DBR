@@ -4,26 +4,21 @@ use strict;
 use base 'DBR::Common';
 use DBR::Misc::Dummy;
 use Carp;
-
-sub new {
-      my( $package ) = shift;
-      my $foo = '';
-      my $self = \$foo; # Minimal reference
-
-      bless( $self, $package );
-      return( $self );
-}
+use constant ({
+	       DUMMY => bless([],'DBR::Misc::Dummy')
+	      });
+sub new { bless( \'', shift ) } # minimal reference
 
 sub delete {croak "Mass delete is not allowed. No cookie for you!"}
 sub each { 1 }
 sub split { {} }
 sub values { wantarray?():[]; }
 
-sub dummy_record{ bless([],'DBR::Misc::Dummy') }
+sub dummy_record{ DUMMY }
 sub hashmap_multi { wantarray?():{} }
 sub hashmap_single{ wantarray?():{} }
 
-sub next     { shift->dummy_record  }
+sub next     { DUMMY }
 sub count    { 0     }
 sub hashrefs { []    } # Is this used?
 

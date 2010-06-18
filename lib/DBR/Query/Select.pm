@@ -9,7 +9,6 @@ package DBR::Query::Select;
 use strict;
 use base 'DBR::Query';
 use Carp;
-use DBR::ResultSet::DB;
 
 sub _params    { qw (fields tables where limit lock quiet_error) }
 sub _reqparams { qw (fields tables) }
@@ -63,14 +62,6 @@ sub run {
 
 sub lastidx  { $_[0]{last_idx} }
 sub can_be_subquery { scalar( $_[0]->fields ) == 1 || 0 }; # Must have exactly one field
-sub resultset{
-      my $self = shift;
-
-      return DBR::ResultSet::DB->new(
-				     session => $self->session,
-				     query   => $self,
-				    ) or croak('Failed to create resultset');
-}
 
 
 1;

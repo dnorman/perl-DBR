@@ -4,8 +4,41 @@ use strict;
 use base 'DBR::ResultSet';
 use DBR::Record::Maker;
 use Carp;
-use constant { CLEAN => 1, ACTIVE => 2  };
 use Scalar::Util 'weaken';
+use constant ({
+	       f_next      => 0,
+	       f_state     => 1,
+	       f_rowcache  => 2,
+	       f_sth       => 3,
+	       f_count     => 4,
+	       f_estimated => 5,
+	       f_session   => 6,
+	       f_query     => 7,
+
+	       CLEAN  => 1,
+	       ACTIVE => 2,
+	       FIRST  => \&_first,
+	       DUMMY  => bless([],'DBR::Misc::Dummy'),
+	      });
+
+# sub new {
+#       my $package = shift;
+#       my %params = @_;
+
+#       return bless ([
+# 		     FIRST, # next
+# 		     CLEAN, # state
+# 		     undef, # sth
+# 		     undef, # real_count
+# 		     undef, # rows_hint
+# 		     \ [],  # rowcache. sacrificial arrayref. scalar ref stays
+# 		     $params{session},
+# 		     $params{query}
+# 		    ], $package );
+
+# }
+
+# sub next { $_[0][f_next]->( $_[0] ) }
 
 sub new {
       my( $package ) = shift;
@@ -21,12 +54,9 @@ sub new {
       return $self->_error('session object must be specified')  unless $self->{session};
 
       #prime the pump
-      $self->{next} = \&_first;
-
-      my $cache = []; # Sacrificial arrayref. This arrayref is not preserved, but the scalarref is.
-      $self->{rowcache} = \$cache; #Use the scalarref to $cache to be able to access this remotely
-
-      $self->{state} = CLEAN;
+      $self->{next}     = FIRST;
+      $self->{state}    = CLEAN;
+      $self->{rowcache} = \ []; # Sacrificial arrayref. This arrayref is not preserved, but the scalarref is.
 
       return( $self );
 }
@@ -44,18 +74,26 @@ sub count{
       my $cquery = $self->{query}->transpose('Count') or croak "Failed to transpose query to a Count";
 
       return $self->{real_count} = $cquery->run;
-      
+
       # Consider profiling min/max/avg rows returned for the scope in question
       # IF max / avg  is < 1000 just fetch all rows instead of executing another query
 
 }
 
+#HERE - This is total BS for now:
+sub where {
+       my $self = shift;
+       my @where = @_;
 
-sub groupby{
-      my $self = shift;
-      $self->{query};
+       # No actual db ops until the last possible moment
+       my $child_query = $self->[f_query]->child_query( \@where );
+
+       return DBR::ResultSet::DB(
+				 session => $self->[f_session],
+				 query   => $child_query,
+				 splitval => $self->['splitval'],
+				);
 }
-
 
 ###################################################
 ### Direct methods for DBRv1 ######################
@@ -199,14 +237,13 @@ sub _dbfetch_iterator{
 sub _end_safe{
       my $self = shift;
 
-      my $dummy = $self->dummy_record;
       weaken ($self); # Weaken the refcount
 
       return sub {
 	    defined($self) or return undef; # technically this could be out of scope because it's a weak ref
 	    $self->_end;
 
-	    return $dummy; # evaluates to false
+	    return DUMMY; # evaluates to false
       }
 }
 

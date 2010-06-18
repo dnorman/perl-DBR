@@ -4,13 +4,14 @@
 
 package DBR::Misc::Dummy;
 # I only ever evaluate to false...  false false falsey false
-# plus, when you call a method, I just return myself.
+# plus, when you call any method, I just return myself.
 
 use Carp;
 use overload 
   #values
-  '""' => sub { '' },
-  '0+' => sub { 0 },
+  '""'   => sub { '' },
+  '0+'   => sub { 0 },
+  'bool' => sub { 0 },
 
   #operators
   '+'  => sub { $_[1] },
@@ -23,6 +24,6 @@ use overload
  ;
 
 our $AUTOLOAD;
-sub AUTOLOAD {  return shift }
+sub AUTOLOAD { shift }
 
 1;

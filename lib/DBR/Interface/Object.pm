@@ -12,6 +12,7 @@ use DBR::ResultSet::Empty;
 use DBR::Query::Select;
 use DBR::Query::Insert;
 use DBR::Interface::Where;
+use DBR::ResultSet::DB;
 use Carp;
 
 sub new {
@@ -55,7 +56,7 @@ sub all{
 					  tables   => $table,
 					 ) or return $self->_error('failed to create Query object');
 
-      my $resultset = $query->resultset or croak('failed to create resultset');
+      my $resultset = DBR::ResultSet::DB->new( session => $self->{session}, query => $query );
 
       return $resultset;
 }
@@ -106,7 +107,7 @@ sub where{
 					  where    => $where,
 					 ) or croak('failed to create Query object');
 
-      my $resultset = $query->resultset or croak('failed to create resultset');
+      my $resultset = DBR::ResultSet::DB->new( session => $self->{session}, query => $query );
 
       return $resultset;
 }
@@ -173,7 +174,7 @@ sub get{
 					  scope  => $scope,
 					 ) or return $self->_error('failed to create Query object');
 
-      my $resultset = $query->resultset or croak('failed to create resultset');
+      my $resultset = DBR::ResultSet::DB->new( session => $self->{session}, query => $query );
 
       if(ref($pkval)){
 	    return $resultset;

@@ -8,12 +8,14 @@ use DBR::Query::Select;
 use DBR::Query::Update;
 use DBR::Query::Delete;
 use DBR::ResultSet::Empty;
+use DBR::ResultSet::DB;
 use DBR::Misc::Dummy;
 
 # we can get away with making these once for all time
-my $EMPTY = DBR::ResultSet::Empty->new();
-my $DUMMY = bless([],'DBR::Misc::Dummy');
-
+use constant ({
+	       EMPTY => bless( [], 'DBR::ResultSet::Empty'),
+	       DUMMY => bless( [], 'DBR::Misc::Dummy'),
+	      });
 sub new {
       my( $package ) = shift;
       my %params = @_;
@@ -114,8 +116,7 @@ sub _set{
       my $rv = $query->run() or return $self->_error('failed to execute');
 
       foreach my $set (@$sets){
-	    $self->_setlocalval($record, $set->field, $set->value->raw->[0]) or
-	      return $self->_error('failed to _setlocalval');
+	    $self->_setlocalval($record, $set->field, $set->value->raw->[0]);
       }
 
       return $rv;
@@ -180,7 +181,7 @@ sub getfield{
 
        my $val = $row->[ $newfield->index ];
 
-       $self->_setlocalval($record,$field,$val) or return $self->_error('failed to _setlocalval');
+       $self->_setlocalval($record,$field,$val);
 
        return $want_sref?\$val:$val; # return a scalarref if requested
 }
@@ -221,7 +222,7 @@ sub getrelation{
 	    @allvals = grep { defined } @allvals;
       }
 
-      return $to1 ? $DUMMY : $EMPTY unless scalar @allvals;
+      return $to1 ? DUMMY : EMPTY unless scalar @allvals;
 
       my $value    = $mapfield->makevalue( \@allvals );
       my $outwhere = DBR::Query::Part::Compare->new( field => $mapfield, value => $value );
@@ -230,7 +231,7 @@ sub getrelation{
 					  session       => $self->{session},
 					  conf_instance => $maptable->conf_instance,
 					  extra_ident   => $maptable->name,
-					  offset        => 2,               # because getrelation is being called indirectly, look at the scope two levels up
+					  offset        => 2,  # because getrelation is being called indirectly, look at the scope two levels up
 					 ) or return $self->_error('Failed to get calling scope');
 
       my $pk        = $maptable->primary_key or return $self->_error('Failed to fetch primary key');
@@ -248,8 +249,11 @@ sub getrelation{
 					  scope    => $scope,
 					 ) or return $self->_error('failed to create Query object');
 
-      my $resultset = $query->resultset or return $self->_error('failed to retrieve resultset');
 
+      my $resultset =  DBR::ResultSet::DB->new(
+					       session => $self->{session},
+					       query   => $query
+					      ) or croak('Failed to create resultset');
       if(scalar(@allvals) > 1){
 	    my $myresult;
 	    if($to1){
@@ -258,12 +262,14 @@ sub getrelation{
 
 		  # look forward in the rowcache and assign the resultsets for whatever we find
 		  foreach my $row (@${$self->{rowcache}}) {
-
-			my $record = $resultmap->{ $row->[$fidx] } || $DUMMY;
-			$self->_setlocalval($row,$relation,$record) or return $self->_error('failed to _setlocalval');
+			$self->_setlocalval(
+					    $row,
+					    $relation,
+					    $resultmap->{ $row->[$fidx] } || DUMMY
+					   );
 		  }
 
-		  $myresult = $resultmap->{$val} || $DUMMY;
+		  $myresult = $resultmap->{$val} || DUMMY;
 
 	    }else{
 
@@ -272,26 +278,29 @@ sub getrelation{
 
 		  # look forward in the rowcache and assign the resultsets for whatever we find
 		  foreach my $row (@${$self->{rowcache}}) {
-
-			my $rs = $resultmap->{ $row->[$fidx] } || $EMPTY;
-			$self->_setlocalval($row,$relation,$rs) or return $self->_error('failed to _setlocalval');
+			# my $resultset = DBR::ResultSet::Sub->new(
+			# 					 session  => $self->{session},
+			# 					 query    => $query,
+			# 					 subvalue => $row->[$fidx]
+			# 					);
+			# $self->_setlocalval($row, $relation, $resultset );
+			$self->_setlocalval($row, $relation, $resultmap->{$row->[$fidx]} );
 		  }
 
-		  $myresult = $resultmap->{$val} || $EMPTY;
+		  $myresult = $resultmap->{$val} || EMPTY;
 	    }
 
-	    $self->_setlocalval($record,$relation,$myresult) or return $self->_error('failed to _setlocalval');
+	    $self->_setlocalval($record,$relation,$myresult);
 
 	    return $myresult;
 
       }else{
-
 	    my $result = $resultset;
 	    if($to1){
 		  $result = $resultset->next;
 	    }
 
-	    $self->_setlocalval($record,$relation,$result) or return $self->_error('failed to _setlocalval');
+	    $self->_setlocalval($record,$relation,$result);
 
 	    return $result;
       }
@@ -334,7 +343,6 @@ sub _setlocalval{
       # Update this record to reflect the new value
       $record->[$idx] = $val;
 
-      return 1;
 }
 
 1;

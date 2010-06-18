@@ -8,6 +8,9 @@ use DBR::ResultSet::Mem;
 use DBR::Misc::Dummy;
 
 use Carp;
+use constant ({
+	       DUMMY => bless([],'DBR::Misc::Dummy'),
+	      });
 
 sub delete {croak "Mass delete is not allowed. No cookie for you!"}
 
@@ -40,10 +43,10 @@ sub split{
       foreach my $key (keys %groupby){
 	    $groupby{$key} = DBR::ResultSet::Mem->new(
 						      session  => $self->{session},
-						      rows    => $groupby{$key},
-						      record  => $self->{record},
-						      buddy   => $self->{buddy}, # use the same record buddy object
-						      query   => $self->{query},
+						      query    => $self->{query},
+						      rows     => $groupby{$key},
+						      record   => $self->{record},
+						      buddy    => $self->{buddy}, # use the same record buddy object
 						     ) or return $self->_error('failed to create resultset lite object');
       }
 
@@ -86,8 +89,6 @@ sub values {
 
       return wantarray?(@output):\@output;
 }
-
-sub dummy_record{ bless([],'DBR::Misc::Dummy') }
 
 sub hashmap_multi { shift->_lookuphash('multi', @_) }
 sub hashmap_single{ shift->_lookuphash('single',@_) }
@@ -140,7 +141,6 @@ sub _mem_iterator{
 
       my $rows  = ${$self->{rowcache}};
       my $ct = 0;
-      my $dummy = $self->dummy_record;
 
       # use a closure to reduce hash lookups
       # It's very important that this closure is fast.
@@ -148,7 +148,7 @@ sub _mem_iterator{
       $self->{next} = sub {
 	    bless( (
 		    [
-		     ($rows->[$ct++] or $ct = 0 or return $dummy ),
+		     ($rows->[$ct++] or $ct = 0 or return DUMMY ),
 		     $buddy # buddy object comes along for the ride - to keep my recmaker in scope
 		    ]
 		   ),	$class );

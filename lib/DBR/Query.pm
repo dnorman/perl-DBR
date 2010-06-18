@@ -7,7 +7,7 @@ package DBR::Query;
 use base 'DBR::Common';
 use strict;
 use Carp;
-
+use DBR::Query::Part;
 sub _params{ confess "Shouldn't get here" }
 sub _reqparams{ confess "Shouldn't get here" }
 
@@ -111,6 +111,25 @@ sub transpose{
 
       my $class = __PACKAGE__ . '::' . $module;
       return $class->new( map { $_ => $self->{$_}} (qw'instance session scope',$self->_params) ) or croak "Failed to create new $class object";
+}
+
+sub child_query{
+      my $self = shift;
+      my $where = shift;
+      my $ident = $where->ident;
+
+      return $self->{child_queries}{$ident} || $self->_new_child_query($where,$ident);
+}
+
+sub _new_child_query{
+      my $self = shift;
+      my $where = shift;
+      my $ident = shift;
+
+      my %params = map { $_ => $self->{$_} } (qw'instance session scope', $self->_params);
+      $params{where} = DBR::Query::Part::And->new( $self->{where}, $where );
+
+      return $self->{child_queries}{$ident} = $self->new(%params) or croak "Failed to create new $self object";
 }
 
 sub instance { $_[0]{instance} }

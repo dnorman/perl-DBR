@@ -15,6 +15,7 @@ use DBR::Query::Delete;
 use DBR::Config::Field::Anon;
 use DBR::Config::Table::Anon;
 use DBR::Query::Part;
+use DBR::ResultSet::DB;
 
 sub new {
       my( $package ) = shift;
@@ -92,7 +93,7 @@ sub select {
 	    return $sth;
 
       } else {
-	    my $resultset = $query->resultset or return $self->_error('failed to get resultset');
+	    my $resultset = DBR::ResultSet::DB->new( session => $self->{session}, query => $query );
 
 	    if ($params{'-object'}) { # new way - hybrid
 		  return $resultset;
