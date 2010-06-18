@@ -33,6 +33,12 @@ sub _andify{
       return DBR::Query::Part::And->new( @_ );
 }
 
+# sub fingerprint{
+#       my $self = shift;
+#       join ( "|", map { ref($_) ? $_->stringify : $_ } @_);
+# }
+
+
 sub build{
       my $self = shift;
       my @input = @_;

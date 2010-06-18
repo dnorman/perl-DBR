@@ -10,6 +10,10 @@ use DBR::Query::Delete;
 use DBR::ResultSet::Empty;
 use DBR::Misc::Dummy;
 
+# we can get away with making these once for all time
+my $EMPTY = DBR::ResultSet::Empty->new();
+my $DUMMY = bless([],'DBR::Misc::Dummy');
+
 sub new {
       my( $package ) = shift;
       my %params = @_;
@@ -217,19 +221,10 @@ sub getrelation{
 	    @allvals = grep { defined } @allvals;
       }
 
-      my $dummy = bless([],'DBR::Misc::Dummy');
-      if(!scalar @allvals){
-	    if($to1){
-		  return $dummy;
-	    }else{
-		  my $rv = DBR::ResultSet::Empty->new() # Empty resultset # Candidate for pre-defined global
-		    or return $self->_error('failed to create ResultSet::Empty object');
-		  return $rv;
-	    }
-      }
+      return $to1 ? $DUMMY : $EMPTY unless scalar @allvals;
 
-      my $value = $mapfield->makevalue( \@allvals ) or return $self->_error('failed to create value object');
-      my $outwhere = DBR::Query::Part::Compare->new( field => $mapfield, value => $value ) or return $self->_error('failed to create compare object');
+      my $value    = $mapfield->makevalue( \@allvals );
+      my $outwhere = DBR::Query::Part::Compare->new( field => $mapfield, value => $value );
 
       my $scope = DBR::Config::Scope->new(
 					  session       => $self->{session},
@@ -264,26 +259,25 @@ sub getrelation{
 		  # look forward in the rowcache and assign the resultsets for whatever we find
 		  foreach my $row (@${$self->{rowcache}}) {
 
-			my $record = $resultmap->{ $row->[$fidx] } || $dummy;
+			my $record = $resultmap->{ $row->[$fidx] } || $DUMMY;
 			$self->_setlocalval($row,$relation,$record) or return $self->_error('failed to _setlocalval');
 		  }
 
-		  $myresult = $resultmap->{$val} || $dummy;
+		  $myresult = $resultmap->{$val} || $DUMMY;
 
 	    }else{
+
 		  $self->_logDebug2('splitting into resultsets');
 		  my $resultmap = $resultset->split( $mapfield ) or return $self->_error('failed to split resultset');
 
 		  # look forward in the rowcache and assign the resultsets for whatever we find
 		  foreach my $row (@${$self->{rowcache}}) {
 
-			my $rs = $resultmap->{ $row->[$fidx] } || DBR::ResultSet::Empty->new() # Empty resultset
-			  or return $self->_error('failed to create ResultSet::Empty object');
+			my $rs = $resultmap->{ $row->[$fidx] } || $EMPTY;
 			$self->_setlocalval($row,$relation,$rs) or return $self->_error('failed to _setlocalval');
 		  }
 
-		  $myresult = $resultmap->{$val} || DBR::ResultSet::Empty->new() # Empty resultset
-		    or return $self->_error('failed to create ResultSet::Empty object');
+		  $myresult = $resultmap->{$val} || $EMPTY;
 	    }
 
 	    $self->_setlocalval($record,$relation,$myresult) or return $self->_error('failed to _setlocalval');

@@ -2,7 +2,7 @@ package DBR::Query::Part::Compare;
 
 use strict;
 use base 'DBR::Query::Part';
-
+use Carp;
 
 use constant ({
 		F_FIELD     => 0,
@@ -40,22 +40,22 @@ sub new{
       my $field = $params{field};
       my $value = $params{value};
 
-      return $package->_error('field must be a Field object') unless ref($field) =~ /^DBR::Config::Field/; # Could be ::Anon
-      return $package->_error('value must be a Value object') unless ref($value) eq 'DBR::Query::Part::Value';
+      croak 'field must be a Field object' unless ref($field) =~ /^DBR::Config::Field/; # Could be ::Anon
+      croak 'value must be a Value object' unless ref($value) eq 'DBR::Query::Part::Value';
 
       my $ref = ref($value);
 
       my $operator = $value->op_hint || $params{operator} || 'eq';
 
       if ($value->{is_number}){
-	    return $package->_error("invalid operator '$operator'") unless $num_operators{ $operator };
+	    $num_operators{ $operator } or croak "invalid operator '$operator'";
       }else{
-	    return $package->_error("invalid operator '$operator'") unless $str_operators{ $operator };
+	    $str_operators{ $operator } or croak "invalid operator '$operator'";
       }
 
       my $sqlfunc = \&_sql;
       if ($operator eq 'between' or $operator eq 'notbetween'){
-	    $value->count == 2 or return $package->_error("between/notbetween comparison requires two values");
+	    $value->count == 2 or croak "between/notbetween comparison requires two values";
 	    $sqlfunc = \&_betweensql;
       }elsif ( $value->count != 1 ){
 	    $operator = 'in'    if $operator eq 'eq';
