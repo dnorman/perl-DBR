@@ -261,9 +261,7 @@ sub reset{
 
       $self->{sth}->finish();
       $self->{state} = CLEAN;
-      $self->{next}  = \&_first;
-
-      #$self->_logDebug3('DID RESET');
+      $self->{next}  = FIRST;
 
       return 1;
 }
