@@ -21,6 +21,7 @@ sub new {
       $self->{instance} = $params{instance} || croak "instance is required";
       $self->{session}  = $params{session}  || croak "session is required";
       $self->{scope}    = $params{scope};
+      $self->{splitfield} = $params{splitfield};
 
       my %req = map {$_ => 1} $self->_reqparams;
       for my $key ( $self->_params ){

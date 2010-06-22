@@ -9,7 +9,6 @@ package DBR::Query::Count;
 use strict;
 use base 'DBR::Query';
 use Carp;
-use DBR::ResultSet::DB;
 
 sub _params    { qw (tables where limit quiet_error) }
 sub _reqparams { qw (tables) }

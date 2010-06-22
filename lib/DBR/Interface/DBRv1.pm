@@ -15,7 +15,7 @@ use DBR::Query::Delete;
 use DBR::Config::Field::Anon;
 use DBR::Config::Table::Anon;
 use DBR::Query::Part;
-use DBR::ResultSet::DB;
+use DBR::ResultSet;
 
 sub new {
       my( $package ) = shift;
@@ -33,6 +33,9 @@ sub new {
 }
 
 
+###################################################
+### Direct methods for DBRv1 ######################
+###################################################
 
 sub select {
       my $self   = shift;
@@ -88,25 +91,28 @@ sub select {
       }elsif ($params{-rawsth}) {
 
 	    my $sth = $query->run or return $self->_error('failed to run');
-	    $sth->execute() or return $self->_error('failed to execute sth');
+	    $sth->execute() or croak('failed to execute sth');
 
 	    return $sth;
 
       } else {
-	    my $resultset = DBR::ResultSet::DB->new( session => $self->{session}, query => $query );
-
 	    if ($params{'-object'}) { # new way - hybrid
-		  return $resultset;
-	    } elsif ($params{-arrayref}) {
-		  return $resultset->raw_arrayrefs;
+		  return  DBR::ResultSet->new( session => $self->{session}, query => $query );
+	    }
+
+	    my $sth = $query->run;
+	    $sth->execute() or croak ('failed to execute sth');
+
+	    if ($params{-arrayref}) {
+		  return $sth->fetchall_arrayref(); # ->finish is automatic
 	    } elsif ($params{-keycol}) {
-		  return $resultset->raw_keycol($params{-keycol});
+		  return $sth->fetchall_hashref($params{-keycol});
 	    } elsif ($params{-single}) {
-		  my $rows = $resultset->raw_hashrefs() or return undef;
-		  return 0 unless @{$rows};
-		  return $rows->[0];
+		  my $row = $sth->fetchrow_hashref();
+		  $sth->finish;
+		  return $row || 0;
 	    } else {
-		  return $resultset->raw_hashrefs;
+		  return $sth->fetchall_arrayref({}); # ->finish is automatic
 	    }
       }
 

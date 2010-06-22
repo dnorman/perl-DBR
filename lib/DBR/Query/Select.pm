@@ -50,18 +50,44 @@ sub sql{
       return $sql;
 }
 
-sub run {
-      my $self = shift;
-
-      my $conn = $self->instance->connect('conn') or confess 'failed to connect';
-      my $sth  = $conn->prepare( $self->sql ) or confess 'failed to prepare statement';
-
-      return $sth;
-
-}
-
 sub lastidx  { $_[0]{last_idx} }
 sub can_be_subquery { scalar( $_[0]->fields ) == 1 || 0 }; # Must have exactly one field
 
+sub run {
+      my $self = shift;
+      return $self->{sth} ||= $self->instance->getconn->prepare( $self->sql ); # only run once
+}
+
+sub fetch_chunk{
+}
+
+sub fetch_for{
+      my $self = shift;
+      my $value = shift;
+
+      $self->{spvals} ||= $self->_do_split();
+      return $self->{spvals}->{$value} || [];
+}
+
+sub _do_split{
+      my $self = shift;
+
+      $self->{splitfield} or croak 'splitfield must be present'; # HERE - let this hard fail to save the check?
+      defined( my $idx = $self->{splitfield}->index ) or croak 'field object must provide an index';
+      my $sth = $self->{sth} or confess "No sth found";
+
+      defined( $sth->execute ) or croak 'failed to execute statement (' . $self->{sth}->errstr. ')';
+
+      my $row;
+      my $code = 'while($row = $sth->fetch){ push @{$groupby{ $row->[' . $idx . '] }}, [@$row] }';
+      $self->_logDebug3($code);
+
+      my %groupby;
+      eval $code;
+      $@ && confess $@;
+
+      $sth->finish;
+      return \%groupby;
+}
 
 1;

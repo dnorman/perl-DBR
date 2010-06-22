@@ -1,7 +1,7 @@
 package DBR::ResultSet::Empty;
 
 use strict;
-use base 'DBR::Common';
+#use base 'DBR::Common';
 use DBR::Misc::Dummy;
 use Carp;
 use constant ({
@@ -19,11 +19,7 @@ sub hashmap_multi { wantarray?():{} }
 sub hashmap_single{ wantarray?():{} }
 
 sub next     { DUMMY }
+sub where    { DUMMY }
 sub count    { 0     }
-sub hashrefs { []    } # Is this used?
-
-sub raw_hashrefs  { [] }
-sub raw_arrayrefs { [] }
-sub raw_keycol    { {} }
 
 1;

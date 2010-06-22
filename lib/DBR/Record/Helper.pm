@@ -7,8 +7,8 @@ use DBR::Query::Part;
 use DBR::Query::Select;
 use DBR::Query::Update;
 use DBR::Query::Delete;
+use DBR::ResultSet;
 use DBR::ResultSet::Empty;
-use DBR::ResultSet::DB;
 use DBR::Misc::Dummy;
 
 # we can get away with making these once for all time
@@ -199,7 +199,7 @@ sub getrelation{
       my $fidx = $field->index();
       my $val;
 
-      my $to1 = $relation->is_to_one; # Candidate for pre-processing
+      my $to1 = $relation->is_to_one;                                                        # Candidate for pre-processing
       my $maptable = $relation->maptable or return $self->_error('Failed to fetch maptable');# Candidate for pre-processing
       my $mapfield = $relation->mapfield or return $self->_error('Failed to fetch mapfield');# Candidate for pre-processing
 
@@ -247,16 +247,17 @@ sub getrelation{
 					  where    => $outwhere,
 					  fields   => \@fields,
 					  scope    => $scope,
+					  splitfield  => $field
 					 ) or return $self->_error('failed to create Query object');
 
 
-      my $resultset =  DBR::ResultSet::DB->new(
-					       session => $self->{session},
-					       query   => $query
-					      ) or croak('Failed to create resultset');
       if(scalar(@allvals) > 1){
 	    my $myresult;
 	    if($to1){
+		  my $resultset =  DBR::ResultSet->new(
+						       session => $self->{session},
+						       query   => $query
+						      ) or croak('Failed to create resultset');
 		  $self->_logDebug2('mapping to individual records');
 		  my $resultmap = $resultset->hashmap_single(  $mapfield->name  ) or return $self->_error('failed to split resultset');
 
@@ -272,22 +273,21 @@ sub getrelation{
 		  $myresult = $resultmap->{$val} || DUMMY;
 
 	    }else{
-
-		  $self->_logDebug2('splitting into resultsets');
-		  my $resultmap = $resultset->split( $mapfield ) or return $self->_error('failed to split resultset');
-
 		  # look forward in the rowcache and assign the resultsets for whatever we find
 		  foreach my $row (@${$self->{rowcache}}) {
-			# my $resultset = DBR::ResultSet::Sub->new(
-			# 					 session  => $self->{session},
-			# 					 query    => $query,
-			# 					 subvalue => $row->[$fidx]
-			# 					);
-			# $self->_setlocalval($row, $relation, $resultset );
-			$self->_setlocalval($row, $relation, $resultmap->{$row->[$fidx]} );
+			$self->_setlocalval($row,
+					    $relation,
+					    DBR::ResultSet->new( session  => $self->{session},
+								 query    => $query,
+								 splitvalue => $row->[$fidx]
+							       )
+					   );
 		  }
 
-		  $myresult = $resultmap->{$val} || EMPTY;
+		  $myresult = DBR::ResultSet->new( session  => $self->{session},
+						   query    => $query,
+						   splitvalue => $val
+						 );
 	    }
 
 	    $self->_setlocalval($record,$relation,$myresult);
@@ -295,6 +295,10 @@ sub getrelation{
 	    return $myresult;
 
       }else{
+	    my $resultset =  DBR::ResultSet->new(
+						 session => $self->{session},
+						 query   => $query
+						) or croak('Failed to create resultset');
 	    my $result = $resultset;
 	    if($to1){
 		  $result = $resultset->next;
