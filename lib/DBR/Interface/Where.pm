@@ -4,6 +4,8 @@ use strict;
 use Carp;
 use DBR::Query::Part;
 use Clone;
+use Digest::MD5 qw(md5_base64);
+use DBR::Misc::General;
 
 sub new {
       my( $package ) = shift;
@@ -33,11 +35,12 @@ sub _andify{
       return DBR::Query::Part::And->new( @_ );
 }
 
-# sub fingerprint{
-#       my $self = shift;
-#       join ( "|", map { ref($_) ? $_->stringify : $_ } @_);
-# }
-
+# fast way to discern the difference between one where clause
+# and another without actually doing the work of assembling everything
+sub digest{
+      my $self = shift;
+      md5_base64( join ( "\0|", map {_expandstr($_)} @{[@_]} ) );
+}
 
 sub build{
       my $self = shift;

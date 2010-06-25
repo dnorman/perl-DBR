@@ -3,6 +3,7 @@ package DBR::Util::Operator;
 use strict;
 use base 'Exporter';
 our @EXPORT = qw(GT LT GE LE NOT LIKE NOTLIKE BETWEEN NOTBETWEEN AND OR);
+use DBR::Misc::General; # imported utils
 
 # Object oriented
 sub new{
@@ -17,6 +18,7 @@ sub new{
 
 sub operator {$_[0]->[0]}
 sub value    {$_[0]->[1]}
+sub stringify{ 'OP-' . $_[0][0] . ':' . _expandstr( $_[0][1] ) }
 
 # EXPORTED:
 
@@ -51,7 +53,10 @@ sub OR {
 
 package DBR::_LOP;
 use base 'DBR::Util::Operator';
+use DBR::Misc::General; # imported utils
 
 sub only_contains_and{ $_[0][2] }
+
+sub stringify{ 'LOP-' . $_[0][0] . ':' . _expandstr( $_[0][1] ) }
 
 1;

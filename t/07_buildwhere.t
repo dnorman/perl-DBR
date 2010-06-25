@@ -13,8 +13,24 @@ use lib './lib';
 use t::lib::Test;
 use Test::More;
 
+
+use Data::Dumper;
+use Getopt::Std;
+my %opts;
+getopts('bwqvl:',\%opts);
+$opts{b} = 1;
+
+sub okq {
+      my ($test,$msg) = @_;
+      if ($test){
+	    pass($msg) if !$opts{q};
+      }else{
+	    fail($msg);
+      }
+      return $test;
+}
 my $testct = 0;
-my $loops = 5000;
+my $loops = $opts{l} || 10000;
 
 # As always, it's important that the sample database is not tampered with, otherwise our tests will fail
 my $dbr = setup_schema_ok('music');
@@ -39,6 +55,7 @@ test(
      [ album_id => 1, AND rating   => 'earbleed' ],
      'album_id = 1 AND rating = 9'
     );
+
 test(
      [
       album_id => 2,
@@ -57,6 +74,7 @@ test([
      ],
      "album_id = 2 OR (name = 'Track BA2' OR (rating = 9 OR date_released > 1132992000))"
     );
+
 test([
       album_id => 2,
       AND name => 'Track BA2',
@@ -140,6 +158,10 @@ test([
      ], # A little less than efficient SQL-wise... but technically correct
      "((c.artist_id = 1 AND a.artist_id = c.artist_id) OR (d.name = 'Artist B' AND a.artist_id = d.artist_id)) AND b.name = 'Artist A' AND a.artist_id = b.artist_id"
     );
+test(
+     [ album_id => [1,2], rating   => 'earbleed' ],
+     'album_id IN (1,2) AND rating = 9'
+    );
 
 done_testing();
 exit;
@@ -151,8 +173,7 @@ sub test{
 
       $testct++;
       my $conn = $instance->connect('conn');
-      ok($conn,'Connect');
-
+      okq($conn,'Connect');
 
       my $table = $schema->get_table( 'album' ) or die("failed to look up table");
 
@@ -163,24 +184,44 @@ sub test{
 					      ) or die("Failed to create wherebuilder");
 
       my $output = $builder->build( @$where );
-      ok($output,"Test build $testct");
+      okq($output,"Test build $testct");
+
       my $sql = $output->sql($conn);
-      ok($sql,"Produce sql") or return;
+      okq($sql,"Produce sql");
+
       diag ("SQL:  $sql");
-      diag ("WANT: $reference_sql");
-      ok($sql eq $reference_sql,"SQL correctness check") or return;
+      diag ("WANT: $reference_sql") if ! $opts{'q'};
+      okq( $sql eq $reference_sql,"SQL correctness check");
 
-      return 1;  # Benchmarking currently doesn't work with joins cus of an inability to reset aliases
+      my ($start,$end,$seconds);
+      my $before = Dumper($where);
+      if ($opts{b}) {
+	    $start = Time::HiRes::time();
+	    my $rv;
+	    for (1..$loops) {
+		  $rv = $builder->digest( @$where ) || confess 'Failed to build where';
+	    }
+	    diag "DIGEST: $rv" if $opts{v}; 
+	    $end = Time::HiRes::time();
 
-      my $start = Time::HiRes::time();
-      for (1..$loops){
-	    my $output = $builder->build( @$where ) || confess 'Failed to build where';
-	    my $sql    = $output->sql( $conn )     || confess 'Failed to generate SQL';
+	    $seconds = $end - $start;
+
+	    diag("Digest benchmark $testct took $seconds seconds. (" . sprintf("%0.4d",$loops / $seconds). " per second)");
       }
-      my $end = Time::HiRes::time();
 
-      my $seconds = $end - $start;
-      my $wps = $loops / $seconds;
+      my $after = Dumper($where);
+      okq( $before eq $after, "Before/after reference check");
+      # FIX THIS: Benchmarking currently doesn't work with joins cus of an inability to reset aliases
 
-      diag("Benchmark $testct took $seconds seconds. (" . sprintf("%0.4d",$wps). " per second)");
+      if( $opts{w} ){
+
+	    $start = Time::HiRes::time();
+	    for (1..$loops){
+		  my $rv  = $builder->build( @$where ) || confess 'Failed to build where';
+		  my $sql = $rv->sql( $conn )     || confess 'Failed to generate SQL';
+	    }
+	    $end = Time::HiRes::time();
+	    $seconds = $end - $start;
+	    diag("Build/SQL Benchmark $testct took $seconds seconds. (" . sprintf("%0.4d",$loops / $seconds). " per second)");
+      }
 }
