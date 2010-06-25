@@ -17,8 +17,8 @@ use Test::More;
 use Data::Dumper;
 use Getopt::Std;
 my %opts;
-getopts('bwqvl:',\%opts);
-$opts{b} = 1;
+getopts('dbqvl:',\%opts);
+$opts{d} = 1;
 
 sub okq {
       my ($test,$msg) = @_;
@@ -195,7 +195,7 @@ sub test{
 
       my ($start,$end,$seconds);
       my $before = Dumper($where);
-      if ($opts{b}) {
+      if ($opts{d}) {
 	    $start = Time::HiRes::time();
 	    my $rv;
 	    for (1..$loops) {
@@ -213,7 +213,7 @@ sub test{
       okq( $before eq $after, "Before/after reference check");
       # FIX THIS: Benchmarking currently doesn't work with joins cus of an inability to reset aliases
 
-      if( $opts{w} ){
+      if( $opts{b} ){
 
 	    $start = Time::HiRes::time();
 	    for (1..$loops){
