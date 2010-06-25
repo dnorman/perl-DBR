@@ -10,7 +10,7 @@ use strict;
 use base 'DBR::Query';
 use Carp;
 
-sub _params    { qw (fields tables where limit lock quiet_error) }
+sub _params    { qw (fields tables where builder limit lock quiet_error) }
 sub _reqparams { qw (fields tables) }
 sub _validate_self{ 1 } # If I exist, I'm valid
 

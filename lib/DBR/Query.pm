@@ -10,7 +10,7 @@ use Carp;
 use DBR::Query::Part;
 sub _params{ confess "Shouldn't get here" }
 sub _reqparams{ confess "Shouldn't get here" }
-
+use Scalar::Util 'blessed';
 
 sub new {
       my( $package, %params ) = @_;
@@ -82,6 +82,18 @@ sub where{
       return $self;
 }
 
+sub builder{
+      my $self = shift;
+      exists( $_[0] )  or return $self->{builder} || undef;
+      my $builder = shift || undef;
+
+      !$builder || ref($builder) eq 'DBR::Interface::Where' || croak('must specify a builder object');
+
+      $self->{builder} = $builder;
+
+      return $self;
+}
+
 sub limit{
   my $self = shift;
   exists( $_[0] ) or return $self->{limit} || undef;
@@ -117,20 +129,34 @@ sub transpose{
 sub child_query{
       my $self = shift;
       my $where = shift;
-      my $ident = $where->ident;
 
-      return $self->{child_queries}{$ident} || $self->_new_child_query($where,$ident);
+      my $builder = $self->{builder} ||= DBR::Interface::Where->new(
+								    session       => $self->{session},
+								    instance      => $self->{instance},
+								    primary_table => $self->{tables}[0], # HERE HERE HERE - this is wrong
+								   );
+
+      my $ident = $builder->digest( $where );
+
+      return $self->{child_queries}{$ident} ||= $self->_new_child_query($where);
 }
 
 sub _new_child_query{
       my $self = shift;
       my $where = shift;
-      my $ident = shift;
 
-      my %params = map { $_ => $self->{$_} } (qw'instance session scope', $self->_params);
-      $params{where} = DBR::Query::Part::And->new( $self->{where}, $where );
+      #HERE - I don't think this is the correct place to do this
+      my $qpart = $self->{builder}->build($where);
 
-      return $self->{child_queries}{$ident} = $self->new(%params) or croak "Failed to create new $self object";
+      my %child;
+
+      # Copy everything over, including internal goodies # HERE HERE HERE - I'm uncertain if builder should be copied
+      map { $child{$_} = $self->{$_} } (qw'instance session scope splitfield last_idx', $self->_params);
+
+      $child{where} = $self->{where} ? DBR::Query::Part::And->new( $self->{where}, $qpart ) : $qpart;
+
+      my $class = blessed($self);
+      return bless(\%child, $class); # not even calling new
 }
 
 sub instance { $_[0]{instance} }

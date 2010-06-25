@@ -39,12 +39,15 @@ sub _andify{
 # and another without actually doing the work of assembling everything
 sub digest{
       my $self = shift;
-      md5_base64( join ( "\0|", map {_expandstr($_)} @{[@_]} ) );
+      md5_base64( join ( "\0|", map {_expandstr($_)} @{ shift() } ) );
 }
-
+sub digest_clear{
+      my $self = shift;
+      join ( "\0|", map {_expandstr($_)} @{ shift() } );
+}
 sub build{
       my $self = shift;
-      my @input = @_;
+      my @input = @{shift()}; # Make a shallow copy
       scalar (@input) || croak "input is required";
 
       my $pendgroup = { table => $self->{table} }; # prime the pump.
@@ -68,14 +71,14 @@ sub build{
 			}else{
 			      # We have to recurse to handle this situation properly
 			      # A AND (B OR C) is not equivelant to A AND B OR C
-			      push @andparts,  $self->build( @{ $next->value } );
+			      push @andparts,  $self->build( $next->value );
 			}
 		  } elsif ( $op eq 'Or' ){
 			if($pendct){
 			      push @andparts, $self->_reljoin( $pendgroup ); # Everything before me (pending)...
 			}
 			my $A = $self->_andify( @andparts );
-			my $B = $self->build( @{ $next->value } );         # Compared to everything inside
+			my $B = $self->build( $next->value );         # Compared to everything inside
 
 			@andparts = ( DBR::Query::Part::Or->new( $A, $B ) ); # Russian dolls... Get in mahh belly
 

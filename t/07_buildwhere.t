@@ -183,7 +183,7 @@ sub test{
 					       primary_table => $table,
 					      ) or die("Failed to create wherebuilder");
 
-      my $output = $builder->build( @$where );
+      my $output = $builder->build( $where );
       okq($output,"Test build $testct");
 
       my $sql = $output->sql($conn);
@@ -199,29 +199,31 @@ sub test{
 	    $start = Time::HiRes::time();
 	    my $rv;
 	    for (1..$loops) {
-		  $rv = $builder->digest( @$where ) || confess 'Failed to build where';
+		  $rv = $builder->digest( $where ) || confess 'Failed to build where';
 	    }
 	    diag "DIGEST: $rv" if $opts{v}; 
+	    diag "DIGEST CLEAR: " . $builder->digest_clear( $where ) if $opts{v};
+
 	    $end = Time::HiRes::time();
 
 	    $seconds = $end - $start;
 
-	    diag("Digest benchmark $testct took $seconds seconds. (" . sprintf("%0.4d",$loops / $seconds). " per second)");
+	    diag("Digest benchmark $testct took $seconds seconds. (" . sprintf("%0.4d",$loops / $seconds). " digests per second)");
       }
 
       my $after = Dumper($where);
       okq( $before eq $after, "Before/after reference check");
-      # FIX THIS: Benchmarking currently doesn't work with joins cus of an inability to reset aliases
+      # HERE HERE HERE - FIX THIS: Benchmarking currently doesn't work with joins cus of an inability to reset aliases
 
       if( $opts{b} ){
 
 	    $start = Time::HiRes::time();
 	    for (1..$loops){
-		  my $rv  = $builder->build( @$where ) || confess 'Failed to build where';
+		  my $rv  = $builder->build( $where ) || confess 'Failed to build where';
 		  my $sql = $rv->sql( $conn )     || confess 'Failed to generate SQL';
 	    }
 	    $end = Time::HiRes::time();
 	    $seconds = $end - $start;
-	    diag("Build/SQL Benchmark $testct took $seconds seconds. (" . sprintf("%0.4d",$loops / $seconds). " per second)");
+	    diag("Build/SQL Benchmark $testct took $seconds seconds. (" . sprintf("%0.4d",$loops / $seconds). " query builds per second)");
       }
 }

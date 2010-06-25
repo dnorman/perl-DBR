@@ -75,10 +75,11 @@ sub _execute{
       if($self->{type} == t_SPLIT){
 	    $self->{query}->run;
 	    my $rows = ${$self->{rowcache}} = $self->{query}->fetch_for($self->{splitval});
+
 	    $self->_mem_iterator;
 	    $self->{real_count} = @$rows;
       }else{
-
+	    
 	    $self->{state} == CLEAN or confess 'Sanity error: must call reset before executing';
 
 	    $self->{sth} ||= $self->{query}->run;
@@ -249,10 +250,15 @@ sub DESTROY{
 
 sub count{
       my $self = shift;
-
       return $self->{real_count} if defined $self->{real_count};
       return $self->{rows_hint}  if defined $self->{rows_hint}; # If it's defined, we can trust it
 
+      if($self->{type} == t_SPLIT){ # run automatically if we are a split query
+	    $self->_execute();      #HERE HERE HERE - I think this is wrong 
+	    return $self->{real_count};
+      }
+
+      # HERE HERE HERE - transpose isn't taking splitness into account
       my $cquery = $self->{query}->transpose('Count') or croak "Failed to transpose query to a Count";
 
       return $self->{real_count} = $cquery->run;
@@ -262,19 +268,14 @@ sub count{
 
 }
 
-#HERE - This is total BS for now:
 sub where {
        my $self = shift;
-       my @where = @_;
 
-       # No actual db ops until the last possible moment
-       my $child_query = $self->[f_query]->child_query( \@where );
-
-       return DBR::ResultSet(
-				 session => $self->[f_session],
-				 query   => $child_query,
-				 splitval => $self->['splitval'],
-				);
+       return DBR::ResultSet->new(
+				  session    => $self->{session},
+				  query      => $self->{query}->child_query( \@_ ), # HERE - Do I need to cache all of these? or just split queries?
+				  splitvalue => $self->{splitval},
+				 );
 }
 
 sub delete {croak "Mass delete is not allowed. No cookie for you!"}

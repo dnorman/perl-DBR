@@ -87,7 +87,7 @@ sub where{
 					       primary_table => $table,
 					      ) or return $self->_error("Failed to generate where for ${\$table->name}");
 
-      my $where = $builder->build( @inwhere );
+      my $where = $builder->build( \@inwhere );
 
       if($where->is_emptyset){
 	  return DBR::ResultSet::Empty->new(); # Empty resultset
@@ -105,6 +105,7 @@ sub where{
 					  fields   => \@fields ,
 					  tables   => $builder->tables,
 					  where    => $where,
+					  builder  => $builder,
 					 ) or croak('failed to create Query object');
 
       my $resultset = DBR::ResultSet->new( session => $self->{session}, query => $query );
