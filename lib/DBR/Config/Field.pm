@@ -233,7 +233,7 @@ sub makevalue{ # shortcut function?
 					  value     => $value,
 					  is_number => $self->is_numeric,
 					  field     => $self,
-					 );# or return $self->_error('failed to create value object');
+					 );
 
 }
 

@@ -7,7 +7,7 @@ use Carp;
 use constant ({
 	       DUMMY => bless([],'DBR::Misc::Dummy')
 	      });
-sub new { bless( \'', shift ) } # minimal reference
+sub new { bless( [], shift ) } # minimal reference
 
 sub delete {croak "Mass delete is not allowed. No cookie for you!"}
 sub each { 1 }

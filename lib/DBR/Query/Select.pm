@@ -55,18 +55,18 @@ sub can_be_subquery { scalar( $_[0]->fields ) == 1 || 0 }; # Must have exactly o
 
 sub run {
       my $self = shift;
-      return $self->{sth} ||= $self->instance->getconn->prepare( $self->sql ); # only run once
+      return $self->{sth} ||= $self->instance->getconn->prepare( $self->sql ) || confess "Failed to prepare"; # only run once
+}
+sub reset {
+      my $self = shift;
+      return $self->{sth} && $self->{sth}->finish;
 }
 
-sub fetch_chunk{
-}
-
-sub fetch_for{
+sub fetch_segment{
       my $self = shift;
       my $value = shift;
 
-      $self->{spvals} ||= $self->_do_split();
-      return $self->{spvals}->{$value} || [];
+      return ( $self->{spvals} ||= $self->_do_split )->{ $value } || [];
 }
 
 sub _do_split{
@@ -74,9 +74,10 @@ sub _do_split{
 
       $self->{splitfield} or croak 'splitfield must be present'; # HERE - let this hard fail to save the check?
       defined( my $idx = $self->{splitfield}->index ) or croak 'field object must provide an index';
-      my $sth = $self->{sth} or confess "No sth found";
 
-      defined( $sth->execute ) or croak 'failed to execute statement (' . $self->{sth}->errstr. ')';
+      my $sth = $self->run;
+
+      defined( $sth->execute ) or croak 'failed to execute statement (' . $sth->errstr. ')';
 
       my $row;
       my $code = 'while($row = $sth->fetch){ push @{$groupby{ $row->[' . $idx . '] }}, [@$row] }';
@@ -90,4 +91,31 @@ sub _do_split{
       return \%groupby;
 }
 
+
+# sub _makerecord{
+#       my $self = shift;
+
+#       die "this is broken";
+#       $self->{record} ||= DBR::Record::Maker->new(
+# 						  session  => $self->{session},
+# 						  query    => $self->{query},
+# 						 ) or confess ('failed to create record class');
+
+#       $self->{buddy} ||= $self->{record}->buddy(
+# 						rowcache => $self->{rowcache}
+# 					       ) or confess ('Failed to make buddy object');
+
+#       return 1;
+# }
+
+
+
+sub DESTROY{
+      my $self = shift;
+
+      # If we have an sth, then finish it
+      $self->{sth} && $self->{sth}->finish();
+
+      return 1;
+}
 1;

@@ -35,7 +35,6 @@ for(1..2){
 		  ok($track->name, 'track has name');
 	    }
 
-	    diag "RS type " . $rtracks->{type};
 	    ok( $precount == $rtct, "pre count ($precount) == actual count ($rtct)");
 	    ok( $rtracks->count == $rtct, "reported count (" . $rtracks->count . ") == actual count ($rtct)");
       }

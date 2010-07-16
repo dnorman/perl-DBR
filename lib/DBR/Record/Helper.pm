@@ -254,10 +254,7 @@ sub getrelation{
       if(scalar(@allvals) > 1){
 	    my $myresult;
 	    if($to1){
-		  my $resultset =  DBR::ResultSet->new(
-						       session => $self->{session},
-						       query   => $query
-						      ) or croak('Failed to create resultset');
+		  my $resultset =  DBR::ResultSet->new( $query ) or croak('Failed to create resultset');
 		  $self->_logDebug2('mapping to individual records');
 		  my $resultmap = $resultset->hashmap_single(  $mapfield->name  ) or return $self->_error('failed to split resultset');
 
@@ -277,17 +274,11 @@ sub getrelation{
 		  foreach my $row (@${$self->{rowcache}}) {
 			$self->_setlocalval($row,
 					    $relation,
-					    DBR::ResultSet->new( session  => $self->{session},
-								 query    => $query,
-								 splitvalue => $row->[$fidx]
-							       )
+					    DBR::ResultSet->new( $query, $row->[$fidx] )
 					   );
 		  }
 
-		  $myresult = DBR::ResultSet->new( session  => $self->{session},
-						   query    => $query,
-						   splitvalue => $val
-						 );
+		  $myresult = DBR::ResultSet->new( $query, $val );
 	    }
 
 	    $self->_setlocalval($record,$relation,$myresult);
@@ -295,10 +286,7 @@ sub getrelation{
 	    return $myresult;
 
       }else{
-	    my $resultset =  DBR::ResultSet->new(
-						 session => $self->{session},
-						 query   => $query
-						) or croak('Failed to create resultset');
+	    my $resultset =  DBR::ResultSet->new( $query ) or croak('Failed to create resultset');
 	    my $result = $resultset;
 	    if($to1){
 		  $result = $resultset->next;

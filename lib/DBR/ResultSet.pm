@@ -11,87 +11,74 @@ use constant ({
 	       f_next      => 0,
 	       f_state     => 1,
 	       f_rowcache  => 2,
-	       f_sth       => 3,
+	       f_query     => 3,
 	       f_count     => 4,
-	       f_estimated => 5,
-	       f_session   => 6,
-	       f_query     => 7,
+	       f_record    => 5, #
+	       f_splitval  => 6,
 
-	       t_DIRECT => 1,
-	       t_SPLIT  => 2,
+	       stCLEAN  => 1,
+	       stACTIVE => 2,
+	       stMEM    => 3,
 
-	       CLEAN  => 1,
-	       ACTIVE => 2,
 	       FIRST  => \&_first,
 	       DUMMY  => bless([],'DBR::Misc::Dummy'),
 	      });
 
 
 sub new {
-      my( $package ) = shift;
-      my %params = @_;
-      my $self = {
-		  state    => CLEAN,
-		  type     => t_DIRECT,
-		  session  => $params{session},
-		  query    => $params{query},
-		  #record   => $params{record}, HERE?
-		  #buddy    => $params{buddy}, HERE ?
-		 };
+      my ( $package, $query, $splitval ) = @_;
 
-      bless( $self, $package );
-
-      return $self->_error('query object must be specified' )   unless $self->{query};
-      return $self->_error('session object must be specified')  unless $self->{session};
-      #return $self->_error('record object must be specified') unless $self->{record}; HERE?
-
-      #prime the pump
-      $self->{next}     = FIRST;
-      if(defined($params{splitvalue})){
-	    $self->{splitval}   = $params{splitvalue}; # HERE HERE HERE this is not efficient
-	    $self->{type}     = t_SPLIT;
-	    #$self->_makerecord or return $self->_error('_makerecord failed'); HERE?
-
-      }
-      $self->{rowcache} = \ []; # Sacrificial arrayref. This arrayref is not preserved, but the scalarref is.
-
-      return( $self );
+      #the sequence of this MUST line up with the fields above
+      return bless( [
+		     FIRST,    # next
+		     stCLEAN,  # state
+		     \ [],     # rowcache - Sacrificial arrayref. This arrayref is not preserved, but the scalarref is.
+		     $query,   # query
+		     undef,    # count
+		     undef,    # record
+		     $splitval,# splitval
+		     ], $package );
 }
 
 
-sub next { $_[0]->{next}->( $_[0] ) }
+sub next { $_[0][ f_next ]->( $_[0] ) }
+
+sub reset{
+      my $self = shift;
+
+      if ($self->[f_state] == stMEM){
+	    return $self->_mem_iterator; #rowcache is already full, reset the mem iterator
+      }
+
+      if( $self->[f_state] == stACTIVE ){
+	    $self->[f_query]->reset; # calls finish
+	    ${ $self->[f_rowcache] } = []; #not sure if this is necessary or not
+	    $self->[f_state] = stCLEAN;
+	    $self->[f_next]  = FIRST;
+      }
+
+      return 1;
+}
 
 sub _first{
       my $self = shift;
 
-      $self->_execute() or return $self->_error('failed to execute');
+      $self->_execute();
       return $self->next;
 }
 
 sub _execute{
       my $self = shift;
 
-      $self->_makerecord or confess '_makerecord failed';
-      if($self->{type} == t_SPLIT){
-	    $self->{query}->run;
-	    my $rows = ${$self->{rowcache}} = $self->{query}->fetch_for($self->{splitval});
+      $self->[f_state] == stCLEAN or croak "Cannot call _execute unless in a clean state";
 
+      if( defined( $self->[f_splitval] ) ){
+
+	    my $rows = ${ $self->[f_rowcache] } = $self->[f_query]->fetch_segment( $self->[f_splitval] ); # Query handles the sth
 	    $self->_mem_iterator;
-	    $self->{real_count} = @$rows;
+
       }else{
-	    
-	    $self->{state} == CLEAN or confess 'Sanity error: must call reset before executing';
 
-	    $self->{sth} ||= $self->{query}->run;
-	    defined( my $rv = $self->{sth}->execute ) or confess 'failed to execute statement (' . $self->{sth}->errstr. ')';
-
-	    my $conn = $self->{query}->instance->getconn or croak "Failed to fetch connection handle";
-	    if($conn->can_trust_execute_rowcount){
-		  $self->{rows_hint} = $rv + 0;
-		  $self->_logDebug3("ROWS: $self->{rows_hint}");
-	    }
-
-	    $self->{state} = ACTIVE;
 	    $self->_db_iterator;
 
       }
@@ -99,39 +86,45 @@ sub _execute{
       return 1;
 }
 
-sub _fetch_all{
-      my $self = shift;
-
-      $self->_execute or return $self->_error('failed to execute');
-
-      if( $self->{type} == t_SPLIT ){
-	    return ${$self->{rowcache}};
-      }else{
-	    # HERE HERE HERE - this needs some TLC
-	    ${$self->{rowcache}} = $self->{sth}->fetchall_arrayref();
-
-	    $self->_end();
-	    $self->_mem_iterator(); # everything is in memory now, so use _mem_iterator
-
-	    return ${$self->{rowcache}};
-      }
-}
-
 sub _db_iterator{
       my $self = shift;
 
-      my $ref   = $self->{rowcache};
-      my $class = $self->{record}->class;
-      my $buddy = $self->{buddy} or confess "No buddy object present";
 
+      my $record = $self->_makerecord;
+      my $class  = $record->class;
+      my $buddy  = $record; # yes, we are using the record object as the buddy for now, just to keep it in scope
+
+      my $sth    =  $self->[f_query]->run;
+
+      defined( my $rv = $sth->execute ) or confess 'failed to execute statement (' . $sth->errstr. ')';
+
+      $self->[f_state] = stACTIVE;
+
+      if( $self->[f_query]->instance->getconn->can_trust_execute_rowcount ){ # yuck... assumes this is same connection as the sth
+	    $self->[f_count] = $rv + 0;
+	    $self->[f_query]->_logDebug3('ROWS: ' . $rv + 0);
+      }
+
+      my $ref   = $self->[f_rowcache];
       my $rows  = $$ref;
-      my $sth   = $self->{sth};
-      my $endsub = $self->_end_safe;
+
+
+      # IMPORTANT NOTE: circular reference hazard
+      weaken ($self); # Weaken the refcount
+
+      my $endsub = sub {
+	    defined($self) or return DUMMY; # technically this could be out of scope because it's a weak ref
+
+	    $self->[f_count] ||= $sth->rows || 0;
+	    $self->[f_state] = stCLEAN; # If we get here, then we hit the end, and no ->finish is required
+
+	    return DUMMY; # evaluates to false
+      };
 
       # use a closure to reduce hash lookups
       # It's very important that this closure is fast.
       # This one routine has more of an effect on speed than anything else in the rest of the code
-      $self->{next} = sub {
+      $self->[f_next] = sub {
 	    bless(
 		  (
 		   [
@@ -150,19 +143,22 @@ sub _db_iterator{
       return 1;
 
 }
+
 sub _mem_iterator{
       my $self = shift;
 
-      my $class = $self->{record}->class;
-      my $buddy = $self->{buddy} or confess "No buddy object present";
+      my $record = $self->_makerecord;
+      my $class  = $record->class;
 
-      my $rows  = ${$self->{rowcache}};
+      my $buddy  = $record; # yes, we are using the record object as the buddy for now, just to keep it in scope
+
+      my $rows  = ${ $self->[f_rowcache] };
       my $ct = 0;
 
       # use a closure to reduce hash lookups
       # It's very important that this closure is fast.
       # This one routine has more of an effect on speed than anything else in the rest of the code
-      $self->{next} = sub {
+      $self->[f_next] = sub {
 	    bless( (
 		    [
 		     ($rows->[$ct++] or $ct = 0 or return DUMMY ),
@@ -171,77 +167,45 @@ sub _mem_iterator{
 		   ),	$class );
       };
 
+      $self->[f_state] = stMEM;
+      $self->[f_count] = @$rows;
       return 1;
 
 }
 
+sub _fetch_all{
+      my $self = shift;
+
+      if( $self->[f_state] == stCLEAN ){
+	    $self->_execute;
+      }
+
+      if( $self->[f_state] == stMEM ){ # This should cover split queries
+
+	    return ${ $self->[f_rowcache] };
+
+      }else{ # Must be stACTIVE
+
+	    my $sth = $self->[f_query]->run; # just gets the sth if it's already been run
+
+	    my $rows = ${ $self->[f_rowcache] } = $sth->fetchall_arrayref();
+
+	    $self->_mem_iterator(); # everything is in memory now, so use _mem_iterator
+
+	    return ${ $self->[f_rowcache] };
+      }
+}
 
 sub _makerecord{
       my $self = shift;
 
-      $self->{record} = DBR::Record::Maker->new(
-						session  => $self->{session},
-						query    => $self->{query},
-						rowcache => $self->{rowcache},
-					       ) or confess ('failed to create record class');
+      carp "this is lame";
 
-      $self->{buddy} ||= $self->{record}->buddy(
-						rowcache => $self->{rowcache}
-					       ) or confess ('Failed to make buddy object');
-
-      return 1;
-}
-
-
-# IMPORTANT NOTE: (circular reference hazard)
-#
-# We can't use $self->reset in the closure generated by _db_iterator
-# due to the fact that it causes a circular reference to be created.
-# Example:
-# $self->{whatever} = sub { $self->foo }  #<--  FIRE BADDDD!
-#
-# So we weaken the $self reference using Scalar::Util::weaken, and make a wrapper for _end
-#
-sub _end_safe{
-      my $self = shift;
-
-      weaken ($self); # Weaken the refcount
-
-      return sub {
-	    defined($self) or return undef; # technically this could be out of scope because it's a weak ref
-	    $self->_end;
-
-	    return DUMMY; # evaluates to false
-      }
-}
-
-sub _end{
-      my $self = shift;
-      $self->{real_count} ||= $self->{sth}->rows || 0; # Sqlite doesn't give any rowcount, so we have to use this as a fallback
-
-      $self->reset;
-
-      return undef;
-}
-
-sub reset{
-      my $self = shift;
-
-      $self->{sth}->finish();
-      $self->{state} = CLEAN;
-      $self->{next}  = FIRST;
-
-      return 1;
-}
-
-sub DESTROY{
-      my $self = shift;
-      # DON'T Purge my rowcache!, cus other objects might still have a copy of it
-
-      #print STDERR "ResultSet::DB DESTROY  ($self,\t$self->{state}, \t$self->{sth})\n";
-      $self->{state} == CLEAN || $self->{sth}->finish();
-
-      return 1;
+      return $self->[f_record] ||= DBR::Record::Maker->new(
+							   session  => $self->[f_query]->session,
+							   query    => $self->[f_query],
+							   rowcache => $self->[f_rowcache],
+							  ) or confess ('failed to create record class');
 }
 
 ###################################################
@@ -250,21 +214,53 @@ sub DESTROY{
 
 sub count{
       my $self = shift;
-      return $self->{real_count} if defined $self->{real_count};
-      return $self->{rows_hint}  if defined $self->{rows_hint}; # If it's defined, we can trust it
+      return $self->[f_count] if defined $self->[f_count];
 
-      if($self->{type} == t_SPLIT){ # run automatically if we are a split query
-	    $self->_execute();      #HERE HERE HERE - I think this is wrong 
-	    return $self->{real_count};
+      if( defined $self->[f_splitval] ){ # run automatically if we are a split query
+	    $self->_execute();
+	    return $self->[f_count];
       }
 
-      # HERE HERE HERE - transpose isn't taking splitness into account
-      my $cquery = $self->{query}->transpose('Count') or croak "Failed to transpose query to a Count";
+      my $cquery = $self->[f_query]->transpose('Count');
 
-      return $self->{real_count} = $cquery->run;
+      return $self->[f_count] = $cquery->run;
 
       # Consider profiling min/max/avg rows returned for the scope in question
       # IF max / avg  is < 1000 just fetch all rows instead of executing another query
+
+}
+
+
+sub set {
+       my $self = shift;
+       my %params = @_;
+
+       my $tables = $self->[f_query]->tables;
+       my $table = $tables->[0]; # only the primary table is supported
+       my $alias = $table->alias;
+
+       my @sets;
+       foreach my $name ( keys %params ){
+	     my $field = $table->get_field( $name ) or croak "Invalid field $name";
+	     $field->alias( $alias ) if $alias;
+
+	     $field->is_readonly && croak ("Field $name is readonly");
+
+	     my $value = $field->makevalue( $params{ $name } );
+
+	     $value->count == 1 or croak("Field $name allows only a single value");
+
+	     my $setobj   = DBR::Query::Part::Set->new( $field, $value ) or return $self->_error('failed to create set object');
+
+	     push @sets, $setobj;
+       };
+
+       scalar(@sets) > 0 or croak('Must specify at least one field to set');
+
+       my $update = $self->[f_query]->transpose( 'Update',
+						 sets => \@sets
+					       );
+       return $update->run;
 
 }
 
@@ -272,20 +268,19 @@ sub where {
        my $self = shift;
 
        return DBR::ResultSet->new(
-				  session    => $self->{session},
-				  query      => $self->{query}->child_query( \@_ ), # HERE - Do I need to cache all of these? or just split queries?
-				  splitvalue => $self->{splitval},
+				  $self->[f_query]->child_query( \@_ ), # Where clause
+				  $self->[f_splitval],
 				 );
 }
 
-sub delete {croak "Mass delete is not allowed. No cookie for you!"}
+sub delete { croak "Mass delete is not allowed. No cookie for you!" }
 
 # Dunno if I like this
-sub each (&){
+sub each {
       my $self    = shift;
       my $coderef = shift;
       my $r;
-      $coderef->($r) while ($r = $self->next);
+      $coderef->($r) while ($r = $self->[f_next]->( $self ) );
 
       return 1;
 
@@ -299,7 +294,7 @@ sub values {
 
       scalar(@fieldnames) or croak('Must provide a list of field names');
 
-      my $rows = $self->_fetch_all or return $self->_error('Failed to retrieve rows');
+      my $rows = $self->_fetch_all;
 
       return wantarray?():[] unless $self->count > 0;
 
@@ -317,7 +312,7 @@ sub values {
 
       $code = 'sub{ push @output, ' . $code . ' }';
 
-      $self->_logDebug3($code);
+      $self->[f_query]->_logDebug3($code);
 
       my @output;
       my $sub = eval $code;
@@ -338,12 +333,13 @@ sub _lookuphash{
 
       scalar(@fieldnames) or croak('Must provide a list of field names');
 
-      my $rows = $self->_fetch_all or return $self->_error('Failed to retrieve rows');
+      my $rows = $self->_fetch_all;
 
       return {} unless $self->count > 0;
 
-      my $class = $self->{record}->class;
-      my $buddy = $self->{buddy} or confess "No buddy object present";
+      my $record = $self->[f_record];
+      my $class  = $record->class;
+      my $buddy  = $record;
 
       my $code;
       foreach my $fieldname (@fieldnames){
@@ -361,7 +357,7 @@ sub _lookuphash{
       }else{
 	    $code = 'map {  $lookup' . $code . ' = $_ }' . $part;
       }
-      $self->_logDebug3($code);
+      $self->[f_query]->_logDebug3($code);
 
       my %lookup;
       eval $code;

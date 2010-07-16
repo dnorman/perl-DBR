@@ -46,16 +46,16 @@ sub class { $_[0]->{recordclass} }
 # idea of keeping the recmaker object in scope, and possibly also
 # for providing rowcache
 # This object will become element index 1 (second element) in EVERY record object returned by resultset
-sub buddy {
-      my $self = shift;
-      my %params = @_;
+# sub buddy {
+#       my $self = shift;
+#       my %params = @_;
 
-      # Require rowcache for future functionality. At some point I'd like the rowcache to belong in the buddy object
-      $params{rowcache} or return $self->_error('rowcache is required'); 
+#       # Require rowcache for future functionality. At some point I'd like the rowcache to belong in the buddy object
+#       $params{rowcache} or return $self->_error('rowcache is required'); 
 
 
-      return $self; # Just use the recmaker for now
-}
+#       return $self; # Just use the recmaker for now
+# }
 
 sub _prep{
       my $self = shift;
@@ -246,7 +246,7 @@ sub _mk_relation{
 
       my $field = $self->{fieldmap}->{ $field_id } or return $self->_error("field_id '$field_id' is not valid");
 
-      my $code = "\$h->getrelation( $record, \$r, \$f, \@_ )";
+      my $code = "\$h->getrelation( $record, \$r, \$f )";
 
       $code = "sub {$code}";
       $self->_logDebug3("$method = $code");

@@ -97,7 +97,7 @@ sub select {
 
       } else {
 	    if ($params{'-object'}) { # new way - hybrid
-		  return  DBR::ResultSet->new( session => $self->{session}, query => $query );
+		  return  DBR::ResultSet->new( $query );
 	    }
 
 	    my $sth = $query->run;

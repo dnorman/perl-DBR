@@ -15,6 +15,10 @@ use DBR::Interface::Where;
 use DBR::ResultSet;
 use Carp;
 
+use constant ({
+	       EMPTY => bless( [], 'DBR::ResultSet::Empty'),
+	      });
+
 sub new {
       my( $package ) = shift;
       my %params = @_;
@@ -56,7 +60,7 @@ sub all{
 					  tables   => $table,
 					 ) or return $self->_error('failed to create Query object');
 
-      my $resultset = DBR::ResultSet->new( session => $self->{session}, query => $query );
+      my $resultset = DBR::ResultSet->new( $query );
 
       return $resultset;
 }
@@ -89,9 +93,7 @@ sub where{
 
       my $where = $builder->build( \@inwhere );
 
-      if($where->is_emptyset){
-	  return DBR::ResultSet::Empty->new(); # Empty resultset
-      }
+      return EMPTY if $where->is_emptyset;
 
       my $alias = $table->alias;
       if($alias){
@@ -108,7 +110,7 @@ sub where{
 					  builder  => $builder,
 					 ) or croak('failed to create Query object');
 
-      my $resultset = DBR::ResultSet->new( session => $self->{session}, query => $query );
+      my $resultset = DBR::ResultSet->new( $query );
 
       return $resultset;
 }
@@ -164,6 +166,8 @@ sub get{
 
       my $value = $field->makevalue( $pkval ) or return $self->_error("failed to build value object for ${\$field->name}");
 
+      return EMPTY if $value->is_emptyset;
+
       my $outwhere = DBR::Query::Part::Compare->new( field => $field, value => $value ) or return $self->_error('failed to create compare object');
 
       my $query = DBR::Query::Select->new(
@@ -175,7 +179,7 @@ sub get{
 					  scope  => $scope,
 					 ) or return $self->_error('failed to create Query object');
 
-      my $resultset = DBR::ResultSet->new( session => $self->{session}, query => $query );
+      my $resultset = DBR::ResultSet->new( $query );
 
       if(ref($pkval)){
 	    return $resultset;

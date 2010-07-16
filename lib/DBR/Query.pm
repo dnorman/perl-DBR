@@ -51,7 +51,7 @@ sub tables{
       foreach my $table (@tables){
 	    croak('must specify table as a DBR::Config::Table object') unless ref($table) =~ /^DBR::Config::Table/; # Could also be ::Anon
 
-	    my $name  = $table->name or return $self->_error('failed to get table name');
+	    my $name  = $table->name or confess 'failed to get table name';
 	    my $alias = $table->alias;
 	    $aliasmap{$alias} = $name if $alias;
       }
@@ -119,11 +119,14 @@ sub quiet_error{
 }
 
 sub transpose{
-      my $self = shift;
+      my $self   = shift;
       my $module = shift;
 
       my $class = __PACKAGE__ . '::' . $module;
-      return $class->new( map { $_ => $self->{$_}} (qw'instance session scope',$self->_params) ) or croak "Failed to create new $class object";
+      return $class->new(
+			 map { $_ => $self->{$_} } (qw'instance session scope',$self->_params),
+			 @_, # extra params
+			) or croak "Failed to create new $class object";
 }
 
 sub child_query{
