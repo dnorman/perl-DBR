@@ -2,13 +2,16 @@
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation.
 
-package DBR::Query::Dummy;
+package DBR::Misc::Dummy;
+# I only ever evaluate to false...  false false falsey false
+# plus, when you call any method, I just return myself.
 
 use Carp;
 use overload 
   #values
-  '""' => sub { '' },
-  '0+' => sub { 0 },
+  '""'   => sub { '' },
+  '0+'   => sub { 0 },
+  'bool' => sub { 0 },
 
   #operators
   '+'  => sub { $_[1] },
@@ -17,11 +20,10 @@ use overload
   '*'  => sub { 0 },
   '/'  => sub { 0 },
 
- 'fallback' => 1,
- 'nomethod' => sub {croak "Dummy object: Invalid operation '$_[3]' The ways in which you can use Dummy objects is limited"}
+ 'fallback' => 1
  ;
 
 our $AUTOLOAD;
-sub AUTOLOAD {  return shift }
+sub AUTOLOAD { shift }
 
 1;

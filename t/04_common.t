@@ -32,3 +32,6 @@ ok(@list == 7,'_uniq - Letters');
 #Falses
 @list = $obj->_uniq( '',undef,0,' ',undef,' ' );
 ok( @list == 4, '_uniq - Various forms of false' );
+
+
+# Split

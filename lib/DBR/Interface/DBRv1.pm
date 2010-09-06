@@ -7,11 +7,15 @@ package DBR::Interface::DBRv1;
 
 use strict;
 use base 'DBR::Common';
-use DBR::Query;
+use DBR::Query::Select;
+use DBR::Query::Count;
+use DBR::Query::Insert;
+use DBR::Query::Update;
+use DBR::Query::Delete;
 use DBR::Config::Field::Anon;
 use DBR::Config::Table::Anon;
-use DBR::Query::Part::Value;
 use DBR::Query::Part;
+use DBR::ResultSet;
 
 sub new {
       my( $package ) = shift;
@@ -29,6 +33,9 @@ sub new {
 }
 
 
+###################################################
+### Direct methods for DBRv1 ######################
+###################################################
 
 sub select {
       my $self   = shift;
@@ -37,19 +44,20 @@ sub select {
       my $tables = $self->_split( $params{-table} || $params{-tables} ) or
 	return $self->_error("No -table[s] parameter specified");
 
-      my $fields = $self->_split( $params{-fields} || $params{-field}) or
-	return $self->_error('No -field[s] parameter specified');
-
-
       my $Qtables = $self->_tables($tables) or return $self->_error('tables failed');
-
       my @Qfields;
-      foreach my $field (@$fields){
-	    my $Qfield = DBR::Config::Field::Anon->new(
-						       session => $self->{session},
-						       name   => $field
-						      ) or return $self->_error('Failed to create field object');
-	    push @Qfields, $Qfield;
+
+      if(!$params{'-count'}){
+	    my $fields = $self->_split( $params{-fields} || $params{-field}) or
+	      return $self->_error('No -field[s] parameter specified');
+
+	    foreach my $field (@$fields){
+		  my $Qfield = DBR::Config::Field::Anon->new(
+							     session => $self->{session},
+							     name   => $field
+							    ) or return $self->_error('Failed to create field object');
+		  push @Qfields, $Qfield;
+	    }
       }
 
       my $where;
@@ -57,51 +65,54 @@ sub select {
 	    $where = $self->_where($params{-where});
 	    return $self->_error('failed to prep where') unless defined($where);
       }
+
       my $limit = $params{'-limit'};
       if(defined $limit){
 	    return $self->_error('invalid limit') unless $limit =~ /^\d+$/;
       }
 
-      my $query = DBR::Query->new(
-				  instance => $self->{instance},
-				  session  => $self->{session},
-				  select   => {
-					     count  => $params{'-count'}?1:0, # takes precedence
-					     fields => \@Qfields
-					    },
-				  tables => $Qtables,
-				  where  => $where,
-				  limit  => $limit,
-				 ) or return $self->_error('failed to create query object');
+      my $class =  'DBR::Query::' . ($params{'-count'} ? 'Count':'Select');
+      my $query = $class->new(
+			      instance => $self->{instance},
+			      session  => $self->{session},
 
-      if ($params{-query}){
+			      fields   => \@Qfields,
+			      tables   => $Qtables,
+			      where    => $where,
+			      limit    => $limit,
+			     ) or return $self->_error('failed to create query object');
 
+      if ($params{-count}) {
+	    return $query->run; # Returns the count directly
+
+      } elsif ($params{-query}){
 	    return $query;
 
       }elsif ($params{-rawsth}) {
 
-	    my $sth = $query->prepare or return $self->_error('failed to prepare');
-	    $sth->execute() or return $self->_error('failed to execute sth');
+	    my $sth = $query->run or return $self->_error('failed to run');
+	    $sth->execute() or croak('failed to execute sth');
 
 	    return $sth;
 
       } else {
-	    my $resultset = $query->resultset or return $self->_error('failed to get resultset');
-
 	    if ($params{'-object'}) { # new way - hybrid
-		  return $resultset;
-	    } elsif ($params{-count}) {
-		  return $resultset->count();
-	    } elsif ($params{-arrayref}) {
-		  return $resultset->raw_arrayrefs;
+		  return  DBR::ResultSet->new( $query );
+	    }
+
+	    my $sth = $query->run;
+	    $sth->execute() or croak ('failed to execute sth');
+
+	    if ($params{-arrayref}) {
+		  return $sth->fetchall_arrayref(); # ->finish is automatic
 	    } elsif ($params{-keycol}) {
-		  return $resultset->raw_keycol($params{-keycol});
+		  return $sth->fetchall_hashref($params{-keycol});
 	    } elsif ($params{-single}) {
-		  my $rows = $resultset->raw_hashrefs() or return undef;
-		  return 0 unless @{$rows};
-		  return $rows->[0];
+		  my $row = $sth->fetchrow_hashref();
+		  $sth->finish;
+		  return $row || 0;
 	    } else {
-		  return $resultset->raw_hashrefs;
+		  return $sth->fetchall_arrayref({}); # ->finish is automatic
 	    }
       }
 
@@ -137,18 +148,15 @@ sub insert {
 	    push @sets, $set;
       }
 
+      my $query = DBR::Query::Insert->new(
+					  instance => $self->{instance},
+					  session  => $self->{session},
+					  sets   => \@sets,
+					  quiet_error => $params{-quiet} ? 1:0,
+					  tables => $Qtable,
+					 ) or return $self->_error('failed to create query object');
 
-      my $query = DBR::Query->new(
-				  instance => $self->{instance},
-				  session   => $self->{session},
-				  insert   => {
-					       set => \@sets,
-					      },
-				  quiet_error => $params{-quiet} ? 1:0,
-				  tables => $Qtable,
-				 ) or return $self->_error('failed to create query object');
-
-      return $query->execute();
+      return $query->run();
 
 }
 
@@ -190,19 +198,16 @@ sub update {
 	    push @sets, $set;
       }
 
+      my $query = DBR::Query::Update->new(
+					  instance => $self->{instance},
+					  session  => $self->{session},
+					  sets     => \@sets,
+					  tables   => $Qtable,
+					  where    => $where,
+					  quiet_error => $params{-quiet} ? 1:0,
+					 ) or return $self->_error('failed to create query object');
 
-      my $query = DBR::Query->new(
-				  instance => $self->{instance},
-				  session   => $self->{session},
-				  update   => {
-					       set => \@sets,
-					      },
-				  quiet_error => $params{-quiet} ? 1:0,
-				  tables => $Qtable,
-				  where  => $where
-				 ) or return $self->_error('failed to create query object');
-
-      return $query->execute();
+      return $query->run();
 
 }
 sub delete {
@@ -225,16 +230,15 @@ sub delete {
 	    return $self->_error('-where hashref/arrayref must be specified');
       }
 
-      my $query = DBR::Query->new(
-				  instance => $self->{instance},
-				  session   => $self->{session},
-				  delete   => 1,
-				  tables   => $Qtable,
-				  where    => $where,
-				  quiet_error => $params{-quiet} ? 1:0
-				 ) or return $self->_error('failed to create query object');
+      my $query = DBR::Query::Delete->new(
+					  instance => $self->{instance},
+					  session   => $self->{session},
+					  tables   => $Qtable,
+					  where    => $where,
+					  quiet_error => $params{-quiet} ? 1:0
+					 ) or return $self->_error('failed to create query object');
 
-      return $query->execute();
+      return $query->run();
 
 }
 

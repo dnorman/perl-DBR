@@ -65,7 +65,7 @@ sub setup_schema_ok{
 
       write_dbrconf( $sandbox ) or return fail ('Write DBR.conf');
 
-      my $logger = new DBR::Util::Logger(-logpath => 'dbr_test.log', -logLevel => 'debug2')
+      my $logger = new DBR::Util::Logger(-logpath => 'dbr_test.log', -logLevel => 'debug3')
 	or return fail ('Logger');
       my $dbr    = new DBR(
 			   -logger => $logger,
@@ -121,7 +121,7 @@ sub ready_sandbox{
       my $testid = shift;
       my $sandbox = "t/sandbox/$testid";
 
-      File::Path::remove_tree( $sandbox ) if -e $sandbox;
+      File::Path::rmtree( $sandbox ) if -e $sandbox;
       mkdir $sandbox or return 0;
       return $sandbox;
 }

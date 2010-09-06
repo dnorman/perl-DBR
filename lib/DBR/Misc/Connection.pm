@@ -32,8 +32,9 @@ sub dbh     { $_[0]->{dbh} }
 sub do      { my $self = shift;  return $self->_wrap($self->{dbh}->do(@_))       }
 sub prepare { my $self = shift;  return $self->_wrap($self->{dbh}->prepare(@_))  }
 sub execute { my $self = shift;  return $self->_wrap($self->{dbh}->execute(@_))  }
+sub selectrow_array { my $self = shift;  return $self->_wrap($self->{dbh}->selectrow_array(@_))  }
 sub disconnect { my $self = shift; return $self->_wrap($self->{dbh}->disconnect(@_))  }
-sub quote { my $self = shift;  return $self->{dbh}->quote(@_)  }
+sub quote { shift->{dbh}->quote(@_)  }
 
 sub ping {
       my $self = shift;
@@ -82,6 +83,9 @@ sub rollback{
       return 1;
 }
 
+######### ability check stubs #########
+
+sub can_trust_execute_rowcount{ 0 }
 
 ############ sequence stubs ###########
 sub prepSequence{

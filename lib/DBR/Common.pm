@@ -26,7 +26,28 @@ sub _split{
 	    $out = [ split(/\s+/,$value) ];
       }
 
-      return wantarray?(@$out):$out;
+      return wantarray? (@$out): $out;
+}
+
+sub _arrayify{
+      my $self = shift;
+      my @out = map { ref($_) eq 'ARRAY' ? (@$_) : ($_) } @_;
+      return wantarray? (@out) : \@out;
+}
+
+sub _hashify{
+      my $self = shift;
+      my %out;
+      while(@_){
+	    my $k = shift;
+	    if(ref($k) eq 'HASH'){
+		  %out = (%out,%$k);
+		  next;
+	    }
+	    my $v = shift;
+	    $out{ $k } = $v;
+      }
+      return wantarray? (%out) : \%out;
 }
 
 # returns true if all elements of Arrayref A (or single value) are present in arrayref B
@@ -84,6 +105,12 @@ sub _logDebug2  {
 sub _logDebug3  {
       my $s = shift->_session or return 1;
       $s->_log( shift, 'DEBUG3'  );
+      return 1
+}
+
+sub _warn       {
+      my $s = shift->_session or return 1;
+      $s->_log( shift, 'WARN'  );
       return 1
 }
 

@@ -26,12 +26,11 @@ sub new{
 
       bless( $self, $package );
 
-
       if (defined $field){ #field object is optional
-	    return $self->_error('invalid field object') unless ref($field) eq 'DBR::Config::Field';
+	    ref($field) eq 'DBR::Config::Field' or croak 'invalid field object';
       }
 
-      return $self->_error('value must be specified') unless exists($params{value}); # undef and 0 are both legal, so cannot check for defined or truth
+      exists($params{value}) || croak 'value must be specified'; # undef and 0 are both legal, so cannot check for defined or truth
       my $value = $params{value};
 
       if ( ref($value) eq 'DBR::Util::Operator' ) {
@@ -53,32 +52,31 @@ sub new{
 			my @tv = $trans->backward($_);
 
 			# undef is ok... but we Must have at least one element, or we are bailing
-			scalar(@tv) or return $self->_error("invalid value '$_' for field " . $field->name . ' (translator)' );
+			scalar(@tv) or croak 'invalid value ' . (defined($_)?"'$_'":'undef') . ' for field ' . $field->name . ' (translator)';
 			push @translated, @tv;
 		  }
 		  $value = \@translated;
 	    }
 	    $self->{is_number}  = $field->is_numeric;
 
-	    my $testsub = $field->testsub or return $self->_error('failed to retrieve testsub');
+	    my $testsub = $field->testsub or confess 'failed to retrieve testsub';
 
 	    foreach (@$value){
-		 $testsub->($_) or return $self->_error("invalid value '$_' for field " . $field->name );
+		 $testsub->($_) or croak 'invalid value ' . (defined($_)?"'$_'":'undef') . ' for field ' . $field->name;
 	    }
 
       }else{
-	    return $self->_error('is_number must be specified') unless defined($params{is_number});
+	    defined($params{is_number}) or croak 'is_number must be specified';
 
 	    $self->{is_number}  = $params{is_number}? 1 : 0;
 
 	    if( $self->{is_number} ){
 		  foreach my $val ( @{$value}) {
 			$val = '' unless defined $val;
-			looks_like_number($val) or return $self->_error("value '$val' is not a legal number");
+			looks_like_number($val) or croak "value '$val' is not a legal number";
 		  }
 	    }
       }
-
 
       $self->{value}    = $value;
 
@@ -96,7 +94,7 @@ sub count    { return scalar(  @{ $_[0]->{value} } ) }
 
 sub sql {
       my $self = shift;
-      my $conn = shift or return croak('conn is required');
+      my $conn = shift or croak 'conn is required';
 
       my $sql;
 

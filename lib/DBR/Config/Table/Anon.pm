@@ -9,10 +9,12 @@ use strict;
 use base 'DBR::Config::Table::Common';
 
 sub get_field     { undef }
-sub fields        {  []   }
+sub fields        { [] }
+sub req_fields    { [] }
 sub primary_key   { undef }
+
 sub get_relation  { undef }
-sub relations     {  []   }
+sub relations     { [] }
 sub conf_instance { undef }
 
 sub new{

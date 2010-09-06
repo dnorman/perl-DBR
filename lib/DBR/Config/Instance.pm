@@ -9,6 +9,7 @@ use strict;
 use DBI;
 use base 'DBR::Common';
 use DBR::Config::Schema;
+use Carp;
 
 my $GUID = 1;
 
@@ -182,30 +183,25 @@ sub connect{
       my $self = shift;
       my $flag = shift;
 
-      return $self->_error('failed to get database handle') unless
-	my $conn = $self->_gethandle;
-
       if (lc($flag) eq 'dbh') {
-	    return $conn->dbh;
+	    return $self->getconn->dbh;
       }elsif (lc($flag) eq 'conn') {
-	    return $conn;
+	    return $self->getconn;
       } else {
-
-	    return $self->_error("Failed to create Handle object") unless
-	      my $dbrh = DBR::Handle->new(
-					  conn     => $conn,
-					  session  => $self->{session},
-					  instance => $self,
-					 );
-	    return $dbrh;
+	    return DBR::Handle->new(
+				    conn     => $self->getconn,
+				    session  => $self->{session},
+				    instance => $self,
+				   ) or confess 'Failed to create Handle object';
       }
 }
 
-sub _gethandle{
+sub getconn{
       my $self = shift;
 
       my $conn = $CONCACHE{ $self->{guid} };
 
+      # conn-ping-zoom!!
       return $conn if $conn && $conn->ping; # Most of the time, we are done right here
 
       if ($conn) {
@@ -217,7 +213,7 @@ sub _gethandle{
       # if we are here, that means either the connection failed, or we never had one
 
       $self->_logDebug2('getting a new connection');
-      $conn = $self->_new_connection() or return $self->_error("Failed to connect to ${\$self->handle}, ${\$self->class}");
+      $conn = $self->_new_connection() or confess "Failed to connect to ${\$self->handle}, ${\$self->class}";
 
       $self->_logDebug2('Connected');
 

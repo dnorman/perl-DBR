@@ -9,7 +9,7 @@ use DBR::Config::SpecLoader;
 my ($conffile, $spec_file) = @ARGV;
 my $confdb = 'dbrconf';
 
-my $logger = new DBR::Util::Logger(-logpath => '/tmp/dbr_loadspec.log', -logLevel => 'debug3') or die "Failed to create logger";
+my $logger = new DBR::Util::Logger(-logpath => 'dbr_loadspec.log', -logLevel => 'debug3') or die "Failed to create logger";
 my $dbr    = new DBR(
 		     -logger => $logger,
 		     -conf   => $conffile,

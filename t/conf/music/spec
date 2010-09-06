@@ -12,3 +12,4 @@ schema=test	table=album	field=rating	cmd=ENUMOPT	handle=stinks	enum_id=10	overri
 schema=test	table=album	field=rating	cmd=ENUMOPT	handle=earbleed	enum_id=12	override_id=NULL	name=My Ears are Bleeding
 schema=test	table=album	field=date_released	cmd=TRANSLATOR	translator=UNIXTIME
 schema=test	table=track	field=album_id	cmd=RELATION	reltable=album	relfield=album_id	relname=album	reverse_name=tracks	type=CHILDOF
+schema=test	table=track	field=name	cmd=REGEX	regex=^[A-Za-z0-9 %]+$

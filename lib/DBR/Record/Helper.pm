@@ -1,12 +1,21 @@
-package DBR::Query::RecHelper;
+package DBR::Record::Helper;
 
 use strict;
 use base 'DBR::Common';
-use DBR::Query::Part;
-use DBR::Query::ResultSet::Empty;
-use DBR::Query::Dummy;
 use Carp;
+use DBR::Query::Part;
+use DBR::Query::Select;
+use DBR::Query::Update;
+use DBR::Query::Delete;
+use DBR::ResultSet;
+use DBR::ResultSet::Empty;
+use DBR::Misc::Dummy;
 
+# we can get away with making these once for all time
+use constant ({
+	       EMPTY => bless( [], 'DBR::ResultSet::Empty'),
+	       DUMMY => bless( [], 'DBR::Misc::Dummy'),
+	      });
 sub new {
       my( $package ) = shift;
       my %params = @_;
@@ -18,7 +27,6 @@ sub new {
 		  pkmap    => $params{pkmap},
 		  scope    => $params{scope},
 		  lastidx  => $params{lastidx},
-		  rowcache => $params{rowcache},
 		 };
 
       bless( $self, $package ); # BS object
@@ -31,7 +39,6 @@ sub new {
       $self->{pkmap}    or return $self->_error('pkmap is required');           # X
       $self->{flookup}  or return $self->_error('flookup is required');         # X
       defined($self->{lastidx}) or return $self->_error('lastidx is required');
-      $self->{rowcache} or return $self->_error('rowcache is required');
 
       return $self;
 }
@@ -96,19 +103,18 @@ sub _set{
 
       my ($outwhere,$table) = $self->_pk_where($record,$table_id) or return $self->_error('failed to create where tree');
 
-      my $query = DBR::Query->new(
-				  session => $self->{session},
-				  instance => $self->{instance},
-				  tables => $table,
-				  where  => $outwhere,
-				  update => { set => $sets }
-				 ) or return $self->_error('failed to create Query object');
+      my $query = DBR::Query::Update->new(
+					  session  => $self->{session},
+					  instance => $self->{instance},
+					  tables   => $table,
+					  where    => $outwhere,
+					  sets     => $sets
+					 ) or return $self->_error('failed to create Query object');
 
-      my $rv = $query->execute() or return $self->_error('failed to execute');
+      my $rv = $query->run() or return $self->_error('failed to execute');
 
       foreach my $set (@$sets){
-	    $self->_setlocalval($record, $set->field, $set->value->raw->[0]) or
-	      return $self->_error('failed to _setlocalval');
+	    $self->_setlocalval($record, $set->field, $set->value->raw->[0]);
       }
 
       return $rv;
@@ -125,15 +131,14 @@ sub delete{
 
        my ($outwhere,$table) = $self->_pk_where($record,$table_id) or return $self->_error('failed to create where tree');
 
-       my $query = DBR::Query->new(
-				   session  => $self->{session},
-				   instance => $self->{instance},
-				   tables   => $table,
-				   where    => $outwhere,
-				   delete   => 1,
-				  ) or return $self->_error('failed to create Query object');
+       my $query = DBR::Query::Delete->new(
+					   session  => $self->{session},
+					   instance => $self->{instance},
+					   tables   => $table,
+					   where    => $outwhere,
+					  ) or return $self->_error('failed to create Query object');
 
-       $query->execute or return $self->_error('failed to execute');
+       $query->run or return $self->_error('failed to execute');
 
        return 1;
 }
@@ -159,82 +164,76 @@ sub getfield{
        # its fields, we must clone the field provided by the original query
        my $newfield = $field->clone;
 
-       my $query = DBR::Query->new(
-				   session  => $self->{session},
-				   instance => $self->{instance},
-				   tables   => $table,
-				   where    => $outwhere,
-				   select   => { fields => [ $newfield ] } # use the new cloned field
-				  ) or return $self->_error('failed to create Query object');
+       my $query = DBR::Query::Select->new(
+					   session  => $self->{session},
+					   instance => $self->{instance},
+					   tables   => $table,
+					   where    => $outwhere,
+					   fields   => [ $newfield ] # use the new cloned field
+					  ) or return $self->_error('failed to create Query object');
 
-       my $sth = $query->prepare or return $self->_error('failed to execute');
+       my $sth = $query->run or return $self->_error('failed to execute');
 
        $sth->execute() or return $self->_error('Failed to execute sth');
        my $row  = $sth->fetchrow_arrayref() or return $self->_error('Failed to fetchrow');
 
        my $val = $row->[ $newfield->index ];
 
-       $self->_setlocalval($record,$field,$val) or return $self->_error('failed to _setlocalval');
+       $self->_setlocalval($record,$field,$val);
 
        return $want_sref?\$val:$val; # return a scalarref if requested
 }
 
 sub getrelation{
       my $self = shift;
-      my $record = shift;
+      my $obj = shift;
       my $relation = shift;
       my $field  = shift;
+
+      my $record = $obj->[0];
+      my $buddy  = $obj->[1];
+      my $rowcache = $buddy->[0];
 
       my $ridx = $relation->index;
       # Check to see if this record has a cached version of the resultset
       return $record->[$ridx] if defined($ridx) && exists($record->[$ridx]); # skip the rest if we have that
 
-      #print STDERR "ROWCACHE  getrelation $self->{rowcache} ${$self->{rowcache}}\n";
-
       my $fidx = $field->index();
       my $val;
 
-      my $to1 = $relation->is_to_one;
-      my $maptable = $relation->maptable or return $self->_error('Failed to fetch maptable');
-      my $mapfield = $relation->mapfield or return $self->_error('Failed to fetch mapfield');
+      my $to1 = $relation->is_to_one;                                                        # Candidate for pre-processing
+      my $maptable = $relation->maptable or return $self->_error('Failed to fetch maptable');# Candidate for pre-processing
+      my $mapfield = $relation->mapfield or return $self->_error('Failed to fetch mapfield');# Candidate for pre-processing
 
       my @allvals; # For uniq-ing
 
       if( defined($fidx) && exists($record->[$fidx]) ){
 	    $val = $record->[ $fidx ]; # My value
-	    @allvals = $self->_uniq( $val, map { $_->[ $fidx ] } @${$self->{rowcache}} ); # look forward in the rowcache and add those too
+	    @allvals = $self->_uniq( $val, map { $_->[ $fidx ] } @${$rowcache} ); # look forward in the rowcache and add those too
       }else{
+	    # I forget, I think I'm using scalar ref as a way to represent undef and still have a true rvalue *ugh*
 	    my $sref = $self->getfield($record,$field, 1 ); # go fetch the value in the form of a scalarref
 	    defined ($sref) or return $self->_error("failed to fetch the value of ${\ $field->name }");
 	    $val = $$sref;
 	    $fidx ||= $field->index;
-	    return $self->_error('field object STILL does not have an index') unless defined($fidx);
+	    confess('field object STILL does not have an index') unless defined($fidx);
 	    push @allvals, $val;
       }
 
-      unless($mapfield->is_nullable){
+      unless($mapfield->is_nullable){ # Candidate for pre-defined global
 	    @allvals = grep { defined } @allvals;
       }
 
-      my $dummy = bless([],'DBR::Query::Dummy');
-      if(!scalar @allvals){
-	    if($to1){
-		  return $dummy;
-	    }else{
-		  my $rv = DBR::Query::ResultSet::Empty->new() # Empty resultset
-		    or return $self->_error('failed to create ResultSet::Empty object');
-		  return $rv;
-	    }
-      }
+      return $to1 ? DUMMY : EMPTY unless scalar @allvals;
 
-      my $value = $mapfield->makevalue( \@allvals ) or return $self->_error('failed to create value object');
-      my $outwhere = DBR::Query::Part::Compare->new( field => $mapfield, value => $value ) or return $self->_error('failed to create compare object');
+      my $value    = $mapfield->makevalue( \@allvals );
+      my $outwhere = DBR::Query::Part::Compare->new( field => $mapfield, value => $value );
 
       my $scope = DBR::Config::Scope->new(
 					  session       => $self->{session},
 					  conf_instance => $maptable->conf_instance,
 					  extra_ident   => $maptable->name,
-					  offset        => 2,               # because getrelation is being called indirectly, look at the scope two levels up
+					  offset        => 2,  # because getrelation is being called indirectly, look at the scope two levels up
 					 ) or return $self->_error('Failed to get calling scope');
 
       my $pk        = $maptable->primary_key or return $self->_error('Failed to fetch primary key');
@@ -243,60 +242,59 @@ sub getrelation{
       my %uniq;
       my @fields = grep { !$uniq{ $_->field_id }++ } ($mapfield, @$pk, @$prefields );
 
-      my $query = DBR::Query->new(
-				  session  => $self->{session},
-				  instance => $self->{instance},
-				  tables   => $maptable,
-				  where    => $outwhere,
-				  select   => { fields => \@fields },
-				  scope    => $scope,
-				 ) or return $self->_error('failed to create Query object');
+      my $query = DBR::Query::Select->new(
+					  session  => $self->{session},
+					  instance => $self->{instance},
+					  tables   => $maptable,
+					  where    => $outwhere,
+					  fields   => \@fields,
+					  scope    => $scope,
+					  splitfield  => $field
+					 ) or return $self->_error('failed to create Query object');
 
-      my $resultset = $query->resultset or return $self->_error('failed to retrieve resultset');
 
       if(scalar(@allvals) > 1){
 	    my $myresult;
 	    if($to1){
+		  my $resultset =  DBR::ResultSet->new( $query ) or croak('Failed to create resultset');
 		  $self->_logDebug2('mapping to individual records');
 		  my $resultmap = $resultset->hashmap_single(  $mapfield->name  ) or return $self->_error('failed to split resultset');
 
 		  # look forward in the rowcache and assign the resultsets for whatever we find
-		  foreach my $row (@${$self->{rowcache}}) {
-
-			my $record = $resultmap->{ $row->[$fidx] } || $dummy;
-			$self->_setlocalval($row,$relation,$record) or return $self->_error('failed to _setlocalval');
+		  foreach my $row (@${$rowcache}) {
+			$self->_setlocalval(
+					    $row,
+					    $relation,
+					    $resultmap->{ $row->[$fidx] } || DUMMY
+					   );
 		  }
 
-		  $myresult = $resultmap->{$val} || $dummy;
+		  $myresult = $resultmap->{$val} || DUMMY;
 
 	    }else{
-		  $self->_logDebug2('splitting into resultsets');
-		  my $resultmap = $resultset->split( $mapfield ) or return $self->_error('failed to split resultset');
-
 		  # look forward in the rowcache and assign the resultsets for whatever we find
-		  foreach my $row (@${$self->{rowcache}}) {
-
-			my $rs = $resultmap->{ $row->[$fidx] } || DBR::Query::ResultSet::Empty->new() # Empty resultset
-			  or return $self->_error('failed to create ResultSet::Empty object');
-			$self->_setlocalval($row,$relation,$rs) or return $self->_error('failed to _setlocalval');
+		  foreach my $row (@${$rowcache}) {
+			$self->_setlocalval($row,
+					    $relation,
+					    DBR::ResultSet->new( $query, $row->[$fidx] )
+					   );
 		  }
 
-		  $myresult = $resultmap->{$val} || DBR::Query::ResultSet::Empty->new() # Empty resultset
-		    or return $self->_error('failed to create ResultSet::Empty object');
+		  $myresult = DBR::ResultSet->new( $query, $val );
 	    }
 
-	    $self->_setlocalval($record,$relation,$myresult) or return $self->_error('failed to _setlocalval');
+	    $self->_setlocalval($record,$relation,$myresult);
 
 	    return $myresult;
 
       }else{
-
+	    my $resultset =  DBR::ResultSet->new( $query ) or croak('Failed to create resultset');
 	    my $result = $resultset;
 	    if($to1){
 		  $result = $resultset->next;
 	    }
 
-	    $self->_setlocalval($record,$relation,$result) or return $self->_error('failed to _setlocalval');
+	    $self->_setlocalval($record,$relation,$result);
 
 	    return $result;
       }
@@ -339,7 +337,6 @@ sub _setlocalval{
       # Update this record to reflect the new value
       $record->[$idx] = $val;
 
-      return 1;
 }
 
 1;

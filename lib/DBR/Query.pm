@@ -1,79 +1,67 @@
-# the contents of this file are Copyright (c) 2004-2009 Daniel Norman
+# the contents of this file are Copyright (c) 2004-2010 Daniel Norman
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation.
 
 package DBR::Query;
-
-use strict;
-no strict 'subs';
 use base 'DBR::Common';
-use DBR::Query::ResultSet::DB;
+use strict;
+use Carp;
+use DBR::Query::Part;
+sub _params{ confess "Shouldn't get here" }
+sub _reqparams{ confess "Shouldn't get here" }
+use Scalar::Util 'blessed';
 
 sub new {
-      my( $package ) = shift;
-      my %params = @_;
+      my( $package, %params ) = @_;
 
-      my $self = {
-		  instance   => $params{instance},
-		  session => $params{session},
-		  scope  => $params{scope},
-		 };
+      $package ne __PACKAGE__ || croak "Can't create a query object directly, must create a subclass for the given query type";
+      my $self = bless({},$package);
 
-      bless( $self, $package );
+      $self->{instance} = $params{instance} || croak "instance is required";
+      $self->{session}  = $params{session}  || croak "session is required";
+      $self->{scope}    = $params{scope};
+      $self->{splitfield} = $params{splitfield};
 
-      return $self->_error('instance object is required') unless $self->{instance};
+      my %req = map {$_ => 1} $self->_reqparams;
+      for my $key ( $self->_params ){
 
-      $self->{flags} = {
-			lock    => $params{lock} ? 1:0,
-		       };
+	    if(  $params{$key} ){
+		  $self->$key( $params{$key} );
 
-      $self->{lastidx} = -1;
-
-      $self->_tables( $params{tables} ) or return $self->_error('failed to prepare tables');
-
-      if($params{where}){
-	    $self->{where_tree} = $params{where};
-	    $self->{where_sql} = $self->_where ( $params{where} ) or return $self->_error('failed to prepare where');
+	    }elsif($req{$key}){
+		  croak "$key is required";
+	    }
       }
 
-      if ($params{limit}){
- 	    return $self->_error('invalid limit') unless $params{limit} =~ /^\d+$/;
-	    $self->{limit} = $params{limit};
-      }
+      $self->validate() or croak "Object is not valid"; # HERE - not enough info as to why
 
-      if ( $params{select} ){
-
-	    $self->_select($params{select}) or return $self->_error('_select failed');
-	    $self->{type} = 'select';
-
-      }elsif( $params{insert} ){
-	    $self->{type} = 'insert';
-	    $self->_insert($params{insert}) or return $self->_error('_insert failed');
-
-      }elsif( $params{update} ){
-	    $self->{type} = 'update';
-	    $self->_update($params{update}) or return $self->_error('_update failed');
-
-      }elsif( $params{delete} ){
-	    $self->{type} = 'delete';
-	    #Nada
-      }else{
-	    return $self->_error('must specify select, insert, update or delete');
-      }
-
-      return( $self );
+      return $self;
 }
 
-sub get_field {
-      my $self = shift;
-      my $fieldname = shift;
+sub tables{
+      my $self   = shift;
+      exists( $_[0] )  or return wantarray?( @$self->{tables} ) : $self->{tables} || undef;
+      my @tables = $self->_arrayify(@_);
 
-      return $self->{fieldmap}->{ $fieldname } || undef;
+      scalar(@tables) || croak "must provide at least one table";
 
+      my @tparts;
+      my %aliasmap;
+      foreach my $table (@tables){
+	    croak('must specify table as a DBR::Config::Table object') unless ref($table) =~ /^DBR::Config::Table/; # Could also be ::Anon
+
+	    my $name  = $table->name or confess 'failed to get table name';
+	    my $alias = $table->alias;
+	    $aliasmap{$alias} = $name if $alias;
+      }
+
+      $self->{tables}   = \@tables;
+      $self->{aliasmap} = \%aliasmap;
+
+      return $self;
 }
 
-sub scope { $_[0]->{scope} }
 sub check_table{
       my $self  = shift;
       my $alias = shift;
@@ -81,291 +69,119 @@ sub check_table{
       return $self->{aliasmap}->{$alias} ? 1 : 0;
 }
 
-sub _tables{
+sub where{
+      my $self = shift;
+      exists( $_[0] )  or return $self->{where} || undef;
+      my $part = shift || undef;
+
+      !$part || ref($part) =~ /^DBR::Query::Part::(And|Or|Compare|Subquery|Join)$/ ||
+	croak('param must be an AND/OR/COMPARE/SUBQUERY/JOIN object');
+
+      $self->{where} = $part;
+
+      return $self;
+}
+
+sub builder{
+      my $self = shift;
+      exists( $_[0] )  or return $self->{builder} || undef;
+      my $builder = shift || undef;
+
+      !$builder || ref($builder) eq 'DBR::Interface::Where' || croak('must specify a builder object');
+
+      $self->{builder} = $builder;
+
+      return $self;
+}
+
+sub limit{
+  my $self = shift;
+  exists( $_[0] ) or return $self->{limit} || undef;
+  $self->{limit} = shift || undef;
+
+  return $self;
+}
+
+sub lock{
+  my $self = shift;
+  exists( $_[0] ) or return $self->{lock} || undef;
+  $self->{lock} = shift() ? 1 : 0;
+
+  return $self;
+}
+
+sub quiet_error{
+  my $self = shift;
+  exists( $_[0] ) or return $self->{quiet_error} || undef;
+  $self->{quiet_error} = shift() ? 1 : 0;
+
+  return $self;
+}
+
+# Copy the guts of this query into a query of a different type
+# For instance: transpose a Select into an Update.
+sub transpose{
       my $self   = shift;
-      my $tables = shift;
+      my $module = shift;
 
-      $tables = [$tables] unless ref($tables) eq 'ARRAY';
-      return $self->_error('At least one table must be specified') unless @$tables;
+      my $class = __PACKAGE__ . '::' . $module;
+      return $class->new(
+			 map { $_ => $self->{$_} } (qw'instance session scope',$self->_params),
+			 @_, # extra params
+			) or croak "Failed to create new $class object";
+}
 
-      my @tparts;
-      my %aliasmap;
-      foreach my $table (@$tables){
-	    return $self->_error('must specify table as a DBR::Config::Table object') unless ref($table) =~ /^DBR::Config::Table/; # Could also be ::Anon
+sub child_query{
+      my $self = shift;
+      my $where = shift;
 
-	    my $name  = $table->name or return $self->_error('failed to get table name');
-	    my $alias = $table->alias;
-	    $aliasmap{$alias} = $name if $alias;
+      my $builder = $self->{builder} ||= DBR::Interface::Where->new(
+								    session       => $self->{session},
+								    instance      => $self->{instance},
+								    primary_table => $self->{tables}[0], # HERE HERE HERE - this is lame
+								   );
 
-	    push @tparts, $table->sql;
+      my $ident = $builder->digest( $where );
+
+      return $self->{child_queries}{$ident} ||= $self->_new_child_query($where);
+}
+
+sub _new_child_query{
+      my $self = shift;
+      my $where = shift;
+
+      #HERE - I don't think this is the correct place to do this
+      my $qpart = $self->{builder}->build($where);
+
+      my %child;
+
+      # Copy everything over, including internal goodies # HERE HERE HERE - I'm uncertain if builder should be copied
+      map { $child{$_} = $self->{$_} } (qw'instance session scope splitfield last_idx', $self->_params);
+
+      $child{where} = $self->{where} ? DBR::Query::Part::And->new( $self->{where}, $qpart ) : $qpart;
+
+      my $class = blessed($self);
+      return bless(\%child, $class); # not even calling new
+}
+
+sub instance { $_[0]{instance} }
+sub _session { $_[0]{session} }
+sub session  { $_[0]{session} }
+sub scope    { $_[0]{scope} }
+
+sub can_be_subquery { 0 }
+
+sub validate{
+      my $self = shift;
+
+      return 0 unless $self->_validate_self; # make sure I'm sane
+
+      # Now check my component objects
+      if($self->{where}){
+	    $self->{where}->validate( $self ) or croak "Invalid where clause";
       }
-
-      $self->{tparts}   = \@tparts;
-      $self->{aliasmap} = \%aliasmap;
 
       return 1;
 }
-
-sub _where{
-      my $self = shift;
-      my $param = shift;
-
-      return $self->_error('param must be an AND/OR/COMPARE/SUBQUERY/JOIN object') unless ref($param) =~ /^DBR::Query::Part::(And|Or|Compare|Subquery|Join)$/;
-
-      $param->validate($self) or return $self->_error('Where clause validation failed');
-
-      my $conn = $self->{instance}->connect('conn') or return $self->_error('failed to connect');
-
-      my $where = $param->sql( $conn ) or return $self->_error('Failed to retrieve sql');
-
-      return $where || '';
-}
-
-
-sub _select{
-      my $self   = shift;
-      my $params = shift;
-
-      my $sql;
-
-      if( $params->{count} ){
-	  $sql .= 'count(*) ';
-	  $self->{flags}->{is_count} = 1;
-
-      }elsif($params->{fields}){
-	    my $fields = $params->{fields};
-
-	    my $conn = $self->{instance}->connect('conn') or return $self->_error('failed to connect');
-	    if (ref($fields) eq 'ARRAY') {
-		  my @fieldsql;
-		  foreach my $field (@{$fields}) {
-
-			return $self->_error('must specify field as a DBR::Config::Field object') unless ref($field) =~ /^DBR::Config::Field/; # Could also be ::Anon
-
-			if ($field->table_alias) {
-			      return $self->_error("table alias is invalid without a join") unless $self->{aliasmap};
-			      return $self->_error('invalid table alias "' . $field->table_alias . '" in -fields')        unless $self->{aliasmap}->{ $field->table_alias };
-			}
-
-			$self->{fieldmap}->{ $field->name } = $field;
-
-			push @fieldsql, $field->sql( $conn );
-			$field->index( ++$self->{lastidx} ) or return $self->_error('failed to set field index');
-
-			$self->{flags}->{can_be_subquery} = 1 if scalar(@fieldsql) == 1;
-
-		  }
-		  return $self->_error('No valid fields specified') unless @fieldsql;
-		  $sql .= join(', ',@fieldsql);
-
-	    } else {
-		  return $self->_error('No valid fields specified');
-	    }
-
-	    $self->{fields} = $fields;
-      }
-
-      $self->{main_sql} = $sql;
-
-      return 1;
-}
-
-sub lastidx{ $_[0]->{lastidx} }
-
-sub _update{
-      my $self = shift;
-      my $params = shift;
-
-      return $self->_error('No set parameter specified') unless $params->{set};
-      my $sets = $params->{set};
-      $sets = [$sets] unless ref($sets) eq 'ARRAY';
-
-      my $conn = $self->{instance}->connect('conn') or return $self->_error('failed to connect');
-
-      my @sql;
-      foreach my $set (@$sets) {
-	    ref($set) eq 'DBR::Query::Part::Set'
-	      or return $self->_error('Set parameter must contain only set objects');
-
-	    push @sql, $set->sql( $conn );
-      }
-
-      $self->{main_sql} = join (', ', @sql);
-}
-
-sub _insert{
-      my $self = shift;
-      my $params = shift;
-
-      return $self->_error('No set parameter specified') unless $params->{set};
-      my $sets = $params->{set};
-      $sets = [$sets] unless ref($sets) eq 'ARRAY';
-
-      my $conn = $self->{instance}->connect('conn') or return $self->_error('failed to connect');
-
-      my @fields;
-      my @values;
-      foreach my $set (@$sets) {
-	    ref($set) eq 'DBR::Query::Part::Set'
-	      or return $self->_error('Set parameter must contain only set objects');
-
-	    push @fields, $set->field->sql( $conn );
-	    push @values, $set->value->sql( $conn );
-      }
-
-      $self->{main_sql} = '(' . join (', ', @fields) . ') values (' . join (', ', @values) . ')';
-
-      if($params->{quiet_error}){
-	    $self->{quiet_error} = 1;
-      }
-
-  return 1;
-
-}
-
-sub sql{
-      my $self = shift;
-
-      return $self->{sql} if exists($self->{sql});
-
-      my $sql;
-
-      my $tables = join(',',@{$self->{tparts}});
-      my $type = $self->{type};
-
-      if ($type eq 'select'){
-	    $sql .= "SELECT $self->{main_sql} FROM $tables";
-	    $sql .= " WHERE $self->{where_sql}" if $self->{where_sql};
-      }elsif($type eq 'insert'){
-	    $sql .= "INSERT INTO $tables $self->{main_sql}";
-      }elsif($type eq 'update'){
-	    $sql .= "UPDATE $tables SET $self->{main_sql} WHERE $self->{where_sql}";
-      }elsif($type eq 'delete'){
-	    $sql .= "DELETE FROM $tables WHERE $self->{where_sql}";
-      }
-
-      $sql .= ' FOR UPDATE'           if $self->{flags}->{lock};
-      $sql .= " LIMIT $self->{limit}" if $self->{limit};
-
-      $self->{sql} = $sql;
-
-      return $sql;
-}
-
-sub where_is_emptyset{
-    my $self = shift;
-    return 0 unless $self->{where_tree};
-    return $self->{where_tree}->is_emptyset;
-}
-
-sub can_be_subquery {
-      my $self = shift;
-      return $self->{flags}->{can_be_subquery} ? 1:0;
-}
-
-sub fields{ $_[0]->{fields} }
-
-sub prepare {
-      my $self = shift;
-
-      return $self->_error('can only call resultset on a select') unless $self->{type} eq 'select';
-
-      my $conn   = $self->{instance}->connect('conn') or return $self->_error('failed to connect');
-
-      my $sql = $self->sql;
-
-      $self->_logDebug2( $sql );
-
-      return $self->_error('failed to prepare statement') unless
-	my $sth = $conn->prepare($sql);
-
-      return $sth;
-
-}
-
-
-sub resultset{
-      my $self = shift;
-
-      return $self->_error('can only call resultset on a select') unless $self->{type} eq 'select';
-
-      my $resultset = DBR::Query::ResultSet::DB->new(
-						     session   => $self->{session},
-						     query    => $self,
-						     #instance => $self->{instance},
-						    ) or return $self->_error('Failed to create resultset');
-
-      return $resultset;
-
-}
-
-sub is_count{
-      my $self = shift;
-      return $self->{flags}->{is_count} || 0,
-}
-
-sub execute{
-      my $self = shift;
-      my %params = @_;
-
-      $self->_logDebug2( $self->sql );
-
-      my $conn   = $self->{instance}->connect('conn') or return $self->_error('failed to connect');
-
-      $conn->quiet_next_error if $self->{quiet_error};
-
-      if($self->{type} eq 'insert'){
-
-	    $conn->prepSequence() or return $self->_error('Failed to prepare sequence');
-
-	    my $rows = $conn->do($self->sql) or return $self->_error("Insert failed");
-
-	    # Tiny optimization: if we are being executed in a void context, then we
-	    # don't care about the sequence value. save the round trip and reduce latency.
-	    return 1 if $params{void};
-
-	    my ($sequenceval) = $conn->getSequenceValue();
-	    return $sequenceval;
-
-      }elsif($self->{type} eq 'update'){
-
-	    my $rows = $conn->do($self->sql);
-
-	    return $rows || 0;
-
-      }elsif($self->{type} eq 'delete'){
-
-	    my $rows = $conn->do($self->sql);
-
-	    return $rows || 0;
-
-      }elsif($self->{type} eq 'select'){
-	    return $self->_error('cannot call execute on a select');
-      }
-
-      return $self->_error('unknown query type')
-}
-
-sub makerecord{
-      my $self = shift;
-      my %params = @_;
-      return $self->_error('rowcache is required') unless $params{rowcache};
-
-      $self->_stopwatch();
-
-      my $handle = DBR::Query::RecMaker->new(
-					     instance => $self->{instance},
-					     session  => $self->{session},
-					     query    => $self,
-					     rowcache => $params{rowcache},
-					    ) or return $self->_error('failed to create record class');
-
-      # need to keep this in scope, because it removes the dynamic class when DESTROY is called
-      $self->_stopwatch('recmaker');
-
-      return $handle;
-
-}
-
 
 1;

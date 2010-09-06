@@ -159,7 +159,7 @@ sub addfield{
       my $instance = $self->{instance};
       my $dbrh = $instance->connect or return $self->_error("Failed to connect to ${\$instance->name}");
 
-      # Don't check for failure, the unique index constraint will reject hte insert in case of a race condition
+      # Don't check for failure, the unique index constraint will reject the insert in case of a race condition
       my $row_id = $dbrh->insert(
 				 -table => 'cache_fielduse',
 				 -fields => {
@@ -168,6 +168,11 @@ sub addfield{
 					    },
 				 -quiet => 1,
 				);
+
+      # $dbrh->minsert('cache_fielduse',
+      # 	       scope_id => $self->{scope_id},
+      # 	       field_id => $fid
+      # 	      );
 
       return 1;
 }
