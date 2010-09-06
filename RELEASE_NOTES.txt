@@ -1,0 +1,50 @@
+= DBR 1.1 release notes =
+
+Headliners:
+ * $resultset->count can now be trusted! Always!
+   It should always work now regardless of whether you have fetched any records or not.
+ * Resultsets may now be refined!
+   my $items = $order->items->where( status => 'active' ) # IS NOW POSSIBLE
+   This is infinately chainable, because you may now call ->where on any resultset to get a sub-resultset.
+   In fact, the above example only initiates one query of the items table per chunk of 1,000 order records.
+   This resulted from a *major* remodel of the relationship code to implement lazy execution at the time of the first ->next, rather than ->where.
+ * Table inserts now enforce the non-null status on fields.
+   Any inserts into a table with one or more non-null fields will require that you provide a values for them.
+   The only downside is that it does not respect database enforced default values.
+   Some discussion of this one may be required prior to the final release of 1.1 as this may actually break some production code.
+ * New! Batshit crazy AND / OR logic
+   DBR::Util::Operator now exports AND and OR subroutines, with evil syntactic sugaryness.
+   There is zero documentation on this right now, but the following sort of logic is now possible:
+   {{{
+my $resultset = $dbrh->tablename->where(
+                                        ( status => 'active' )
+					OR
+                                        (
+                                          status  => 'retired',
+                                          thingus => GT 1,
+                                        )
+                                       );
+   }}}
+ * Probably other stuff I forgot about. lol
+
+Some handy stuff: 
+ * $dbrh->tablename->parse( somefield => 'somevalue' ) now works for all fields, regardless of whether they are translated fields or not.
+   This does full type, range and regex checking. It's Very handy for data validation.
+ * Added many new test cases
+ * Totally re-arranged most of the modules. The file tree is starting to make a little more sense now.
+ * Reverted dependency on File::Path to 1.08, because centos5 is stupid and cannot upgrade File::Path without totally repackaging perl itself.
+
+Some stuff I heartlessly broke:
+ * DBR::Config::Schema no longer contains a browse method.
+   Sorry for being a bit heavy handed about removing this, but the former browse code belongs elsewhere.
+   John: I'd be happy to discuss a better place for the code.
+
+Some things that are '''Not''' included in 1.1:
+ * DBR Admin overhaul
+   I think I have a pretty good thing going on https://perl-dbr.googlecode.com/svn/branches/pre_1.1
+   but I didn't want it to hold up the 1.1 release.
+   I need help with finishing this! Volunteers would be much appreciated.
+ * A proper exception handling system.
+   Hopefully I can whip something up before the final release of 1.1
+ * Integral attributes (dynamic, record-based fields)
+   Sadly, this 1.1 design goal is not going to happen just yet.
