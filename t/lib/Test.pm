@@ -121,7 +121,7 @@ sub ready_sandbox{
       my $testid = shift;
       my $sandbox = "t/sandbox/$testid";
 
-      File::Path::remove_tree( $sandbox ) if -e $sandbox;
+      File::Path::rmtree( $sandbox ) if -e $sandbox;
       mkdir $sandbox or return 0;
       return $sandbox;
 }

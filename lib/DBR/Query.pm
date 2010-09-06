@@ -136,7 +136,7 @@ sub child_query{
       my $builder = $self->{builder} ||= DBR::Interface::Where->new(
 								    session       => $self->{session},
 								    instance      => $self->{instance},
-								    primary_table => $self->{tables}[0], # HERE HERE HERE - this is wrong
+								    primary_table => $self->{tables}[0], # HERE HERE HERE - this is lame
 								   );
 
       my $ident = $builder->digest( $where );

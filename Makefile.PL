@@ -38,7 +38,7 @@ WriteMakefile(
 				  'Test::More'         => '0.87',
 				  'Time::HiRes'        => 0,
 				  'Time::ParseDate'    => 0,
-				  'File::Path'         => '2.07',
+				  'File::Path'         => '1.08',
 				 },
 
 	     );
