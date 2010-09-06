@@ -19,51 +19,30 @@ sub new {
       my %params = @_;
       my $self = {
 		  session  => $params{session},
-		  query    => $params{query},
-		  rowcache => $params{rowcache},
 		 };
 
       bless( $self, $package ); # BS object
 
       $self->{session}  or croak 'session is required';
-      $self->{query}    or croak 'query is required';
-      $self->{rowcache} or croak 'rowcache is required';
-
-      $self->{scope} = $self->{query}->scope or croak 'failed to fetch scope object';
+      my $query = $params{query}  or croak 'query is required';
 
       $self->{classidx} = (shift @IDPOOL) || ++$classidx;
-      #print STDERR "PACKAGEID: $self->{classidx}\n";
 
-      $self->_prep or return $self->_error('prep failed');
+      $self->_prep($query) or return $self->_error('prep failed');
 
       return $self;
 }
 
 sub class { $_[0]->{recordclass} }
 
-
-# This is just a stub to return some sort of buddy object, with the
-# idea of keeping the recmaker object in scope, and possibly also
-# for providing rowcache
-# This object will become element index 1 (second element) in EVERY record object returned by resultset
-# sub buddy {
-#       my $self = shift;
-#       my %params = @_;
-
-#       # Require rowcache for future functionality. At some point I'd like the rowcache to belong in the buddy object
-#       $params{rowcache} or return $self->_error('rowcache is required'); 
-
-
-#       return $self; # Just use the recmaker for now
-# }
-
 sub _prep{
       my $self = shift;
+      my $query = shift;
 
       my $class = $BASECLASS . $self->{classidx};
       $self->{recordclass} = $class;
 
-      my @fields = $self->{query}->fields or confess 'Failed to get query fields';
+      my @fields = $query->fields or confess 'Failed to get query fields';
 
       my @table_ids;
       # It's important that we preserve the specific field objects from the query. They have payloads that new ones do not.
@@ -121,17 +100,17 @@ sub _prep{
       }
       $self->{name} = join('/',@tablenames);
 
-      my $instance = $self->{query}->instance;
+      my $scope    = $query->scope or croak 'failed to fetch scope object';
+      my $instance = $query->instance or croak 'failed to fetch instance object';
 
       my $helper = DBR::Record::Helper->new(
 					    session  => $self->{session},
 					    instance => $instance,
-					    tablemap => \%tablemap,     # V
-					    pkmap    => \%pkmap,        # V
-					    flookup  => \%flookup,      # V
-					    scope    => $self->{scope}, # V
-					    lastidx  => $self->{query}->lastidx,# V
-					    rowcache => $self->{rowcache}, #X
+					    tablemap => \%tablemap,
+					    pkmap    => \%pkmap,
+					    flookup  => \%flookup,
+					    scope    => $scope,
+					    lastidx  => $query->lastidx,
 					   ) or return $self->_error('Failed to create Helper object');
 
       my $mode = 'rw';
@@ -183,6 +162,7 @@ sub _mk_accessor{
 
       my $obj      = '$_[0]';
       my $record   = $obj . '[0]';
+      my $buddy    = $obj . '[1]';
 
       my $setvalue = '$_[1]';
       my $value;
@@ -241,12 +221,13 @@ sub _mk_relation{
 
       my $obj      = '$_[0]';
       my $record   = $obj . '[0]';
+      my $buddy    = $obj . '[1]';
 
       my $field_id = $relation->field_id or return $self->_error('failed to retrieve field_id');
 
       my $field = $self->{fieldmap}->{ $field_id } or return $self->_error("field_id '$field_id' is not valid");
 
-      my $code = "\$h->getrelation( $record, \$r, \$f )";
+      my $code = "\$h->getrelation( $obj, \$r, \$f )";
 
       $code = "sub {$code}";
       $self->_logDebug3("$method = $code");

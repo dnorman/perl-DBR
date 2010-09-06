@@ -4,7 +4,6 @@ use strict;
 use base 'DBR::Common';
 
 use DBR::Misc::Dummy;
-use DBR::Record::Maker;
 use Carp;
 use Scalar::Util 'weaken';
 use constant ({
@@ -13,8 +12,7 @@ use constant ({
 	       f_rowcache  => 2,
 	       f_query     => 3,
 	       f_count     => 4,
-	       f_record    => 5, #
-	       f_splitval  => 6,
+	       f_splitval  => 5,
 
 	       stCLEAN  => 1,
 	       stACTIVE => 2,
@@ -35,7 +33,6 @@ sub new {
 		     \ [],     # rowcache - Sacrificial arrayref. This arrayref is not preserved, but the scalarref is.
 		     $query,   # query
 		     undef,    # count
-		     undef,    # record
 		     $splitval,# splitval
 		     ], $package );
 }
@@ -90,9 +87,9 @@ sub _db_iterator{
       my $self = shift;
 
 
-      my $record = $self->_makerecord;
+      my $record = $self->[f_query]->get_record_obj;
       my $class  = $record->class;
-      my $buddy  = $record; # yes, we are using the record object as the buddy for now, just to keep it in scope
+      my $buddy  = [ $self->[f_rowcache], $record ]; # buddy ref must contain the record object just to keep it in scope.
 
       my $sth    =  $self->[f_query]->run;
 
@@ -100,7 +97,7 @@ sub _db_iterator{
 
       $self->[f_state] = stACTIVE;
 
-      if( $self->[f_query]->instance->getconn->can_trust_execute_rowcount ){ # yuck... assumes this is same connection as the sth
+      if( $self->[f_query]->instance->getconn->can_trust_execute_rowcount ){ # HERE - yuck... assumes this is same connection as the sth
 	    $self->[f_count] = $rv + 0;
 	    $self->[f_query]->_logDebug3('ROWS: ' . $rv + 0);
       }
@@ -147,10 +144,10 @@ sub _db_iterator{
 sub _mem_iterator{
       my $self = shift;
 
-      my $record = $self->_makerecord;
+      my $record = $self->[f_query]->get_record_obj;
       my $class  = $record->class;
 
-      my $buddy  = $record; # yes, we are using the record object as the buddy for now, just to keep it in scope
+      my $buddy  = [ $self->[f_rowcache], $record ]; # buddy ref must contain the record object just to keep it in scope.
 
       my $rows  = ${ $self->[f_rowcache] };
       my $ct = 0;
@@ -194,18 +191,6 @@ sub _fetch_all{
 
 	    return ${ $self->[f_rowcache] };
       }
-}
-
-sub _makerecord{
-      my $self = shift;
-
-      carp "this is lame";
-
-      return $self->[f_record] ||= DBR::Record::Maker->new(
-							   session  => $self->[f_query]->session,
-							   query    => $self->[f_query],
-							   rowcache => $self->[f_rowcache],
-							  ) or confess ('failed to create record class');
 }
 
 ###################################################
@@ -337,9 +322,10 @@ sub _lookuphash{
 
       return {} unless $self->count > 0;
 
-      my $record = $self->[f_record];
+      my $record = $self->[f_query]->get_record_obj;
       my $class  = $record->class;
-      my $buddy  = $record;
+      my $buddy  = [ $self->[f_rowcache], $record ]; # buddy ref must contain the record object just to keep it in scope.
+      my $buddy  = [$self->[f_rowcache], $record];
 
       my $code;
       foreach my $fieldname (@fieldnames){

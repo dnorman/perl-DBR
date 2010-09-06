@@ -118,6 +118,8 @@ sub quiet_error{
   return $self;
 }
 
+# Copy the guts of this query into a query of a different type
+# For instance: transpose a Select into an Update.
 sub transpose{
       my $self   = shift;
       my $module = shift;

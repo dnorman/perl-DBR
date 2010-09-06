@@ -9,6 +9,7 @@ package DBR::Query::Select;
 use strict;
 use base 'DBR::Query';
 use Carp;
+use DBR::Record::Maker;
 
 sub _params    { qw (fields tables where builder limit lock quiet_error) }
 sub _reqparams { qw (fields tables) }
@@ -62,6 +63,8 @@ sub reset {
       return $self->{sth} && $self->{sth}->finish;
 }
 
+# HERE - it's a little funky that we are handling split queries here,
+# but non-split queries in ResultSet. Not horrible... just funky.
 sub fetch_segment{
       my $self = shift;
       my $value = shift;
@@ -72,7 +75,7 @@ sub fetch_segment{
 sub _do_split{
       my $self = shift;
 
-      $self->{splitfield} or croak 'splitfield must be present'; # HERE - let this hard fail to save the check?
+      # Should have a splitfield if we're getting here. Don't check for it. speeed.
       defined( my $idx = $self->{splitfield}->index ) or croak 'field object must provide an index';
 
       my $sth = $self->run;
@@ -92,23 +95,15 @@ sub _do_split{
 }
 
 
-# sub _makerecord{
-#       my $self = shift;
+sub get_record_obj{
+      my $self = shift;
 
-#       die "this is broken";
-#       $self->{record} ||= DBR::Record::Maker->new(
-# 						  session  => $self->{session},
-# 						  query    => $self->{query},
-# 						 ) or confess ('failed to create record class');
-
-#       $self->{buddy} ||= $self->{record}->buddy(
-# 						rowcache => $self->{rowcache}
-# 					       ) or confess ('Failed to make buddy object');
-
-#       return 1;
-# }
-
-
+      # Only make the record-maker object once per query. Even split queries should be able to share the same one.
+      return $self->{recordobj} ||= DBR::Record::Maker->new(
+							    session  => $self->{session},
+							    query    => $self,  # This value is not preserved by the record maker, thus no memory leak
+							   ) or confess ('failed to create record class');
+}
 
 sub DESTROY{
       my $self = shift;

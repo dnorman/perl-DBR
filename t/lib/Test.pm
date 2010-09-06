@@ -65,7 +65,7 @@ sub setup_schema_ok{
 
       write_dbrconf( $sandbox ) or return fail ('Write DBR.conf');
 
-      my $logger = new DBR::Util::Logger(-logpath => 'dbr_test.log', -logLevel => 'debug2')
+      my $logger = new DBR::Util::Logger(-logpath => 'dbr_test.log', -logLevel => 'debug3')
 	or return fail ('Logger');
       my $dbr    = new DBR(
 			   -logger => $logger,
