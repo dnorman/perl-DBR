@@ -13,8 +13,8 @@ sub new{
       my( $package ) = shift;
       my ($field,$query) = @_;
 
-      croak('field must be a Field object') unless ref($field) =~ /^DBR::Config::Field/; # Could be ::Anon
-      croak('value must be a Value object') unless ref($query) eq 'DBR::Query';
+      croak('first argument must be a Field object') unless ref($field) =~ /^DBR::Config::Field/; # Could be ::Anon
+      croak('second argument must be a Select object') unless ref($query) eq 'DBR::Query::Select';
 
       my $self = [ $field, $query ];
 

@@ -52,7 +52,7 @@ sub sql{
 }
 
 sub lastidx  { $_[0]{last_idx} }
-sub can_be_subquery { scalar( $_[0]->fields ) == 1 || 0 }; # Must have exactly one field
+sub can_be_subquery { scalar( @{ $_[0]->fields || [] } ) == 1 }; # Must have exactly one field
 
 sub run {
       my $self = shift;
