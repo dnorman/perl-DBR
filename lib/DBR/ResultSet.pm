@@ -325,7 +325,6 @@ sub _lookuphash{
       my $record = $self->[f_query]->get_record_obj;
       my $class  = $record->class;
       my $buddy  = [ $self->[f_rowcache], $record ]; # buddy ref must contain the record object just to keep it in scope.
-      my $buddy  = [$self->[f_rowcache], $record];
 
       my $code;
       foreach my $fieldname (@fieldnames){
