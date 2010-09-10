@@ -16,6 +16,7 @@ use DBR::Config::Field::Anon;
 use DBR::Config::Table::Anon;
 use DBR::Query::Part;
 use DBR::ResultSet;
+use Carp;
 
 sub new {
       my( $package ) = shift;
