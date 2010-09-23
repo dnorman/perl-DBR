@@ -1,0 +1,1 @@
+schema=test	table=test_abc	field=xyz_id	cmd=RELATION	reltable=test_xyz	relfield=id	relname=xyz	reverse_name=abcs	type=CHILDOF
