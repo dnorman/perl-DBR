@@ -220,11 +220,17 @@ sub getrelation{
 	    push @allvals, $val;
       }
 
+      my $rowcount = scalar @allvals; # Cheapest way to get a rowcount is here, before we filter
+
       unless($mapfield->is_nullable){ # Candidate for pre-defined global
 	    @allvals = grep { defined } @allvals;
       }
 
-      return $to1 ? DUMMY : EMPTY unless scalar @allvals;
+      unless(scalar @allvals){
+	    # no values? then for sure, the relationship for this record must be empty.
+	    # Cache the emptyness so we don't have to repeat this work
+	    return $self->_setlocalval( $record, $relation, $to1 ? DUMMY : EMPTY );
+      }
 
       my $value    = $mapfield->makevalue( \@allvals );
       my $outwhere = DBR::Query::Part::Compare->new( field => $mapfield, value => $value );
@@ -253,7 +259,7 @@ sub getrelation{
 					 ) or return $self->_error('failed to create Query object');
 
 
-      if(scalar(@allvals) > 1){
+      if($rowcount > 1){
 	    my $myresult;
 	    if($to1){
 		  my $resultset =  DBR::ResultSet->new( $query ) or croak('Failed to create resultset');
@@ -335,8 +341,7 @@ sub _setlocalval{
       }
 
       # Update this record to reflect the new value
-      $record->[$idx] = $val;
-
+      return $record->[$idx] = $val;
 }
 
 1;
