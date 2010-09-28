@@ -13,7 +13,7 @@ use constant ({
 
 my %sql_ops = (
 	       eq      => '=',
-	       ne      => '!=',
+	       not     => '!=',
 	       ge      => '>=',
 	       le      => '<=',
 	       gt      => '>',
@@ -29,8 +29,8 @@ my %sql_ops = (
 	       isnot   => 'IS NOT'  # /
 	      );
 
-my %str_operators = map {$_ => 1} qw'eq ne like notlike';
-my %num_operators = map {$_ => 1} qw'eq ne ge le gt lt between notbetween';
+my %str_operators = map {$_ => 1} qw'eq not like notlike';
+my %num_operators = map {$_ => 1} qw'eq not ge le gt lt between notbetween';
 
 
 sub new{
@@ -59,10 +59,10 @@ sub new{
 	    $sqlfunc = \&_betweensql;
       }elsif ( $value->count != 1 ){
 	    $operator = 'in'    if $operator eq 'eq';
-	    $operator = 'notin' if $operator eq 'ne';
+	    $operator = 'notin' if $operator eq 'not';
       }elsif ($value->is_null) {
 	    $operator = 'is'    if $operator eq 'eq';
-	    $operator = 'isnot' if $operator eq 'ne';
+	    $operator = 'isnot' if $operator eq 'not';
       }
 
       my $self = [ $field, $operator, $value, $sqlfunc];

@@ -409,8 +409,8 @@ sub _processfield{
                   if ( $flags =~ /like/ ) {
                         $operator = 'like';# like
                         #return $self->_error('LIKE flag disabled without the allowquery flag') unless $self->{config}->{allowquery};
-                  } elsif ( $flags =~ /!/    ) { $operator = 'ne'; # Not
-	          } elsif ( $flags =~ /\<\>/ ) { $operator = 'ne'; $is_number = 1; # greater than less than
+                  } elsif ( $flags =~ /!/    ) { $operator = 'not'; # Not
+	          } elsif ( $flags =~ /\<\>/ ) { $operator = 'not'; $is_number = 1; # greater than less than
 	          } elsif ( $flags =~ /\>=/  ) { $operator = 'ge'; $is_number = 1; # greater than eq
 	          } elsif ( $flags =~ /\<=/  ) { $operator = 'le'; $is_number = 1; # less than eq
 	          } elsif ( $flags =~ /\>/   ) { $operator = 'gt'; $is_number = 1; # greater than

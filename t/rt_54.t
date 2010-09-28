@@ -6,7 +6,7 @@ $| = 1;
 
 use lib './lib';
 use t::lib::Test;
-use Test::More tests => 6;
+use Test::More tests => 10;
 use DBR::Config::Scope;
 use DBR::Util::Operator;
 
@@ -20,16 +20,20 @@ ok($dbrh, 'dbr connect');
 my $recs;
 
 $recs = $dbrh->abc->where( status => 'one' );
-ok( $recs, 'get recs' );
+ok( $recs, 'get recs A' );
+ok( $recs->count == 1, 'Count A');
 
 $recs = $dbrh->abc->where( status => NOT 'one' );
-ok( $recs, 'get recs' );
+ok( $recs, 'get recs B' );
+ok( $recs->count == 2, 'Count B');
 
 $recs = $dbrh->abc->where( status => 'one two' );
-ok( $recs, 'get recs' );
+ok( $recs, 'get recs C' );
+ok( $recs->count == 2, 'Count C');
 
 $recs = $dbrh->abc->where( status => NOT 'one two' );
-ok( $recs, 'get recs' );
+ok( $recs, 'get recs D' );
+ok( $recs->count == 1, 'Count D');
 
 1;
 
