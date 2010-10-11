@@ -20,7 +20,7 @@ ok($dbrh, 'dbr connect');
 my $recs;
 
 my $new_id = $dbrh->abc->insert( status => 'one', name => 'added' );
-ok( $new_id, 'get recs A' );
+ok( $new_id, 'new id from insert' );
 
 1;
 
