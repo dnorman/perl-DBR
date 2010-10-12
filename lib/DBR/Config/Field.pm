@@ -117,7 +117,9 @@ sub load{
 						name     => $field->[C_name],
 						field_id => $field->[C_field_id],
 						is_pkey  => $field->[C_is_pkey] ? 1 : 0,
-						is_req   => !$field->[C_is_nullable],
+						is_req   => !( $field->[C_is_nullable] || $field->[C_is_pkey] ),
+						# OK OK... this is a hack. Just because it's a pkey doesn't mean it's not required.
+						# It would seem that we need to be aware of serial/trigger fields.
 					       ) or die('failed to register field');
 
 	    _gen_valcheck($field) or die('failed to generate value checking routine');
