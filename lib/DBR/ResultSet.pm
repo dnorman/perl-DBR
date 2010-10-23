@@ -113,6 +113,7 @@ sub _db_iterator{
 	    defined($self) or return DUMMY; # technically this could be out of scope because it's a weak ref
 
 	    $self->[f_count] ||= $sth->rows || 0;
+	    $self->[f_next]  = FIRST;
 	    $self->[f_state] = stCLEAN; # If we get here, then we hit the end, and no ->finish is required
 
 	    return DUMMY; # evaluates to false
