@@ -19,10 +19,7 @@ my $rv;
 # Repeat the whole test twice to test both query modes (Unregistered and Prefetch)
 for(1){
 
-      my $artist = $dbh->artist->get(1);
-      ok( $artist , 'get artist');
-
-      my $albums = $artist->albums;
+      my $albums = $dbh->album->all;
       ok ($albums, 'albums');
 
       my $ctA;
@@ -30,14 +27,14 @@ for(1){
 	    $ctA++;
       }
 
-      ok ($ctA == 1, 'first pass ->next');
+      ok ($ctA, 'first pass ->next');
 
       my $ctB;
       while ( $albums->next ) {
 	    $ctB++;
       }
 
-      ok ($ctB == 1, 'second pass ->next');
+      ok ($ctB, 'second pass ->next');
 
 }
 
