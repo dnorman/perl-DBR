@@ -192,7 +192,7 @@ sub update_fields{
 	    }
 	    $type =~ /^\s+|\s+$/g;
 	    ($type) = split (/\s+/,$type);
-	    my $typeid = DBR::Config::Field->get_type_id($type) or $self->_error( "Invalid type '$type'" );
+	    my $typeid = DBR::Config::Field->get_type_id($type) or die( "Invalid type '$type'" );
 
  	    my $record = $fieldmap{$name};
 

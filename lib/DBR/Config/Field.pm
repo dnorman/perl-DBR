@@ -66,6 +66,7 @@ my %datatypes = (
 		 mediumblob=> { id => 15 },
 		 tinyblob  => { id => 16 },
 		 enum      => { id => 17 }, # I loathe mysql enums
+		 decimal   => { id => 18, numeric => 1, bits => 'NA'}, # HERE - may need a little more attention for proper range checking
 		);
 
 my %datatype_lookup = map { $datatypes{$_}->{id} => {%{$datatypes{$_}}, handle => $_ }} keys %datatypes;
