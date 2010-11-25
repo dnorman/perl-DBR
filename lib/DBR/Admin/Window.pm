@@ -14,6 +14,7 @@ has 'bordercolor'   => (is => 'ro');
 has 'title'         => (is => 'ro');
 has 'dimensions'    => (is => 'ro');
 has 'height'        => (is => 'ro');
+has 'onclose'       => (is => 'ro');
 
 # Basic window construction goes here ( base class )
 sub BUILD {
@@ -83,6 +84,10 @@ sub close {
       $self->parent->delete($self->id);
       $self->parent->focus();
       $self->parent->draw();
+
+      if (ref($self->onclose) eq 'CODE'){
+	    $self->onclose->();
+      }
 }
 
 

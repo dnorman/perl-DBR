@@ -19,15 +19,18 @@ sub BUILD {
        			       -y => 0, -width => 20,
        			       -buttons   => [{ -label => '< Add New Schema >',
        						-onpress => sub {
-						      $self->spawn('EditSchema',  dimensions  => '50x15', isnew => 1);
-						      $self->update_schema_list($listbox);
+						      $self->spawn('EditSchema',
+								   dimensions  => '50x15',
+								   isnew => 1,
+								   onclose => sub { $self->update_schema_list($listbox) }
+								  );
 						}
        					      }],
 			     );
       $self->add( 'info', 'Label',
-       			       -y => 10, -x => 26,
-       			       -text => "Press e to edit the schema name,\nor press enter to select."
-			      );
+		  -y => 10, -x => 26,
+		  -text => "Press e to edit the schema name,\nor press enter to select."
+		);
 
       $listbox = $self->add( 'schemalistbox', 'Listbox',
 			     -y => 2, -width => 25, -vscrollbar => 1,
@@ -73,6 +76,7 @@ sub update_schema_list{
 
       $listbox->values( [ sort { lc($labels{$a}) cmp lc($labels{$b}) } keys %labels ]); # Curses::UI sucks
       $listbox->labels( \%labels );
+      $listbox->draw;
 }
 
 

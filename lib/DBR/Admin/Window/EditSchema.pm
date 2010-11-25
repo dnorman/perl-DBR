@@ -70,7 +70,7 @@ sub save{
 					 ) or die DBR::Admin::Exception->new( message => "failed to insert into dbr_schemas",
 									      root_window => $self->win->root() );
 	    $self->schema_id($schema_id);
-	    $self->new(0);
+	    $self->isnew(0);
       }else{
 	    $dbrh->update( -table => 'dbr_schemas', -fields => \%fields,
 			   -where => { schema_id => ['d',$self->schema_id ] },
