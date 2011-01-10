@@ -9,8 +9,9 @@ use strict;
 use DBR::Handle;
 use DBR::Config;
 use DBR::Misc::Session;
+use Scalar::Util 'blessed';
 use base 'DBR::Common';
-
+use Carp;
 
 my ($tag) = '$HeadURL$' =~ /\/svn\/(?:tags|branches)?\/?(.*?)\//;
 my ($rev) = '$Revision$' =~ /(\d+)/;
@@ -18,7 +19,46 @@ $tag .= '_' . $rev if $tag eq 'trunk';
 
 our $VERSION = $tag || 'unknown';
 
+my %LOOKUP;
+my %OBJECTS;
+my $CT;
 
+sub import {
+      my $pkg = shift;
+      my %params = @_;
+      my $dbr;
+
+      my ($callpack, $callfile, $callline) = caller;
+
+      my $app = $params{app};
+
+      if( $params{conf} ){
+	    croak "conf file '$params{conf}' not found" unless -e $params{conf};
+	    $app ||= $LOOKUP{ $params{conf} } ||= 'auto_' . $CT++; # use existing app id if conf exists, or make one up
+
+	    use DBR::Util::Logger;
+
+	    $OBJECTS{ $app } ||= DBR->new(
+					  -logger => DBR::Util::Logger->new(
+									    -logpath  => $params{logpath} || '/tmp/dbr_auto.log',
+									    -logLevel => $params{loglevel} || 'warn'
+									   ),
+					  -conf   => $params{conf},
+					 );
+      }
+
+      return 1 unless $app; # No import requested
+
+      my $dbr = $OBJECTS{ $app } or croak "No DBR object could be located";
+
+      no strict 'refs';
+      *{"${callpack}::dbr_connect"} =
+	sub {
+	      shift if blessed($_[0]);
+	      $dbr->connect(@_);
+	};
+
+}
 sub new {
       my( $package ) = shift;
       my %params = @_;
