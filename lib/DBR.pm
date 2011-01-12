@@ -54,7 +54,7 @@ sub import {
       no strict 'refs';
       *{"${callpack}::dbr_connect"} =
 	sub {
-	      shift if blessed($_[0]);
+	      shift if blessed($_[0]) || [caller]->[0]->isa( $_[0] );
 	      $dbr->connect(@_);
 	};
 
