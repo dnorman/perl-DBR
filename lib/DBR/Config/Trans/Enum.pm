@@ -41,12 +41,15 @@ sub moduleload{
 
       my @enumids = $self->_uniq( map {  $_->{enum_id} } @$maps);
 
-      return $self->_error('Failed to select from enum') unless
-	my $values = $dbrh->select(
-				   -table => 'enum',
-				   -fields => 'enum_id handle name override_id',
-				   -where  => { enum_id => ['d in',@enumids ] },
-				  );
+      my $values = [];
+      if(@enumids){
+	    return $self->_error('Failed to select from enum') unless
+	      my $values = $dbrh->select(
+					 -table => 'enum',
+					 -fields => 'enum_id handle name override_id',
+					 -where  => { enum_id => ['d in',@enumids ] },
+					);
+      }
 
       my %VALUES_BY_ID;
       foreach my $value (@$values){

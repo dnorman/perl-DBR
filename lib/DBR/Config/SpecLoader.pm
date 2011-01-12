@@ -148,7 +148,7 @@ sub _do_relation   {
 sub _do_enumopt    {
       my ($self, $schema, $table, $field, $spec, $sortval) = @_;
 
-      map { length($spec->{$_}) or die("Parameter '$_' must be specified") } qw'handle enum_id override_id name';
+      map { length($spec->{$_}) or die("Parameter '$_' must be specified") } qw'handle name';
 
       my $override;
 
