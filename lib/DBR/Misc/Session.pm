@@ -13,6 +13,7 @@ sub new {
 		  logger   => $params{logger},
 		  admin    => $params{admin} ? 1 : 0,
 		  fudge_tz => $params{fudge_tz},
+		  use_exceptions => $params{use_exceptions} ? 1 : 0,
 		 };
 
       bless( $self, $package );
@@ -57,6 +58,7 @@ sub timezone {
 sub timezone_ref{ $_[0]->{tzref} }
 
 sub is_admin{ $_[0]->{admin} }
+sub use_exceptions{ $_[0]->{use_exceptions} }
 
 sub _session { $_[0] }
 
