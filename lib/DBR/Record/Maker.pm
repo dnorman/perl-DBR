@@ -234,8 +234,11 @@ sub _mk_relation{
 
       my $subref = _eval_relation($helper,$relation,$field,$code) or $self->_error('Failed to eval relation' . $@);
 
-      my $symbol = qualify_to_ref( $self->{recordclass} . '::' . $method );
-      *$symbol = $subref;
+      {
+        no warnings 'redefine';
+        my $symbol = qualify_to_ref( $self->{recordclass} . '::' . $method );
+        *$symbol = $subref;
+      }
 
       return 1;
 }
