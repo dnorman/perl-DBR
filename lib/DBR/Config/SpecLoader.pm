@@ -43,9 +43,29 @@ sub process_spec{
 
       $dbrh->begin();
 
+      my %SCANS;
+
       my $sortval;
       foreach my $spec ( @$specs ){
+
+	    my ($schema) = $spec->{table} =~ /^(.*?)\./;
+	    $spec->{schema} ||= $schema;
+
 	    map {$spec->{ $_ } or die "Invalid Spec row: Missing $_"} qw'schema table field cmd';
+
+	    if( ! $SCANS{ $spec->{schema} }++ ){
+		  #                           HERE - THIS \/ is wrong. Fix it. Should be asking the schema object for an instance
+		  my $scan_instance = $dbr->get_instance( $spec->{schema} ) or die "No config found for scandb $scandb";
+
+		  my $scanner = DBR::Config::ScanDB->new(
+							 session => $dbr->session,
+							 conf_instance => $self->{conf_instance},
+							 scan_instance => $scan_instance,
+							);
+
+
+		  $scanner->scan() or die "Failed to scan $scandb";
+	    }
 
 	    my $schema = new DBR::Config::Schema(session => $self->{session}, handle => $spec->{schema}) or die "Schema $spec->{schema} not found";
 	    my $table = $schema->get_table( $spec->{table} ) or die "$spec->{table} not found in schema\n";
@@ -91,8 +111,17 @@ sub _do_relation   {
       map { $spec->{$_} or die("Parameter '$_' must be specified") } qw'relname reltable relfield type reverse_name';
 
 
-      my $totable = $schema ->get_table( $spec->{reltable} ) or die "$spec->{reltable} not found in schema\n";
-      my $tofield = $totable->get_field( $spec->{relfield} ) or die "$spec->{reltable}.$spec->{relfield} not found\n";
+      my ($toschemaname) = $spec->{reltable} =~ /^(.*?)\./;
+
+      my $toschema = $schema;
+      if ( $toschema_name ){
+	    $toschema = new DBR::Config::Schema(session => $self->{session}, handle => $toschema_name )
+	      or die "Schema $spec->{schema} not found";
+      }
+
+      my $totable = $toschema->get_table( $spec->{reltable} ) or die "$spec->{reltable} not found in schema\n";
+      my $tofield = $totable ->get_field( $spec->{relfield} ) or die "$spec->{reltable}.$spec->{relfield} not found\n";
+
       my $type = $relationtype_lookup{ uc ($spec->{type}) } or die "Invalid relationship type '$spec->{type}'";
       my $type_id = $type->{type_id};
 
