@@ -108,8 +108,7 @@ sub get_record_obj{
 sub DESTROY{
       my $self = shift;
 
-      # If we have an sth, then finish it
-      $self->{sth} && $self->{sth}->finish();
+      # Can't finish the sth when going out of scope, it might live longer than this object.
 
       return 1;
 }
