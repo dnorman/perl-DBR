@@ -17,6 +17,7 @@ use Carp;
 
 use constant ({
 	       EMPTY => bless( [], 'DBR::ResultSet::Empty'),
+	       DUMMY => bless( [], 'DBR::Misc::Dummy'),
 	      });
 
 sub new {
@@ -166,7 +167,7 @@ sub get{
 
       my $value = $field->makevalue( $pkval ) or return $self->_error("failed to build value object for ${\$field->name}");
 
-      return EMPTY if $value->is_emptyset;
+      return ref($pkval) ? EMPTY : DUMMY if $value->is_emptyset;
 
       my $outwhere = DBR::Query::Part::Compare->new( field => $field, value => $value ) or return $self->_error('failed to create compare object');
 
