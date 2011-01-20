@@ -44,11 +44,11 @@ sub moduleload{
       my $values = [];
       if(@enumids){
 	    return $self->_error('Failed to select from enum') unless
-	      my $values = $dbrh->select(
-					 -table => 'enum',
-					 -fields => 'enum_id handle name override_id',
-					 -where  => { enum_id => ['d in',@enumids ] },
-					);
+	      $values = $dbrh->select(
+				      -table => 'enum',
+				      -fields => 'enum_id handle name override_id',
+				      -where  => { enum_id => ['d in',@enumids ] },
+				     );
       }
 
       my %VALUES_BY_ID;
