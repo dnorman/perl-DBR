@@ -99,7 +99,7 @@ sub _db_iterator{
 
       if( $self->[f_query]->instance->getconn->can_trust_execute_rowcount ){ # HERE - yuck... assumes this is same connection as the sth
 	    $self->[f_count] = $rv + 0;
-	    $self->[f_query]->_logDebug3('ROWS: ' . $rv + 0);
+	    $self->[f_query]->_logDebug3('ROWS: ' . ($rv + 0));
       }
 
       my $ref   = $self->[f_rowcache];
