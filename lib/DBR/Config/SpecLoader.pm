@@ -6,6 +6,7 @@
 package DBR::Config::SpecLoader;
 
 use strict;
+
 use base 'DBR::Common';
 
 use DBR::Config::Trans;
@@ -25,6 +26,7 @@ sub new {
       my $self = {
 		  session       => $params{session},
 		  conf_instance => $params{conf_instance},
+		  dbr           => $params{dbr},
 		 };
 
       bless( $self, $package );
@@ -48,23 +50,23 @@ sub process_spec{
       my $sortval;
       foreach my $spec ( @$specs ){
 
-	    my ($schema) = $spec->{table} =~ /^(.*?)\./;
-	    $spec->{schema} ||= $schema;
+	    my ($schemaname) = $spec->{table} =~ /^(.*?)\./;
+	    $spec->{schema} ||= $schemaname;
 
 	    map {$spec->{ $_ } or die "Invalid Spec row: Missing $_"} qw'schema table field cmd';
 
 	    if( ! $SCANS{ $spec->{schema} }++ ){
 		  #                           HERE - THIS \/ is wrong. Fix it. Should be asking the schema object for an instance
-		  my $scan_instance = $dbr->get_instance( $spec->{schema} ) or die "No config found for scandb $scandb";
+		  my $scan_instance = $self->{dbr}->get_instance( $spec->{schema} ) or die "No config found for scandb $spec->{schema}";
 
 		  my $scanner = DBR::Config::ScanDB->new(
-							 session => $dbr->session,
+							 session => $self->{dbr}->session,
 							 conf_instance => $self->{conf_instance},
 							 scan_instance => $scan_instance,
 							);
 
 
-		  $scanner->scan() or die "Failed to scan $scandb";
+		  $scanner->scan() or die "Failed to scan $spec->{schema}";
 	    }
 
 	    my $schema = new DBR::Config::Schema(session => $self->{session}, handle => $spec->{schema}) or die "Schema $spec->{schema} not found";
@@ -111,7 +113,7 @@ sub _do_relation   {
       map { $spec->{$_} or die("Parameter '$_' must be specified") } qw'relname reltable relfield type reverse_name';
 
 
-      my ($toschemaname) = $spec->{reltable} =~ /^(.*?)\./;
+      my ($toschema_name) = $spec->{reltable} =~ /^(.*?)\./;
 
       my $toschema = $schema;
       if ( $toschema_name ){
