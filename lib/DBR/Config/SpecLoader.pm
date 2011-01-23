@@ -53,7 +53,6 @@ sub process_spec{
       foreach my $spec ( @$specs ){
 	    my $oldtable = $spec->{table};
 	    if ( $spec->{table} =~ s/^(.*?)\.// ){
-		    print STDERR "TABLE WAS '$oldtable', is now '$spec->{table}'\n";
 		    $spec->{schema} ||= $1;
 	    }
 
