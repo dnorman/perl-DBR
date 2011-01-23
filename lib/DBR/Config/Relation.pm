@@ -142,6 +142,15 @@ sub mapfield {
       return $field;
 }
 
+sub table {
+      my $self = shift;
+
+      return DBR::Config::Table->new(
+				     session   => $self->{session},
+				     table_id => $RELATIONS_BY_ID{  $self->{relation_id} }->{$self->{forward} . '_table_id'}
+				    );
+}
+
 sub maptable {
       my $self = shift;
 
