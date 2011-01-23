@@ -11,6 +11,8 @@ use base 'DBR::Common';
 
 use DBR::Config::Trans;
 use DBR::Config::Relation;
+
+use DBR::Config::ScanDB;
 use Switch;
 
 my $trans_defs = DBR::Config::Trans->list_translators or die 'Failed to get translator list';
@@ -49,12 +51,15 @@ sub process_spec{
 
       my $sortval;
       foreach my $spec ( @$specs ){
-
-	    my ($schemaname) = $spec->{table} =~ /^(.*?)\./;
-	    $spec->{schema} ||= $schemaname;
+	    my $oldtable = $spec->{table};
+	    if ( $spec->{table} =~ s/^(.*?)\.// ){
+		    print STDERR "TABLE WAS '$oldtable', is now '$spec->{table}'\n";
+		    $spec->{schema} ||= $1;
+	    }
 
 	    map {$spec->{ $_ } or die "Invalid Spec row: Missing $_"} qw'schema table field cmd';
 
+	
 	    if( ! $SCANS{ $spec->{schema} }++ ){
 		  #                           HERE - THIS \/ is wrong. Fix it. Should be asking the schema object for an instance
 		  my $scan_instance = $self->{dbr}->get_instance( $spec->{schema} ) or die "No config found for scandb $spec->{schema}";
@@ -116,9 +121,10 @@ sub _do_relation   {
       my ($toschema_name) = $spec->{reltable} =~ /^(.*?)\./;
 
       my $toschema = $schema;
-      if ( $toschema_name ){
-	    $toschema = new DBR::Config::Schema(session => $self->{session}, handle => $toschema_name )
-	      or die "Schema $spec->{schema} not found";
+      if ( $spec->{reltable} =~ s/^(.*?)\.// ){
+	   my $toschema_name = $1;
+	   $toschema = new DBR::Config::Schema(session => $self->{session}, handle => $toschema_name )
+              or die "Schema $spec->{schema} not found";
       }
 
       my $totable = $toschema->get_table( $spec->{reltable} ) or die "$spec->{reltable} not found in schema\n";
