@@ -40,6 +40,29 @@ sub new {
 
 sub next { $_[0][ f_next ]->( $_[0] ) }
 
+sub dump{
+      my $self = shift;
+      my @fields = map { split(/\s+/,$_) } @_;
+
+      map { croak "invalid field '$_'" unless /^[A-Za-z0-9_\.]+$/ } @fields;
+
+
+      my $code = 'while($self->next){ push @out, {' . "\n";
+
+      foreach my $field ( @fields){
+	    my $f = $field;
+	    $f =~ s/\./->/g;
+	    $code .= "'$field' => \$_->$f;\n";
+      }
+
+      $code .= "\n}}";
+
+      my @out;
+      eval $code;
+
+      wantarray ? @out : \@out;
+}
+
 sub reset{
       my $self = shift;
 
