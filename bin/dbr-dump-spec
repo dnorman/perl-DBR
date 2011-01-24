@@ -151,9 +151,9 @@ sub dumptable{
       my $rschema_lookup;
       if (@rschema_ids) {
 	    $rschema_lookup = $dbrh->select(
-					    -table => 'dbr_tables',
+					    -table => 'dbr_schemas',
 					    -fields => 'schema_id handle',
-					    -where  => { schema_id => ['d in', @rtableids] },
+					    -where  => { schema_id => ['d in', @rschema_ids] },
 					    -keycol => 'schema_id',
 					   ) or die('Failed to select related schemas');
       }
@@ -203,7 +203,7 @@ sub dumptable{
 
 			if( $table->{schema_id} != $rtable->{schema_id} ){
 			      my $rschema = $rschema_lookup->{ $rtable->{schema_id} };
-			      $rtablename = $rschema . '.' . $rtable;
+			      $rtablename = $rschema->{handle} . '.' . $rtable->{name};
 			}else{
 			      $rtablename = $rtable->{name};
 			}
