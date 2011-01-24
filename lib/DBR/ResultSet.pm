@@ -47,18 +47,19 @@ sub dump{
       map { croak "invalid field '$_'" unless /^[A-Za-z0-9_\.]+$/ } @fields;
 
 
-      my $code = 'while($self->next){ push @out, {' . "\n";
+      my $code = 'while(my $rec = $self->next){ push @out, {' . "\n";
 
       foreach my $field ( @fields){
 	    my $f = $field;
 	    $f =~ s/\./->/g;
-	    $code .= "'$field' => \$_->$f;\n";
+	    $code .= "'$field' => \$rec->$f,\n";
       }
 
-      $code .= "\n}}";
-
+      $code .= "}}";
       my @out;
       eval $code;
+
+      die "eval returned '$@'" if $@;
 
       wantarray ? @out : \@out;
 }
