@@ -118,6 +118,8 @@ sub quiet_error{
   return $self;
 }
 
+sub primary_table{ shift->{tables}[0] } # HERE HERE HERE - this is lame
+
 # Copy the guts of this query into a query of a different type
 # For instance: transpose a Select into an Update.
 sub transpose{
@@ -138,7 +140,7 @@ sub child_query{
       my $builder = $self->{builder} ||= DBR::Interface::Where->new(
 								    session       => $self->{session},
 								    instance      => $self->{instance},
-								    primary_table => $self->{tables}[0], # HERE HERE HERE - this is lame
+								    primary_table => $self->primary_table,
 								   );
 
       my $ident = $builder->digest( $where );

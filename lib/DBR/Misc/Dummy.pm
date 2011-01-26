@@ -23,7 +23,8 @@ use overload
  'fallback' => 1
  ;
 
+sub TO_JSON { undef }
+
 our $AUTOLOAD;
 sub AUTOLOAD { shift }
-
 1;

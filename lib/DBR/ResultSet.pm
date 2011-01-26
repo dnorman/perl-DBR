@@ -64,6 +64,15 @@ sub dump{
       wantarray ? @out : \@out;
 }
 
+sub TO_JSON {
+      my $self = shift;
+
+      return $self->dump(
+			 map { $_->name } @{ $self->[f_query]->primary_table->fields }
+			);
+
+} #Dump it all
+
 sub reset{
       my $self = shift;
 
