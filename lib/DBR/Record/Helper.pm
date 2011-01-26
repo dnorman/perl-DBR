@@ -249,9 +249,10 @@ sub getrelation{
       my %uniq;
       my @fields = grep { !$uniq{ $_->field_id }++ } ($mapfield, @$pk, @$prefields );
 
-      my $class = $self->{instance}->class;
-      my $mapinstance = $maptable->schema->get_instance( $class ) or return $self->_error('Failed to retrieve db instance for the maptable');
-
+      my $mapinstance = $self->{instance};
+      unless ( $relation->is_same_schema ){
+	    $mapinstance = $maptable->schema->get_instance( $mapinstance->class ) or return $self->_error('Failed to retrieve db instance for the maptable');
+      }
 
       $self->_logDebug2( "Relationship from instance " . $self->{instance}->guid . "->" . $mapinstance->guid );
       my $query = DBR::Query::Select->new(

@@ -53,20 +53,24 @@ sub load{
       my @rel_ids;
       foreach my $relation (@$relations){
 
-	    DBR::Config::Table->_register_relation(
-						   table_id    => $relation->{to_table_id},
-						   name        => $relation->{from_name}, #yes, this is kinda confusing
-						   relation_id => $relation->{relationship_id},
-						  ) or return $self->_error('failed to register to relationship');
+	    my $table1 = DBR::Config::Table->_register_relation(
+								table_id    => $relation->{to_table_id},
+								name        => $relation->{from_name}, #yes, this is kinda confusing
+								relation_id => $relation->{relationship_id},
+							       ) or return $self->_error('failed to register to relationship');
 
-	    DBR::Config::Table->_register_relation(
-						   table_id    => $relation->{from_table_id},
-						   name        => $relation->{to_name}, #yes, this is kinda confusing
-						   relation_id => $relation->{relationship_id},
-						  ) or return $self->_error('failed to register from relationship');
+	    my $table2 = DBR::Config::Table->_register_relation(
+								table_id    => $relation->{from_table_id},
+								name        => $relation->{to_name}, #yes, this is kinda confusing
+								relation_id => $relation->{relationship_id},
+							       ) or return $self->_error('failed to register from relationship');
+
+
+	    $relation->{same_schema} = ( $table1->{schema_id} == $table2->{schema_id} );
 
 	    $RELATIONS_BY_ID{ $relation->{relationship_id} } = $relation;
 	    push @rel_ids, $relation->{relationship_id};
+
       }
 
       return 1;
@@ -169,6 +173,7 @@ sub is_to_one{
       return 0;
 }
 
+sub is_same_schema{ $RELATIONS_BY_ID{  shift->{relation_id} }->{same_schema} }
 
 
 sub index{

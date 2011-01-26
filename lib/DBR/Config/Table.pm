@@ -108,7 +108,9 @@ sub _register_relation{
 
       $RELATIONS_BY_NAME{ $table_id } -> { $name } = $relation_id;
 
-      return 1;
+      return {
+	      %{ $TABLES_BY_ID{ $table_id } }
+	     }; # shallow clone
 }
 
 sub new {
