@@ -22,32 +22,51 @@ sub sets{
       for (@sets){
 	    ref($_) eq 'DBR::Query::Part::Set' || croak('arguments must be Sets');
       }
-
+      
       $self->{sets} = \@sets;
+      
+      $self->_check_fields;
 
       return 1;
+}
+
+sub _check_fields{
+      my $self = shift;
+
+      # Make sure we have sets for all required fields
+      # It may be slightly more efficient to enforce this in ::Interface::Object->insert, but it seems more correct here.
+
+      return 0 unless $self->{sets} && $self->{tables};
+
+      my %fids = map { $_->field->field_id => 1 } @{ $self->{sets} };
+      
+      my $reqfields = $self->primary_table->req_fields();
+      my @missing;
+      foreach my $field ( grep { !$fids{ $_->field_id } } @$reqfields ){
+            if ( my $v = $field->default_val ){
+                  my $value = $field->makevalue( $v ) or croak "failed to build value object for " . $field->name;
+                  my $set = DBR::Query::Part::Set->new($field,$value) or confess 'failed to create set object';
+                  push @{ $self->{sets} }, $set;
+            }else{
+                  push @missing, $field;
+            }
+      
+      }
+      if(@missing){
+	    croak "Invalid insert. Missing fields (" .
+	    join(', ', map { $_->name } @{ $self->{_missing_fields} }) . ")";
+      }
+      $self->{_fields_checked} = 1;
 }
 
 sub _validate_self{
       my $self = shift;
 
       @{$self->{tables}} == 1 or croak "Must have exactly one table";
-      my $table = $self->{tables}[0];
-
-      # Make sure we have sets for all required fields
-      # It may be slightly more efficient to enforce this in ::Interface::Object->insert, but it seems more correct here.
-      my $reqfields = $table->req_fields();
-      if(@$reqfields){
-	    my %fids = map {$_->field->field_id => 1} @{$self->{sets}};
-
-	    my @missing = grep { !$fids{ $_->field_id } } @$reqfields;
-
-	    if(@missing > 0){
-		  croak "Invalid insert. Missing fields (" .
-		    join(', ', map { $_->name } @missing) . ")";
-	    }
-      }
-
+      $self->{sets} or croak "Must have at least one set";
+      
+      $self->_check_fields unless $self->{_fields_checked};
+      
       return 1;
 }
 

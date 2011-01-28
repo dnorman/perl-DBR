@@ -56,7 +56,8 @@ sub process_spec{
 		  case 'RELATION'   { $self->_do_relation  ( $schema, $table, $field, $spec ) }
 		  case 'REGEX'      { $self->_do_regex     ( $schema, $table, $field, $spec ) }
 		  case 'ENUMOPT'    { $self->_do_enumopt   ( $schema, $table, $field, $spec, ++$sortval ) }
-		  else { die "Invalid spec: unknown command $spec->{cmd}"}
+		  case 'DEFAULT'    { $self->_do_default   ( $schema, $table, $field, $spec ) }
+                  else { die "Invalid spec: unknown command $spec->{cmd}"}
 	    }
       }
 
@@ -79,12 +80,22 @@ sub _do_translator {
 sub _do_regex {
       my ($self, $schema, $table, $field, $spec) = @_;
 
-      $spec->{regex} or die "Missing parameter: translator";
+      $spec->{regex} or die "Missing parameter: regex";
       $field->update_regex($spec->{regex}) or die "Failed to update field regex for $spec->{table}.$spec->{field}";
 
       return 1;
 
 }
+sub _do_default {
+      my ($self, $schema, $table, $field, $spec) = @_;
+
+      $spec->{value} or die "Missing parameter: value";
+      $field->update_default($spec->{value}) or die "Failed to update field default for $spec->{table}.$spec->{field}";
+
+      return 1;
+
+}
+
 sub _do_relation   {
       my ($self, $schema, $table, $field, $spec) = @_;
 
