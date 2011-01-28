@@ -348,7 +348,7 @@ sub update_default{
 
       $dbrh->update(
 		    -table  => 'dbr_fields',
-		    -fields => { default => $value },
+		    -fields => { default_val => $value },
 		    -where  => { field_id => ['d', $self->field_id  ]}
 		   ) or die "Failed to update dbr_fields";
 
