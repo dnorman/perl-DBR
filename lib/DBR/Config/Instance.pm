@@ -181,7 +181,7 @@ sub register { # basically the same as a new
 
 sub connect{
       my $self = shift;
-      my $flag = shift;
+      my $flag = shift || '';
 
       if (lc($flag) eq 'dbh') {
 	    return $self->getconn->dbh;
