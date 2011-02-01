@@ -67,6 +67,13 @@ sub import {
 	      shift if blessed($_[0]) || $_[0]->isa( [caller]->[0] );
 	      $dbr->connect(@_);
 	};
+        
+      *{"${callpack}::dbr_instance"} =
+	sub {
+	      shift if blessed($_[0]) || $_[0]->isa( [caller]->[0] );
+	      $dbr->get_instance(@_);
+	};
+        
 
 }
 sub new {
