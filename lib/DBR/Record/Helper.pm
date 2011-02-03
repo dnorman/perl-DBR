@@ -255,7 +255,7 @@ sub getrelation{
 					  where    => $outwhere,
 					  fields   => \@fields,
 					  scope    => $scope,
-					  splitfield  => $field
+					  splitfield  => $mapfield
 					 ) or return $self->_error('failed to create Query object');
 
 
