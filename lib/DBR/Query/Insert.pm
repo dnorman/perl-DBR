@@ -54,7 +54,7 @@ sub _check_fields{
       }
       if(@missing){
 	    croak "Invalid insert. Missing fields (" .
-	    join(', ', map { $_->name } @{ $self->{_missing_fields} }) . ")";
+	    join(', ', map { $_->name } @missing) . ")";
       }
       $self->{_fields_checked} = 1;
 }
