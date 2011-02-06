@@ -157,7 +157,8 @@ sub get{
 
       my $scope = DBR::Config::Scope->new(
 					  session        => $self->{session},
-					  conf_instance => $table->conf_instance
+					  conf_instance => $table->conf_instance,
+					  extra_ident   => $table->name,
 					 ) or return $self->_error('Failed to get calling scope');
 
       my $prefields = $scope->fields or return $self->_error('Failed to determine fields to retrieve');
