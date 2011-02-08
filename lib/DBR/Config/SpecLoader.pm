@@ -89,7 +89,7 @@ sub _do_regex {
 sub _do_default {
       my ($self, $schema, $table, $field, $spec) = @_;
 
-      $spec->{value} or die "Missing parameter: value";
+      defined($spec->{value}) or die "Missing parameter: value";
       $field->update_default($spec->{value}) or die "Failed to update field default for $spec->{table}.$spec->{field}";
 
       return 1;
