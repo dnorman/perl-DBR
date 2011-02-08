@@ -43,7 +43,7 @@ sub _check_fields{
       my $reqfields = $self->primary_table->req_fields();
       my @missing;
       foreach my $field ( grep { !$fids{ $_->field_id } } @$reqfields ){
-            if ( my $v = $field->default_val ){
+            if ( defined ( my $v = $field->default_val ) ){
                   my $value = $field->makevalue( $v ) or croak "failed to build value object for " . $field->name;
                   my $set = DBR::Query::Part::Set->new($field,$value) or confess 'failed to create set object';
                   push @{ $self->{sets} }, $set;
