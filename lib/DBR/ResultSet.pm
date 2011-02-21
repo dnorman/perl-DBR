@@ -309,7 +309,7 @@ sub each {
 # Kind of a flimsy way to do this, but it's lightweight
 sub values {
       my $self = shift;
-      my @fieldnames = grep { /^[A-Za-z0-9_]+$/ } map { split(/\s+/,$_) }  @_;
+      my @fieldnames = grep { /^[A-Za-z0-9_.]+$/ } map { split(/\s+/,$_) }  @_;
 
       scalar(@fieldnames) or croak('Must provide a list of field names');
 
@@ -319,6 +319,7 @@ sub values {
 
       my @parts;
       foreach my $fieldname (@fieldnames){
+	    $fieldname =~ s/\./->/; # kind of a hack, but it works
 	    push @parts , "\$_[0]->$fieldname";
       }
 
