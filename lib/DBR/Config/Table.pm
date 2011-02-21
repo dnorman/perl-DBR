@@ -129,6 +129,21 @@ sub new {
   return( $self );
 }
 
+sub clone{
+      my $self = shift;
+      my %params = @_;
+
+      return bless({
+                  session   => $self->{session},
+                  table_id  => $self->{table_id},
+                  $params{with_alias} ? ( alias => $self->{alias} ) : (),
+            },
+           ref($self)
+      );
+
+}
+
+
 sub table_id { $_[0]->{table_id} }
 sub get_field{
       my $self  = shift;

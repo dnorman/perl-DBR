@@ -201,7 +201,7 @@ sub _reljoin{
 
 			push @$tables, $table;
 
-			my $where = $self->_reljoin( $kid ) or confess('_reljoin failed');
+			my $where = $self->_reljoin( $kid, $tables ) or confess('_reljoin failed');
 			push @and, $where;
 
 			my $join = DBR::Query::Part::Join->new($field,$prevfield) or confess('failed to create join object');
