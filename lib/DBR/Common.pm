@@ -117,7 +117,7 @@ sub _warn       {
 sub _error     {
       my $s = shift->_session;
 
-      if($s->use_exceptions){
+      if(!$s || $s->use_exceptions){
 	    local $Carp::CarpLevel = 1;
 	    croak shift;
       }
