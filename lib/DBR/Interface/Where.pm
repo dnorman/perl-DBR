@@ -220,7 +220,7 @@ sub _reljoin{
 			}
 
  			my $query = DBR::Query::Select->new(
-							    instance => $self->{instance},
+							    instance => $instance,
 							    session  => $self->{session},
 							    fields => [$field],
 							    tables   => \@tables,
