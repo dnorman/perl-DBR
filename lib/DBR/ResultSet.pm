@@ -30,7 +30,7 @@ sub new {
       return bless( [
 		     FIRST,    # next
 		     stCLEAN,  # state
-		     \ [],     # rowcache - Sacrificial arrayref. This arrayref is not preserved, but the scalarref is.
+		     [],     # rowcache - placeholder
 		     $query,   # query
 		     undef,    # count
 		     $splitval,# splitval
@@ -198,7 +198,7 @@ sub _fetch_all{
 
 	    $self->_mem_iterator(); # everything is in memory now, so use _mem_iterator
 
-	    return $self->[f_rowcache];
+	    return $rows;
       }
 }
 
