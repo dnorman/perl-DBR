@@ -319,7 +319,7 @@ sub values {
 
       my @parts;
       foreach my $fieldname (@fieldnames){
-	    $fieldname =~ s/\./->/; # kind of a hack, but it works
+	    $fieldname =~ s/\./->/g; # kind of a hack, but it works
 	    push @parts , "\$_[0]->$fieldname";
       }
 
