@@ -57,6 +57,8 @@ use overload
 'nomethod' => sub {croak "Percent object: Invalid operation '$_[3]' The ways in which you can use percent objects is restricted"}
 ;
 
+*TO_JSON = \&format;
+
 sub value  {
       return '' unless defined($_[0][0]);
       return $_[0][0]

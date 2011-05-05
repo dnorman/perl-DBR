@@ -22,4 +22,6 @@ sub next     { DUMMY }
 sub where    { DUMMY }
 sub count    { 0     }
 
+sub TO_JSON { [] }
+
 1;

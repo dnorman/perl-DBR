@@ -28,9 +28,10 @@ use constant ({
 	       C_trans_id    => 7,
 	       C_max_value   => 8,
 	       C_regex       => 9,
+	       C_default     => 10,
 
-	       C_is_readonly => 10, # Not in table
-	       C_testsub     => 11,
+	       C_is_readonly => 11, # Not in table
+	       C_testsub     => 12,
 
 	       # Object fields
 	       O_field_id    => 0,
@@ -101,7 +102,7 @@ sub load{
 	my $fields = $dbrh->select(
 				   -table => 'dbr_fields',
 				   # This MUST match constants above
-				   -fields => 'field_id table_id name data_type is_nullable is_signed is_pkey trans_id max_value regex',
+				   -fields => 'field_id table_id name data_type is_nullable is_signed is_pkey trans_id max_value regex default_val',
 				   -where  => { table_id => ['d in',@$table_ids] },
 				   -arrayref => 1,
 				  );
@@ -248,6 +249,7 @@ sub is_nullable  { $FIELDS_BY_ID{  $_[0]->[O_field_id] }->[C_is_nullable] }
 sub is_readonly  { $FIELDS_BY_ID{  $_[0]->[O_field_id] }->[C_is_readonly] }
 sub datatype     { $FIELDS_BY_ID{  $_[0]->[O_field_id] }->[C_data_type]   }
 sub testsub      { $FIELDS_BY_ID{  $_[0]->[O_field_id] }->[C_testsub]     }
+sub default_val  { $FIELDS_BY_ID{  $_[0]->[O_field_id] }->[C_default]     }
 
 sub table    {
       return DBR::Config::Table->new(
@@ -328,6 +330,30 @@ sub update_regex{
       my $fieldref = $FIELDS_BY_ID{ $self->[O_field_id] };
       $fieldref->[C_regex] = $regex; # update local copy
       _gen_valcheck($fieldref);      # Update value test sub
+
+      return 1;
+}
+
+sub update_default{
+      my $self = shift;
+      my $value = shift;
+
+      $self->[O_session]->is_admin or return $self->_error('Cannot update translator in non-admin mode');
+
+      my $existing_value = $FIELDS_BY_ID{ $self->[O_field_id] }->[C_default];
+      return 1 if defined($existing_value) && $value eq $existing_value;
+
+      my $instance = $self->table->conf_instance or die "Failed to retrieve conf instance";
+      my $dbrh     = $instance->connect or die "Failed to connect to conf instance";
+
+      $dbrh->update(
+		    -table  => 'dbr_fields',
+		    -fields => { default_val => $value },
+		    -where  => { field_id => ['d', $self->field_id  ]}
+		   ) or die "Failed to update dbr_fields";
+
+      my $fieldref = $FIELDS_BY_ID{ $self->[O_field_id] };
+      $fieldref->[C_default] = $value; # update local copy
 
       return 1;
 }

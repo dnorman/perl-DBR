@@ -28,6 +28,7 @@ sub is_numeric{ undef }
 sub translator { undef }
 sub is_readonly  { 0 }
 sub testsub      { sub { 0 } }
+sub default_val  { undef }
 
 sub table_alias{
       my $self = shift;

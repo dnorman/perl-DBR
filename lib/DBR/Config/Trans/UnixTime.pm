@@ -75,6 +75,8 @@ use overload
 #'nomethod' => sub {croak "UnixTime object: Invalid operation '$_[3]' The ways in which you can use UnixTime objects is restricted"}
 ;
 
+*TO_JSON = \&datetime;
+
 sub unixtime { $_[0][0] || '' };
 
 # Using $ENV{TZ} and the posix functions is ugly... and about 60x faster than the alternative in benchmarks
@@ -189,7 +191,6 @@ sub _manip{
       return undef;
 
 }
-
 
 #              uxtime , tzref
 sub new{ bless([ $_[1], $_[0][1] ],'DBR::_UXTIME') }

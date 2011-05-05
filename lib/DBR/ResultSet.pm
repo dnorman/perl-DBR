@@ -40,6 +40,39 @@ sub new {
 
 sub next { $_[0][ f_next ]->( $_[0] ) }
 
+sub dump{
+      my $self = shift;
+      my @fields = map { split(/\s+/,$_) } @_;
+
+      map { croak "invalid field '$_'" unless /^[A-Za-z0-9_\.]+$/ } @fields;
+
+
+      my $code = 'while(my $rec = $self->next){ push @out, {' . "\n";
+
+      foreach my $field ( @fields){
+	    my $f = $field;
+	    $f =~ s/\./->/g;
+	    $code .= "'$field' => \$rec->$f,\n";
+      }
+
+      $code .= "}}";
+      my @out;
+      eval $code;
+
+      die "eval returned '$@'" if $@;
+
+      wantarray ? @out : \@out;
+}
+
+sub TO_JSON {
+      my $self = shift;
+
+      return $self->dump(
+			 map { $_->name } @{ $self->[f_query]->primary_table->fields }
+			);
+
+} #Dump it all
+
 sub reset{
       my $self = shift;
 
@@ -276,7 +309,7 @@ sub each {
 # Kind of a flimsy way to do this, but it's lightweight
 sub values {
       my $self = shift;
-      my @fieldnames = grep { /^[A-Za-z0-9_]+$/ } map { split(/\s+/,$_) }  @_;
+      my @fieldnames = grep { /^[A-Za-z0-9_.]+$/ } map { split(/\s+/,$_) }  @_;
 
       scalar(@fieldnames) or croak('Must provide a list of field names');
 
@@ -286,6 +319,7 @@ sub values {
 
       my @parts;
       foreach my $fieldname (@fieldnames){
+	    $fieldname =~ s/\./->/g; # kind of a hack, but it works
 	    push @parts , "\$_[0]->$fieldname";
       }
 
