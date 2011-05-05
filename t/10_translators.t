@@ -31,7 +31,9 @@ while (my $artist = $artists->next()) {
     ok ( $datetime == $refdate,                    'date verification');
     diag($datetime);
     
-    ok ( $artist->date_founded('2001-02-03 04:05:06'), 'datetime - update' );
+    ok ( $artist->date_founded('2001-02-03 04:05:06'),    'datetime - update' );
+    ok ( $artist->date_founded('midnight Last Tuesday'),  'datetime - update' );
+    ok ( $artist->date_founded('next sunday'),  'datetime - update' );
 }
 
 
