@@ -44,6 +44,8 @@ sub sql   {
 
 	    $sth->finish;
 
+        return '0' unless @list; # HACK - this should abort the query this feeds into, but this will patch the bug for now
+        
 	    if( $self->quoted ){
 		  return $self->field->sql($_[1]) . ' IN (' . join(',', map { $conn->quote( $_ ) } @list ) . ')';
 	    }else{
