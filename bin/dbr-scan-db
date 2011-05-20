@@ -25,4 +25,5 @@ my $scanner = DBR::Config::ScanDB->new(
 				    );
 
 
-$scanner->scan() or die "Failed to scan $scandb";
+$scanner->scan( pretty => 1 ) or die "Failed to scan $scandb";
+print "DONE!\n";

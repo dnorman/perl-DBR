@@ -10,6 +10,7 @@ use base 'DBR::Common';
 
 use DBR::Config::Trans;
 use DBR::Config::Relation;
+no warnings 'deprecated';
 use Switch;
 
 my $trans_defs = DBR::Config::Trans->list_translators or die 'Failed to get translator list';

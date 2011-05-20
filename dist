@@ -1,0 +1,6 @@
+#!/bin/sh
+perl -pi -e "s/-DBR-VERSION-TAG-/$1/" lib/DBR.pm Makefile.PL
+perl Makefile.PL
+make manifest
+make dist
+git checkout lib/DBR.pm Makefile.PL

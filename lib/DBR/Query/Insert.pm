@@ -38,7 +38,7 @@ sub _check_fields{
 
       return 0 unless $self->{sets} && $self->{tables};
 
-      my %fids = map { $_->field->field_id => 1 } @{ $self->{sets} };
+      my %fids = map { $_->field->field_id => 1 } grep { defined $_->field->field_id } @{ $self->{sets} };
       
       my $reqfields = $self->primary_table->req_fields();
       my @missing;
