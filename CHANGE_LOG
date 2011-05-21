@@ -1,5 +1,5 @@
 
-1.1.1 - 05/20/2011
+1.2 - 05/20/2011
   merged commonref_rowcache
     Allows for read-ahead for record objects that are already retrieved.
     In past versions, read-ahead was only enabled if inside the while( $r = $rs->next ) loop
