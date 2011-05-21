@@ -104,6 +104,9 @@ sub build{
       return wantarray?(@andparts):$self->_andify(@andparts); # don't wrap it in an and if we want an array
 }
 
+
+# Process ONE comparison.
+# Walk the relation.relation.relation.field chain and set up the heirarchical hash structure for reljoin.
 sub _process_comparison{
       my $self = shift;
 
@@ -148,7 +151,7 @@ sub _process_comparison{
 			      # Any to_one relationship results in a join. we'll need some table aliases for later.
 			      # Do them now so everything is in sync. I originally assigned the alias in _reljoin,
 			      # but it didn't always alias the fields that needed to be aliased due to the order of execution.
-			      if($relation->is_to_one){
+			      if( $relation->is_same_schema && $relation->is_to_one ){
 				    croak ('No more than 25 tables allowed in a join') if $self->{aliascount} > 24;
 
 				    $cur_table ->alias() || $cur_table ->alias( chr(97 + $self->{aliascount}++)  ); # might be doing this one again
@@ -194,7 +197,7 @@ sub _reljoin{
 		  $prevfield ->table_alias( $prevalias ) if $prevalias;
 		  $field     ->table_alias( $alias     ) if $alias;
 
-		  if ($relation->is_to_one) { # Do a join
+		  if ($relation->is_same_schema && $relation->is_to_one) { # Do a join
 
 			$prevalias or die('Sanity error: prevtable alias is required');
 			$alias     or die('Sanity error: table alias is required');
@@ -207,19 +210,26 @@ sub _reljoin{
 			my $join = DBR::Query::Part::Join->new($field,$prevfield) or confess('failed to create join object');
 			push @and, $join;
 
-		  }else{ # if it's a to_many relationship, then subqery
+		  }else{ # if it's a to_many relationship ( or cross schema ), then subqery
 			my @tables = $table;
 			my $where = $self->_reljoin( $kid, \@tables ) or confess('_reljoin failed');
 
+			my $instance = $self->{instance};
+			unless ( $relation->is_same_schema ){
+			      $instance = $table->schema->get_instance( $instance->class ) or return $self->_error('Failed to retrieve db instance for subquery table');
+			}
+
  			my $query = DBR::Query::Select->new(
-							    instance => $self->{instance},
+							    instance => $instance,
 							    session  => $self->{session},
 							    fields => [$field],
 							    tables   => \@tables,
 							    where    => $where,
 							   ) or confess('failed to create query object');
 
- 			my $subquery = DBR::Query::Part::Subquery->new($prevfield, $query) or confess ('failed to create subquery object');
+			print STDERR "SAME SCHEMA? '" . $relation->is_same_schema . "'\n";
+			my $runflag = ! $relation->is_same_schema;
+ 			my $subquery = DBR::Query::Part::Subquery->new($prevfield, $query, $runflag) or confess ('failed to create subquery object');
 			push @and, $subquery;
 		  }
 

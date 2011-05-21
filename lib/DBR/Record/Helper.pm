@@ -202,6 +202,7 @@ sub getrelation{
       my $val;
 
       my $to1 = $relation->is_to_one;                                                        # Candidate for pre-processing
+      my $table    = $relation->table    or return $self->_error('Failed to fetch table'   );# Candidate for pre-processing
       my $maptable = $relation->maptable or return $self->_error('Failed to fetch maptable');# Candidate for pre-processing
       my $mapfield = $relation->mapfield or return $self->_error('Failed to fetch mapfield');# Candidate for pre-processing
 
@@ -248,9 +249,15 @@ sub getrelation{
       my %uniq;
       my @fields = grep { !$uniq{ $_->field_id }++ } ($mapfield, @$pk, @$prefields );
 
+      my $mapinstance = $self->{instance};
+      unless ( $relation->is_same_schema ){
+	    $mapinstance = $maptable->schema->get_instance( $mapinstance->class ) or return $self->_error('Failed to retrieve db instance for the maptable');
+      }
+
+      $self->_logDebug2( "Relationship from instance " . $self->{instance}->guid . "->" . $mapinstance->guid );
       my $query = DBR::Query::Select->new(
 					  session  => $self->{session},
-					  instance => $self->{instance},
+					  instance => $mapinstance,
 					  tables   => $maptable,
 					  where    => $outwhere,
 					  fields   => \@fields,

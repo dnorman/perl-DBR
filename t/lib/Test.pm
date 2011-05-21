@@ -97,6 +97,7 @@ sub setup_schema_ok{
       my $loader = DBR::Config::SpecLoader->new(
 						session       => $dbr->session,
 						conf_instance => $conf_instance,
+						dbr           => $dbr,
 					       ) or return fail("Failed to create spec loader");
 
 

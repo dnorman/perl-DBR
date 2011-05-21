@@ -167,6 +167,13 @@ sub register { # basically the same as a new
 	    $INSTANCE_MAP{ $spec->{alias} }->{'*'} = $guid;
       }
 
+      if ($config->{schema_id}){
+	    DBR::Config::Schema->_register_instance(
+						    schema_id => $config->{schema_id},
+						    class     => $config->{class},
+						    guid      => $guid,
+						   ) or return $self->_error('failed to register table');
+      }
 
       return( $self );
 }

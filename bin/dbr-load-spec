@@ -21,6 +21,7 @@ my $conf_instance = $dbr->get_instance($confdb) or die "No config found for conf
 my $loader = DBR::Config::SpecLoader->new(
 					  session => $dbr->session,
 					  conf_instance => $conf_instance,
+					  dbr => $dbr,
 					 );
 
 

@@ -140,20 +140,30 @@ sub dumptable{
       if (@rtableids) {
 	    $rtable_lookup = $dbrh->select(
 					   -table => 'dbr_tables',
-					   -fields => 'table_id name',
+					   -fields => 'table_id name schema_id',
 					   -where  => { table_id => ['d in', @rtableids] },
 					   -keycol => 'table_id',
 					  ) or die('Failed to select related tables');
       }
 
+      my @rschema_ids = grep { $_ != $schema->{schema_id} } uniq( map { $_->{schema_id} } values %$rtable_lookup );
+
+      my $rschema_lookup;
+      if (@rschema_ids) {
+	    $rschema_lookup = $dbrh->select(
+					    -table => 'dbr_schemas',
+					    -fields => 'schema_id handle',
+					    -where  => { schema_id => ['d in', @rschema_ids] },
+					    -keycol => 'schema_id',
+					   ) or die('Failed to select related schemas');
+      }
 
       #schema table field directive value1 value2...
 
 
       foreach my $field (@$fields) {
 	    my @prefix = (
-			  schema => $schemaname,
-			  table  => $tablename,
+			  table  => $schemaname . '.' . $tablename,
 			  field  => $field->{name}
 			 );
 
@@ -188,11 +198,21 @@ sub dumptable{
 		  foreach my $relation (@$relations) {
 			my $rfield  = $rfield_lookup->{ $relation->{to_field_id} };
 			my $rtable = $rtable_lookup->{ $rfield->{table_id} };
+
+			my $rtablename;
+
+			if( $table->{schema_id} != $rtable->{schema_id} ){
+			      my $rschema = $rschema_lookup->{ $rtable->{schema_id} };
+			      $rtablename = $rschema->{handle} . '.' . $rtable->{name};
+			}else{
+			      $rtablename = $rtable->{name};
+			}
+
 			my $typename = uc($relationtype_lookup{ $relation->{type} }->{name} || 'Unknown');
 			line(
 			     @prefix,
 			     cmd      => 'RELATION',
-			     reltable => $rtable->{name},
+			     reltable => $rtablename,
 			     relfield => $rfield->{name},
 			     relname  => $relation->{to_name},
 			     reverse_name  => $relation->{from_name},
