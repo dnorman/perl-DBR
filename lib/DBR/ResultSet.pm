@@ -30,7 +30,7 @@ sub new {
       return bless( [
 		     FIRST,    # next
 		     stCLEAN,  # state
-		     \ [],     # rowcache - Sacrificial arrayref. This arrayref is not preserved, but the scalarref is.
+		     [],     # rowcache - placeholder
 		     $query,   # query
 		     undef,    # count
 		     $splitval,# splitval
@@ -39,6 +39,39 @@ sub new {
 
 
 sub next { $_[0][ f_next ]->( $_[0] ) }
+
+sub dump{
+      my $self = shift;
+      my @fields = map { split(/\s+/,$_) } @_;
+
+      map { croak "invalid field '$_'" unless /^[A-Za-z0-9_\.]+$/ } @fields;
+
+
+      my $code = 'while(my $rec = $self->next){ push @out, {' . "\n";
+
+      foreach my $field ( @fields){
+	    my $f = $field;
+	    $f =~ s/\./->/g;
+	    $code .= "'$field' => \$rec->$f,\n";
+      }
+
+      $code .= "}}";
+      my @out;
+      eval $code;
+
+      die "eval returned '$@'" if $@;
+
+      wantarray ? @out : \@out;
+}
+
+sub TO_JSON {
+      my $self = shift;
+
+      return $self->dump(
+			 map { $_->name } @{ $self->[f_query]->primary_table->fields }
+			);
+
+} #Dump it all
 
 sub reset{
       my $self = shift;
@@ -49,7 +82,7 @@ sub reset{
 
       if( $self->[f_state] == stACTIVE ){
 	    $self->[f_query]->reset; # calls finish
-	    ${ $self->[f_rowcache] } = []; #not sure if this is necessary or not
+	    $self->[f_rowcache] = []; #not sure if this is necessary or not
 	    $self->[f_state] = stCLEAN;
 	    $self->[f_next]  = FIRST;
       }
@@ -71,7 +104,7 @@ sub _execute{
 
       if( defined( $self->[f_splitval] ) ){
 
-	    my $rows = ${ $self->[f_rowcache] } = $self->[f_query]->fetch_segment( $self->[f_splitval] ); # Query handles the sth
+	    my $rows = $self->[f_rowcache] = $self->[f_query]->fetch_segment( $self->[f_splitval] ); # Query handles the sth
 	    $self->_mem_iterator;
 
       }else{
@@ -89,7 +122,6 @@ sub _db_iterator{
 
       my $record = $self->[f_query]->get_record_obj;
       my $class  = $record->class;
-      my $buddy  = [ $self->[f_rowcache], $record ]; # buddy ref must contain the record object just to keep it in scope.
 
       my $sth    =  $self->[f_query]->run;
 
@@ -99,12 +131,10 @@ sub _db_iterator{
 
       if( $self->[f_query]->instance->getconn->can_trust_execute_rowcount ){ # HERE - yuck... assumes this is same connection as the sth
 	    $self->[f_count] = $rv + 0;
-	    $self->[f_query]->_logDebug3('ROWS: ' . $rv + 0);
+	    $self->[f_query]->_logDebug3('ROWS: ' . ($rv + 0));
       }
 
-      my $ref   = $self->[f_rowcache];
-      my $rows  = $$ref;
-
+     
 
       # IMPORTANT NOTE: circular reference hazard
       weaken ($self); # Weaken the refcount
@@ -119,17 +149,28 @@ sub _db_iterator{
 	    return DUMMY; # evaluates to false
       };
 
+      my $buddy;
+      my $rows  = [];
+      my $commonref;
+      my $getchunk = sub {
+	    $rows = $sth->fetchall_arrayref(undef,1000) || return undef; # if cache is empty, fetch more
+	    
+	    $commonref = [ @$rows ];
+	    map {weaken $_} @$commonref;
+	    $buddy = [ $commonref, $record ]; # buddy ref must contain the record object just to keep it in scope.
+	    
+	    return shift @$rows;
+      };
       # use a closure to reduce hash lookups
       # It's very important that this closure is fast.
       # This one routine has more of an effect on speed than anything else in the rest of the code
+
       $self->[f_next] = sub {
 	    bless(
 		  (
 		   [
 		   (
-		    shift(@$rows)# Shift from cache
-		   || shift( @{$rows = $$ref = $sth->fetchall_arrayref(undef,1000) || [] } ) # if cache is empty, fetch more
-		   || return $endsub->()
+		    shift(@$rows) || $getchunk->() || return $endsub->()
 		   ),
 		    $buddy
 		   ]
@@ -150,7 +191,7 @@ sub _mem_iterator{
 
       my $buddy  = [ $self->[f_rowcache], $record ]; # buddy ref must contain the record object just to keep it in scope.
 
-      my $rows  = ${ $self->[f_rowcache] };
+      my $rows  = $self->[f_rowcache];
       my $ct = 0;
 
       # use a closure to reduce hash lookups
@@ -180,17 +221,17 @@ sub _fetch_all{
 
       if( $self->[f_state] == stMEM ){ # This should cover split queries
 
-	    return ${ $self->[f_rowcache] };
+	    return $self->[f_rowcache];
 
       }else{ # Must be stACTIVE
 
 	    my $sth = $self->[f_query]->run; # just gets the sth if it's already been run
 
-	    my $rows = ${ $self->[f_rowcache] } = $sth->fetchall_arrayref();
+	    my $rows = $self->[f_rowcache] = $sth->fetchall_arrayref();
 
 	    $self->_mem_iterator(); # everything is in memory now, so use _mem_iterator
 
-	    return ${ $self->[f_rowcache] };
+	    return $rows;
       }
 }
 
@@ -276,7 +317,7 @@ sub each {
 # Kind of a flimsy way to do this, but it's lightweight
 sub values {
       my $self = shift;
-      my @fieldnames = grep { /^[A-Za-z0-9_]+$/ } map { split(/\s+/,$_) }  @_;
+      my @fieldnames = grep { /^[A-Za-z0-9_.]+$/ } map { split(/\s+/,$_) }  @_;
 
       scalar(@fieldnames) or croak('Must provide a list of field names');
 
@@ -286,6 +327,7 @@ sub values {
 
       my @parts;
       foreach my $fieldname (@fieldnames){
+	    $fieldname =~ s/\./->/g; # kind of a hack, but it works
 	    push @parts , "\$_[0]->$fieldname";
       }
 

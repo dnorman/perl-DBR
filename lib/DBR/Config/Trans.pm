@@ -1,4 +1,4 @@
-# the contents of this file are Copyright (c) 2009 Daniel Norman
+# the contents of this file are Copyright (c) 2009-2011 Daniel Norman
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation.
@@ -12,6 +12,7 @@ use base 'DBR::Common';
 use DBR::Config::Trans::Enum;
 use DBR::Config::Trans::Dollars;
 use DBR::Config::Trans::UnixTime;
+use DBR::Config::Trans::DateTime;
 use DBR::Config::Trans::Percent;
 
 
@@ -21,6 +22,7 @@ my %MODULES = (
 	       2 => 'Dollars',
 	       3 => 'UnixTime',
 	       4 => 'Percent',
+	       5 => 'DateTime',
 	      );
 
 sub list_translators{

@@ -28,9 +28,10 @@ use constant ({
 	       C_trans_id    => 7,
 	       C_max_value   => 8,
 	       C_regex       => 9,
+	       C_default     => 10,
 
-	       C_is_readonly => 10, # Not in table
-	       C_testsub     => 11,
+	       C_is_readonly => 11, # Not in table
+	       C_testsub     => 12,
 
 	       # Object fields
 	       O_field_id    => 0,
@@ -66,6 +67,8 @@ my %datatypes = (
 		 mediumblob=> { id => 15 },
 		 tinyblob  => { id => 16 },
 		 enum      => { id => 17 }, # I loathe mysql enums
+		 decimal   => { id => 18, numeric => 1, bits => 'NA'}, # HERE - may need a little more attention for proper range checking
+		 datetime  => { id => 19 },
 		);
 
 my %datatype_lookup = map { $datatypes{$_}->{id} => {%{$datatypes{$_}}, handle => $_ }} keys %datatypes;
@@ -100,7 +103,7 @@ sub load{
 	my $fields = $dbrh->select(
 				   -table => 'dbr_fields',
 				   # This MUST match constants above
-				   -fields => 'field_id table_id name data_type is_nullable is_signed is_pkey trans_id max_value regex',
+				   -fields => 'field_id table_id name data_type is_nullable is_signed is_pkey trans_id max_value regex default_val',
 				   -where  => { table_id => ['d in',@$table_ids] },
 				   -arrayref => 1,
 				  );
@@ -121,6 +124,10 @@ sub load{
 						# OK OK... this is a hack. Just because it's a pkey doesn't mean it's not required.
 						# It would seem that we need to be aware of serial/trigger fields.
 					       ) or die('failed to register field');
+
+	    if ( $datatype_lookup{ $field->[C_data_type] }->{handle} eq 'datetime' ){ 
+			$field->[C_trans_id] ||= 5; #DateTime hack
+		}
 
 	    _gen_valcheck($field) or die('failed to generate value checking routine');
 
@@ -158,7 +165,7 @@ sub _gen_valcheck{ # Intentionally Non-oo
 	    }
       }else{
 	    push @code, 'defined($v)' unless $fieldref->[C_is_nullable];
-	    if ($fieldref->[C_max_value] =~ /^\d+$/){ # use regex to prevent code injection
+	    if ($fieldref->[C_max_value] =~ /^\d+$/ && $fieldref->[C_max_value] > 0){ # use regex to prevent code injection
 		  my $max = $fieldref->[C_max_value];
 		  push @code, "length(\$v)<= $max";
 	    }
@@ -172,12 +179,12 @@ sub _gen_valcheck{ # Intentionally Non-oo
 	    push @code, "\$v =~ /\$R/o"; # supposedly o is only functional for <5.6
 	    $extra .= "\0" . $R; # Use extra to cache based on the contents of the regex
       }
-
+	  
       my $code = join(' && ', @code);
 
-      $code = "!defined(\$v)||($code)" if $fieldref->[C_is_nullable];
+      $code = "!defined(\$v)||($code)" if length($code) && $fieldref->[C_is_nullable];
 
-      # print STDERR "VALCHECK: $code\t$R\n";
+      #print STDERR "VALCHECK:$fieldref->[C_data_type], $code\t$R\n";
 
       $fieldref->[C_testsub] = $VALCHECKS{$code . $extra} ||= eval "sub { my \$v = shift; $code }"
 	|| confess "DBR::Config::Field::_get_valcheck: failed to gen sub '$@'";
@@ -247,6 +254,7 @@ sub is_nullable  { $FIELDS_BY_ID{  $_[0]->[O_field_id] }->[C_is_nullable] }
 sub is_readonly  { $FIELDS_BY_ID{  $_[0]->[O_field_id] }->[C_is_readonly] }
 sub datatype     { $FIELDS_BY_ID{  $_[0]->[O_field_id] }->[C_data_type]   }
 sub testsub      { $FIELDS_BY_ID{  $_[0]->[O_field_id] }->[C_testsub]     }
+sub default_val  { $FIELDS_BY_ID{  $_[0]->[O_field_id] }->[C_default]     }
 
 sub table    {
       return DBR::Config::Table->new(
@@ -327,6 +335,30 @@ sub update_regex{
       my $fieldref = $FIELDS_BY_ID{ $self->[O_field_id] };
       $fieldref->[C_regex] = $regex; # update local copy
       _gen_valcheck($fieldref);      # Update value test sub
+
+      return 1;
+}
+
+sub update_default{
+      my $self = shift;
+      my $value = shift;
+
+      $self->[O_session]->is_admin or return $self->_error('Cannot update translator in non-admin mode');
+
+      my $existing_value = $FIELDS_BY_ID{ $self->[O_field_id] }->[C_default];
+      return 1 if defined($existing_value) && $value eq $existing_value;
+
+      my $instance = $self->table->conf_instance or die "Failed to retrieve conf instance";
+      my $dbrh     = $instance->connect or die "Failed to connect to conf instance";
+
+      $dbrh->update(
+		    -table  => 'dbr_fields',
+		    -fields => { default_val => $value },
+		    -where  => { field_id => ['d', $self->field_id  ]}
+		   ) or die "Failed to update dbr_fields";
+
+      my $fieldref = $FIELDS_BY_ID{ $self->[O_field_id] };
+      $fieldref->[C_default] = $value; # update local copy
 
       return 1;
 }

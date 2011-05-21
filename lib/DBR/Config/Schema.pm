@@ -12,6 +12,7 @@ use DBR::Config::Table;
 use Clone;
 
 my %TABLES_BY_NAME;
+my %INSTANCES_BY_CLASS;
 my %SCHEMAS_BY_ID;
 my %SCHEMAS_BY_HANDLE;
 
@@ -74,6 +75,19 @@ sub _register_table{
       return 1;
 }
 
+sub _register_instance{
+      my $package = shift; # no dummy $self object here, for efficiency
+      my %params = @_;
+
+      my $schema_id = $params{schema_id} or die 'schema_id is required';
+      my $class     = $params{class}     or die 'class is required';
+      my $guid      = $params{guid}      or die 'guid is required';
+
+      $INSTANCES_BY_CLASS{ $schema_id } -> { $class } = $guid;
+
+      return 1;
+}
+
 ###################### BEGIN OBJECT ORIENTED CODE ######################
 
 sub new {
@@ -128,8 +142,41 @@ sub tables{
       }
 
 
-      return \@tables;
+      return  wantarray ? @tables : \@tables;
 }
+
+sub get_instance{
+      my $self  = shift;
+      my $class = shift || 'master';
+
+      my $guid = $INSTANCES_BY_CLASS{ $self->{schema_id} } -> { $class } || return $self->_error("instance of class $class does not exist");
+
+      my $instance = DBR::Config::Instance->lookup(
+						   session => $self->{session},
+						   guid    => $guid,
+						  ) or return $self->_error('failed to create table object');
+      return $instance;
+}
+
+sub instances{
+      my $self  = shift;
+
+      my @instances;
+
+      foreach my $guid (    values %{$INSTANCES_BY_CLASS{ $self->{schema_id}} }   ) {
+
+	    my $instance = DBR::Config::Instance->lookup(
+							 session => $self->{session},
+							 guid    => $guid,
+							) or return $self->_error('failed to create instance object');
+	    push @instances, $instance;
+      }
+
+
+      return wantarray ? @instances : \@instances;
+}
+
+
 
 sub schema_id {
       my $self = shift;

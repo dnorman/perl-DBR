@@ -41,12 +41,15 @@ sub moduleload{
 
       my @enumids = $self->_uniq( map {  $_->{enum_id} } @$maps);
 
-      return $self->_error('Failed to select from enum') unless
-	my $values = $dbrh->select(
-				   -table => 'enum',
-				   -fields => 'enum_id handle name override_id',
-				   -where  => { enum_id => ['d in',@enumids ] },
-				  );
+      my $values = [];
+      if(@enumids){
+	    return $self->_error('Failed to select from enum') unless
+	      $values = $dbrh->select(
+				      -table => 'enum',
+				      -fields => 'enum_id handle name override_id',
+				      -where  => { enum_id => ['d in',@enumids ] },
+				     );
+      }
 
       my %VALUES_BY_ID;
       foreach my $value (@$values){
@@ -146,6 +149,8 @@ use overload
 'ne' => sub { $_[0]->handle ne _strhandle($_[1]) },
 'nomethod' => sub {croak "Enum object: Invalid operation '$_[3]' The ways in which you can use an enum are restricted"}
 ;
+
+*TO_JSON = \&chunk;
 
 sub id     { $_[0][0]->[ v_id     ] }
 sub handle { $_[0][0]->[ v_handle ] }

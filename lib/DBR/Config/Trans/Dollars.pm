@@ -58,6 +58,8 @@ use overload
 
 'fallback' => 1;
 
+*TO_JSON = \&dollars;
+
 sub cents   {
       return '' unless defined($_[0][0]);
       return $_[0][0]

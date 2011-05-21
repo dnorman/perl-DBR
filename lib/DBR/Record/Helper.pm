@@ -202,6 +202,7 @@ sub getrelation{
       my $val;
 
       my $to1 = $relation->is_to_one;                                                        # Candidate for pre-processing
+      my $table    = $relation->table    or return $self->_error('Failed to fetch table'   );# Candidate for pre-processing
       my $maptable = $relation->maptable or return $self->_error('Failed to fetch maptable');# Candidate for pre-processing
       my $mapfield = $relation->mapfield or return $self->_error('Failed to fetch mapfield');# Candidate for pre-processing
 
@@ -209,7 +210,7 @@ sub getrelation{
 
       if( defined($fidx) && exists($record->[$fidx]) ){
 	    $val = $record->[ $fidx ]; # My value
-	    @allvals = $self->_uniq( $val, map { $_->[ $fidx ] } @${$rowcache} ); # look forward in the rowcache and add those too
+	    @allvals = $self->_uniq( $val, map { $_->[ $fidx ] } grep {defined} @$rowcache ); # look forward in the rowcache and add those too
       }else{
 	    # I forget, I think I'm using scalar ref as a way to represent undef and still have a true rvalue *ugh*
 	    my $sref = $self->getfield($record,$field, 1 ); # go fetch the value in the form of a scalarref
@@ -248,14 +249,20 @@ sub getrelation{
       my %uniq;
       my @fields = grep { !$uniq{ $_->field_id }++ } ($mapfield, @$pk, @$prefields );
 
+      my $mapinstance = $self->{instance};
+      unless ( $relation->is_same_schema ){
+	    $mapinstance = $maptable->schema->get_instance( $mapinstance->class ) or return $self->_error('Failed to retrieve db instance for the maptable');
+      }
+
+      $self->_logDebug2( "Relationship from instance " . $self->{instance}->guid . "->" . $mapinstance->guid );
       my $query = DBR::Query::Select->new(
 					  session  => $self->{session},
-					  instance => $self->{instance},
+					  instance => $mapinstance,
 					  tables   => $maptable,
 					  where    => $outwhere,
 					  fields   => \@fields,
 					  scope    => $scope,
-					  splitfield  => $field
+					  splitfield  => $mapfield
 					 ) or return $self->_error('failed to create Query object');
 
 
@@ -267,7 +274,7 @@ sub getrelation{
 		  my $resultmap = $resultset->hashmap_single(  $mapfield->name  ) or return $self->_error('failed to split resultset');
 
 		  # look forward in the rowcache and assign the resultsets for whatever we find
-		  foreach my $row (@${$rowcache}) {
+		  foreach my $row (grep {defined} @$rowcache) {
 			$self->_setlocalval(
 					    $row,
 					    $relation,
@@ -279,7 +286,7 @@ sub getrelation{
 
 	    }else{
 		  # look forward in the rowcache and assign the resultsets for whatever we find
-		  foreach my $row (@${$rowcache}) {
+		  foreach my $row (grep {defined} @$rowcache) {
 			$self->_setlocalval($row,
 					    $relation,
 					    DBR::ResultSet->new( $query, $row->[$fidx] )

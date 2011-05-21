@@ -46,6 +46,7 @@ CREATE TABLE dbr_fields (
   index_type tinyint(1) default NULL,
   trans_id tinyint(3) unsigned default NULL,
   regex varchar(250) default NULL,
+  default_val varchar(250) default NULL,
   PRIMARY KEY  (field_id),
   KEY (table_id)
 ) Engine=InnoDB;

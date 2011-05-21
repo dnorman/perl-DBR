@@ -1,3 +1,8 @@
+# the contents of this file are Copyright (c) 2009-2011 Daniel Norman
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation.
+
 package DBR::Config::Trans::UnixTime;
 
 use strict;
@@ -74,6 +79,8 @@ use overload
 'fallback' => 1,
 #'nomethod' => sub {croak "UnixTime object: Invalid operation '$_[3]' The ways in which you can use UnixTime objects is restricted"}
 ;
+
+*TO_JSON = \&datetime;
 
 sub unixtime { $_[0][0] || '' };
 
@@ -189,7 +196,6 @@ sub _manip{
       return undef;
 
 }
-
 
 #              uxtime , tzref
 sub new{ bless([ $_[1], $_[0][1] ],'DBR::_UXTIME') }

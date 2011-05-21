@@ -118,6 +118,8 @@ sub quiet_error{
   return $self;
 }
 
+sub primary_table{ shift->{tables}[0] } # HERE HERE HERE - this is lame
+
 # Copy the guts of this query into a query of a different type
 # For instance: transpose a Select into an Update.
 sub transpose{
@@ -125,8 +127,11 @@ sub transpose{
       my $module = shift;
 
       my $class = __PACKAGE__ . '::' . $module;
+      my %params;
+      map { $params{ $_ } = $self->{$_} if $self->{$_} } (qw'instance session scope',$self->_params);
+      
       return $class->new(
-			 map { $_ => $self->{$_} } (qw'instance session scope',$self->_params),
+			 %params,
 			 @_, # extra params
 			) or croak "Failed to create new $class object";
 }
@@ -138,7 +143,7 @@ sub child_query{
       my $builder = $self->{builder} ||= DBR::Interface::Where->new(
 								    session       => $self->{session},
 								    instance      => $self->{instance},
-								    primary_table => $self->{tables}[0], # HERE HERE HERE - this is lame
+								    primary_table => $self->primary_table,
 								   );
 
       my $ident = $builder->digest( $where );

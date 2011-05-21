@@ -6,10 +6,13 @@
 package DBR::Config::SpecLoader;
 
 use strict;
+
 use base 'DBR::Common';
 
 use DBR::Config::Trans;
 use DBR::Config::Relation;
+no warnings 'deprecated';
+use DBR::Config::ScanDB;
 use Switch;
 
 my $trans_defs = DBR::Config::Trans->list_translators or die 'Failed to get translator list';
@@ -25,6 +28,7 @@ sub new {
       my $self = {
 		  session       => $params{session},
 		  conf_instance => $params{conf_instance},
+		  dbr           => $params{dbr},
 		 };
 
       bless( $self, $package );
@@ -43,9 +47,31 @@ sub process_spec{
 
       $dbrh->begin();
 
+      my %SCANS;
+
       my $sortval;
       foreach my $spec ( @$specs ){
+	    my $oldtable = $spec->{table};
+	    if ( $spec->{table} =~ s/^(.*?)\.// ){
+		    $spec->{schema} ||= $1;
+	    }
+
 	    map {$spec->{ $_ } or die "Invalid Spec row: Missing $_"} qw'schema table field cmd';
+
+	
+	    if( ! $SCANS{ $spec->{schema} }++ ){
+		  #                           HERE - THIS \/ is wrong. Fix it. Should be asking the schema object for an instance
+		  my $scan_instance = $self->{dbr}->get_instance( $spec->{schema} ) or die "No config found for scandb $spec->{schema}";
+
+		  my $scanner = DBR::Config::ScanDB->new(
+							 session => $self->{dbr}->session,
+							 conf_instance => $self->{conf_instance},
+							 scan_instance => $scan_instance,
+							);
+
+
+		  $scanner->scan() or die "Failed to scan $spec->{schema}";
+	    }
 
 	    my $schema = new DBR::Config::Schema(session => $self->{session}, handle => $spec->{schema}) or die "Schema $spec->{schema} not found";
 	    my $table = $schema->get_table( $spec->{table} ) or die "$spec->{table} not found in schema\n";
@@ -56,7 +82,8 @@ sub process_spec{
 		  case 'RELATION'   { $self->_do_relation  ( $schema, $table, $field, $spec ) }
 		  case 'REGEX'      { $self->_do_regex     ( $schema, $table, $field, $spec ) }
 		  case 'ENUMOPT'    { $self->_do_enumopt   ( $schema, $table, $field, $spec, ++$sortval ) }
-		  else { die "Invalid spec: unknown command $spec->{cmd}"}
+		  case 'DEFAULT'    { $self->_do_default   ( $schema, $table, $field, $spec ) }
+                  else { die "Invalid spec: unknown command $spec->{cmd}"}
 	    }
       }
 
@@ -79,20 +106,40 @@ sub _do_translator {
 sub _do_regex {
       my ($self, $schema, $table, $field, $spec) = @_;
 
-      $spec->{regex} or die "Missing parameter: translator";
+      $spec->{regex} or die "Missing parameter: regex";
       $field->update_regex($spec->{regex}) or die "Failed to update field regex for $spec->{table}.$spec->{field}";
 
       return 1;
 
 }
+sub _do_default {
+      my ($self, $schema, $table, $field, $spec) = @_;
+
+      defined($spec->{value}) or die "Missing parameter: value";
+      $field->update_default($spec->{value}) or die "Failed to update field default for $spec->{table}.$spec->{field}";
+
+      return 1;
+
+}
+
 sub _do_relation   {
       my ($self, $schema, $table, $field, $spec) = @_;
 
       map { $spec->{$_} or die("Parameter '$_' must be specified") } qw'relname reltable relfield type reverse_name';
 
 
-      my $totable = $schema ->get_table( $spec->{reltable} ) or die "$spec->{reltable} not found in schema\n";
-      my $tofield = $totable->get_field( $spec->{relfield} ) or die "$spec->{reltable}.$spec->{relfield} not found\n";
+      my ($toschema_name) = $spec->{reltable} =~ /^(.*?)\./;
+
+      my $toschema = $schema;
+      if ( $spec->{reltable} =~ s/^(.*?)\.// ){
+	   my $toschema_name = $1;
+	   $toschema = new DBR::Config::Schema(session => $self->{session}, handle => $toschema_name )
+              or die "Schema $spec->{schema} not found";
+      }
+
+      my $totable = $toschema->get_table( $spec->{reltable} ) or die "$spec->{reltable} not found in schema\n";
+      my $tofield = $totable ->get_field( $spec->{relfield} ) or die "$spec->{reltable}.$spec->{relfield} not found\n";
+
       my $type = $relationtype_lookup{ uc ($spec->{type}) } or die "Invalid relationship type '$spec->{type}'";
       my $type_id = $type->{type_id};
 
@@ -148,7 +195,7 @@ sub _do_relation   {
 sub _do_enumopt    {
       my ($self, $schema, $table, $field, $spec, $sortval) = @_;
 
-      map { length($spec->{$_}) or die("Parameter '$_' must be specified") } qw'handle enum_id override_id name';
+      map { length($spec->{$_}) or die("Parameter '$_' must be specified") } qw'handle name';
 
       my $override;
 

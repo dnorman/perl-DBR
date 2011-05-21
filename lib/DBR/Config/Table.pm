@@ -108,7 +108,9 @@ sub _register_relation{
 
       $RELATIONS_BY_NAME{ $table_id } -> { $name } = $relation_id;
 
-      return 1;
+      return {
+	      %{ $TABLES_BY_ID{ $table_id } }
+	     }; # shallow clone
 }
 
 sub new {
@@ -128,6 +130,21 @@ sub new {
 
   return( $self );
 }
+
+sub clone{
+      my $self = shift;
+      my %params = @_;
+
+      return bless({
+                  session   => $self->{session},
+                  table_id  => $self->{table_id},
+                  $params{with_alias} ? ( alias => $self->{alias} ) : (),
+            },
+           ref($self)
+      );
+
+}
+
 
 sub table_id { $_[0]->{table_id} }
 sub get_field{
@@ -206,7 +223,24 @@ sub relations{
 }
 
 
-sub name { $TABLES_BY_ID{  $_[0]->{table_id} }->{name} };
+sub name      { $TABLES_BY_ID{  $_[0]->{table_id} }->{name} };
+sub schema_id { $TABLES_BY_ID{  $_[0]->{table_id} }->{schema_id} };
+
+sub schema{
+      my $self = shift;
+      my %params = @_;
+
+      my $schema_id = $self->schema_id || return ''; # No schemas here
+
+      my $schema = DBR::Config::Schema->new(
+					    session   => $self->{session},
+					    schema_id => $schema_id,
+					   ) || return $self->_error("failed to fetch schema object for schema_id $schema_id");
+
+      return $schema;
+}
+
+
 sub conf_instance {
       my $self = shift;
 
