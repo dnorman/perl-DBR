@@ -24,7 +24,7 @@ sub clean {
 BEGIN { clean() }
 END   { clean() }
 
-my $CONFDIR = 't/conf';
+my ($CONFDIR) = grep {-d $_ } ('example/schemas','../example/schemas');
 
 sub connectdb {
         my $attr = { @_ };
