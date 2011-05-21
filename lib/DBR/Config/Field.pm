@@ -68,6 +68,7 @@ my %datatypes = (
 		 tinyblob  => { id => 16 },
 		 enum      => { id => 17 }, # I loathe mysql enums
 		 decimal   => { id => 18, numeric => 1, bits => 'NA'}, # HERE - may need a little more attention for proper range checking
+		 datetime  => { id => 19 },
 		);
 
 my %datatype_lookup = map { $datatypes{$_}->{id} => {%{$datatypes{$_}}, handle => $_ }} keys %datatypes;
@@ -124,6 +125,10 @@ sub load{
 						# It would seem that we need to be aware of serial/trigger fields.
 					       ) or die('failed to register field');
 
+	    if ( $datatype_lookup{ $field->[C_data_type] }->{handle} eq 'datetime' ){ 
+			$field->[C_trans_id] ||= 5; #DateTime hack
+		}
+
 	    _gen_valcheck($field) or die('failed to generate value checking routine');
 
 	    $FIELDS_BY_ID{ $field->[C_field_id] } = $field;
@@ -160,7 +165,7 @@ sub _gen_valcheck{ # Intentionally Non-oo
 	    }
       }else{
 	    push @code, 'defined($v)' unless $fieldref->[C_is_nullable];
-	    if ($fieldref->[C_max_value] =~ /^\d+$/){ # use regex to prevent code injection
+	    if ($fieldref->[C_max_value] =~ /^\d+$/ && $fieldref->[C_max_value] > 0){ # use regex to prevent code injection
 		  my $max = $fieldref->[C_max_value];
 		  push @code, "length(\$v)<= $max";
 	    }
@@ -174,12 +179,12 @@ sub _gen_valcheck{ # Intentionally Non-oo
 	    push @code, "\$v =~ /\$R/o"; # supposedly o is only functional for <5.6
 	    $extra .= "\0" . $R; # Use extra to cache based on the contents of the regex
       }
-
+	  
       my $code = join(' && ', @code);
 
-      $code = "!defined(\$v)||($code)" if $fieldref->[C_is_nullable];
+      $code = "!defined(\$v)||($code)" if length($code) && $fieldref->[C_is_nullable];
 
-      # print STDERR "VALCHECK: $code\t$R\n";
+      #print STDERR "VALCHECK:$fieldref->[C_data_type], $code\t$R\n";
 
       $fieldref->[C_testsub] = $VALCHECKS{$code . $extra} ||= eval "sub { my \$v = shift; $code }"
 	|| confess "DBR::Config::Field::_get_valcheck: failed to gen sub '$@'";
