@@ -210,7 +210,7 @@ sub getrelation{
 
       if( defined($fidx) && exists($record->[$fidx]) ){
 	    $val = $record->[ $fidx ]; # My value
-	    @allvals = $self->_uniq( $val, map { $_->[ $fidx ] } @${$rowcache} ); # look forward in the rowcache and add those too
+	    @allvals = $self->_uniq( $val, map { $_->[ $fidx ] } grep {defined} @$rowcache ); # look forward in the rowcache and add those too
       }else{
 	    # I forget, I think I'm using scalar ref as a way to represent undef and still have a true rvalue *ugh*
 	    my $sref = $self->getfield($record,$field, 1 ); # go fetch the value in the form of a scalarref
@@ -274,7 +274,7 @@ sub getrelation{
 		  my $resultmap = $resultset->hashmap_single(  $mapfield->name  ) or return $self->_error('failed to split resultset');
 
 		  # look forward in the rowcache and assign the resultsets for whatever we find
-		  foreach my $row (@${$rowcache}) {
+		  foreach my $row (grep {defined} @$rowcache) {
 			$self->_setlocalval(
 					    $row,
 					    $relation,
@@ -286,7 +286,7 @@ sub getrelation{
 
 	    }else{
 		  # look forward in the rowcache and assign the resultsets for whatever we find
-		  foreach my $row (@${$rowcache}) {
+		  foreach my $row (grep {defined} @$rowcache) {
 			$self->_setlocalval($row,
 					    $relation,
 					    DBR::ResultSet->new( $query, $row->[$fidx] )
