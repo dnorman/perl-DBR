@@ -61,7 +61,7 @@ test(
       album_id => 2,
       name     => 'Track BA2',
       rating   => 'earbleed',
-      date_released => GT 'November 26th 2005'
+      date_released => GT 'November 26th 2005 PST'
      ],
      "album_id = 2 AND date_released > 1132992000 AND name = 'Track BA2' AND rating = 9"
     );
@@ -70,7 +70,7 @@ test([
       album_id => 2,
       OR name     => 'Track BA2',
       OR rating   => 'earbleed',
-      OR date_released => GT 'November 26th 2005'
+      OR date_released => GT 'November 26th 2005 PST'
      ],
      "album_id = 2 OR (name = 'Track BA2' OR (rating = 9 OR date_released > 1132992000))"
     );
@@ -79,7 +79,7 @@ test([
       album_id => 2,
       AND name => 'Track BA2',
       AND rating => 'earbleed',
-      AND date_released => GT 'November 26th 2005'
+      AND date_released => GT 'November 26th 2005 PST'
      ],
      "album_id = 2 AND date_released > 1132992000 AND name = 'Track BA2' AND rating = 9"
     );
@@ -89,7 +89,7 @@ test([
        ( album_id => 1, AND rating => 'earbleed' ),
        OR album_id => 789 
       ),   # closing peren ends the list of args to OR
-      date_released => GT 'November 26th 2005',
+      date_released => GT 'November 26th 2005 PST',
      ],
      "((album_id = 1 AND rating = 9) OR album_id = 789) AND date_released > 1132992000"
     );
@@ -97,12 +97,12 @@ test([
 test([
       album_id => 1,
       AND (rating   => 'earbleed', OR album_id => 789 ),
-      AND date_released => GT 'November 26th 2005'
+      AND date_released => GT 'November 26th 2005 PST'
      ],
      "(rating = 9 OR album_id = 789) AND album_id = 1 AND date_released > 1132992000"
      );
 test([
-      date_released => GT 'November 26th 2005',
+      date_released => GT 'November 26th 2005 PST',
       album_id => 1,
       OR (album_id => 2, rating => 'earbleed'),
       OR (album_id => 3)
@@ -111,7 +111,7 @@ test([
     );
 
 test([
-      date_released => GT 'November 26th 2005',
+      date_released => GT 'November 26th 2005 PST',
       AND (
 	   album_id => 1,
 	   OR (album_id => 2, rating => 'earbleed'),
