@@ -24,7 +24,6 @@ my $CT;
 sub import {
       my $pkg = shift;
       my %params = @_;
-      my $dbr;
 
       my ($callpack, $callfile, $callline) = caller;
 

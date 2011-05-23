@@ -44,7 +44,7 @@ sub scan{
        	    my $fields = $self->scan_fields($table) or return $self->_error( "failed to describe table" );
             my $pkey = $pkeys ? $pkeys->{$table} : $self->scan_pkeys( $table );
 
-	    $self->update_table($fields,$table,$pkey) or return $self->_error("failed to update table");
+            $self->update_table($fields,$table,$pkey) or return $self->_error("failed to update table");
       }
 
       #HACK - the scanner should load up the in-memory representation at the same time
@@ -67,6 +67,7 @@ sub scan_pkeys {
 
       my $sth;
       local $dbh->{PrintError} = 0;
+      local $^W = 0;
       eval { $sth= $dbh->primary_key_info(undef,undef,$table); };
       return $self->_error('failed call to primary_key_info') unless $sth;
       

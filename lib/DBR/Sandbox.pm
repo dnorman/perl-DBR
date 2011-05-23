@@ -35,7 +35,7 @@ sub provision{
     my $dbrconf = $params{writeconf} || "$sandbox/DBR.conf";
     
     return if $params{reuse} && -e $dbrconf && -d $sandbox;
-     
+    
     print STDERR "Provisioning Sandbox... " unless $params{quiet};
     _ready_sandbox ( $sandbox );
     
