@@ -37,7 +37,7 @@ my $dbr = setup_schema_ok('music');
 
 my $session = $dbr->session;
 
-my $instance = $dbr->get_instance('test') or die "Failed to retrieve DB instance";
+my $instance = $dbr->get_instance('music') or die "Failed to retrieve DB instance";
 ok($instance, 'dbr instance');
 
 my $schema = $instance->schema or die "Failed to retrieve schema";

@@ -1,1 +1,1 @@
-schema=test	table=cart	field=price	cmd=TRANSLATOR	translator=DOLLARS
+schema=rt_44	table=cart	field=price	cmd=TRANSLATOR	translator=DOLLARS

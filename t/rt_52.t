@@ -12,7 +12,7 @@ use Test::More tests => 5;
 
 my $dbr = setup_schema_ok('rt_52');
 
-my $dbrh = $dbr->connect('test');
+my $dbrh = $dbr->connect('rt_52');
 ok($dbrh, 'dbr connect');
 my $rv;
 

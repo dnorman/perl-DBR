@@ -12,7 +12,7 @@ use DBR::Util::Operator;
 
 my $dbr = setup_schema_ok( 'rt_54' );
 
-my $dbrh = $dbr->connect( 'test' );
+my $dbrh = $dbr->connect( 'rt_54' );
 ok($dbrh, 'dbr connect');
 
 # 2 tests so far, plus tests below

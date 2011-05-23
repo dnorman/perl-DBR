@@ -11,7 +11,7 @@ use DBR::Config::Scope;
 
 my $dbr = setup_schema_ok('rt_40');
 
-my $dbh = $dbr->connect('test');
+my $dbh = $dbr->connect('rt_40');
 ok($dbh, 'dbr connect');
 my $rv;
 # Repeat the whole test twice to test both query modes (Unregistered and Prefetch)

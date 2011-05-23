@@ -12,7 +12,7 @@ use Test::More tests => 28;
 
 my $dbr = setup_schema_ok('rt_38');
 
-my $dbh = $dbr->connect('test');
+my $dbh = $dbr->connect('rt_38');
 ok($dbh, 'dbr connect');
 
 # Repeat the whole test twice to test both query modes (Unregistered and Prefetch)

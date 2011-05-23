@@ -48,7 +48,7 @@ sub process_spec{
       $dbrh->begin();
 
       my %SCANS;
-
+      my %SCHEMA_IDS;
       my $sortval;
       foreach my $spec ( @$specs ){
 	    my $oldtable = $spec->{table};
@@ -76,7 +76,7 @@ sub process_spec{
 	    my $schema = new DBR::Config::Schema(session => $self->{session}, handle => $spec->{schema}) or die "Schema $spec->{schema} not found";
 	    my $table = $schema->get_table( $spec->{table} ) or die "$spec->{table} not found in schema\n";
 	    my $field = $table->get_field ( $spec->{field} ) or die "$spec->{table}.$spec->{field} not found\n";
-
+        $SCHEMA_IDS{ $schema->schema_id } = 1;
 	    switch ( uc($spec->{cmd}) ){
 		  case 'TRANSLATOR' { $self->_do_translator( $schema, $table, $field, $spec ) }
 		  case 'RELATION'   { $self->_do_relation  ( $schema, $table, $field, $spec ) }
@@ -88,7 +88,19 @@ sub process_spec{
       }
 
       $dbrh->commit();
+      
+      foreach my $schema_id ( keys %SCHEMA_IDS ) {
+            #HACK - the SpecLoader should load up the in-memory representation at the same time
+            DBR::Config::Schema->load(
+                  session   => $self->{session},
+                  schema_id => $schema_id,
+                  instance  => $self->{conf_instance},
+                ) or die "Failed to reload schema";
+      }
+      
+      return 1;
 }
+
 
 # Did this one the new way cus it was easy, the rest will be redone at some point
 sub _do_translator {

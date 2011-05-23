@@ -11,7 +11,7 @@ use DBR::Config::Scope;
 
 my $dbr = setup_schema_ok( 'rt_53' );
 
-my $dbrh = $dbr->connect( 'test' );
+my $dbrh = $dbr->connect( 'rt_53' );
 ok($dbrh, 'dbr connect');
 
 # 2 tests so far, plus tests below

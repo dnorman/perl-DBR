@@ -1,22 +1,16 @@
 #!/usr/bin/perl
-
 use strict;
-use lib qw(../lib ../../lib);
-use DBR;
-use DBR::Util::Logger;   # Any object that implements log, logErr, logDebug, logDebug2 and logDebug3 will do
-use DBR::Util::Operator; # Imports operator functions
+use lib qw'lib ../lib ../../lib';
+####### Provision the sandbox DB, for examples/testing only ###########
+use DBR::Sandbox( schema => 'music', writeconf => 'example_dbr.conf' ); 
+#######################################################################
 
-my $logger = new DBR::Util::Logger(
-				   -logpath => '/tmp/dbr_example.log',
-				   -logLevel => 'debug3'
-				  );
+# Here is the real code:
 
-my $dbr = new DBR(
-		  -logger => $logger,
-		  -conf => 'support/example_dbr.conf'
-		 );
+use DBR ( conf => 'example_dbr.conf', logpath => 'dbr_example.log', loglevel => 'debug3', use_exceptions => 1 );
 
-my $dbrh = $dbr->connect('example') || die "failed to connect";
+
+my $dbrh = dbr_connect('example') || die "failed to connect";
 
 
 print "The choices for rating are:\n";

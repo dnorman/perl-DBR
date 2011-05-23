@@ -8,6 +8,7 @@ package DBR::Config::ScanDB;
 use strict;
 use base 'DBR::Common';
 use DBR::Config::Field;
+use DBR::Config::Schema;
 
 sub new {
       my( $package ) = shift;
@@ -45,6 +46,13 @@ sub scan{
 
 	    $self->update_table($fields,$table,$pkey) or return $self->_error("failed to update table");
       }
+
+      #HACK - the scanner should load up the in-memory representation at the same time
+      DBR::Config::Schema->load(
+            session   => $self->{session},
+            schema_id => $self->{schema_id},
+            instance  => $self->{conf_instance},
+          ) or die "Failed to reload schema";
 
       return 1;
 }
