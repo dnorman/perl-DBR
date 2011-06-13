@@ -1,6 +1,0 @@
-DBR is a fairly directed attempt at a DB wrapper and Object Relational Mapper.
-
-It is not trying to be all things to all people. It's goal is to rapidly, and simply, provide ORM capabilities for databases with a large number of tables, fields, and relationships.
-
-For details see http://code.google.com/p/perl-dbr/
-To get the latest code or to contribute, visit: https://github.com/dnorman/perl-DBR
