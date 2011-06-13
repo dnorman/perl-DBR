@@ -27,16 +27,9 @@ To run the tests:
 
     make test
 
-The documentation:
-
-    SETUP.md
-    doc/objects_and_methods.pdf
-    [The wiki (pretty flimsy right now) ](http://code.google.com/p/perl-dbr/w/list)
-    *more documentation coming soon*
-
-Resources:
+Documentation / Resources:
 ---
-
+  - APP_SETUP.md ( First time setup instructions for your application )
   - [The latest source ( Please fork and contribute! )](http://github.com/dnorman/perl-DBR)
   - [CPAN page](http://search.cpan.org/~impious/DBR/)
   - [The wiki (pretty flimsy right now) ](http://code.google.com/p/perl-dbr/w/list)
