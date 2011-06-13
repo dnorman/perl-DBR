@@ -8,10 +8,17 @@ This guide is intended to get you quickly set up the environment for your first 
 
 See [README.md] and try out the examples
 
+
 Setup Steps:
 ---
 
- 1. Create your DBR database
+ 1. Check out the code
+
+    *Using the CPAN installer will not suffice for this step*
+
+        git clone git://github.com/dnorman/perl-DBR.git
+
+ 2. Create your DBR database
 
     For SQLite:
 
@@ -19,10 +26,10 @@ Setup Steps:
 
     For Mysql:
 
-        create database dbr; # database name and access control are totally up to you
+        mysql -e 'create database dbr;' # database name and access control are totally up to you
         mysql -h mydbhost -u myuser -p'mypasswd' dbr < sql/dbr_schema_mysql.sql
 
- 2. Create your DBR.conf
+ 3. Create your DBR.conf
 
     Location is up to you.
 
@@ -34,7 +41,7 @@ Setup Steps:
 
         echo hostname=mydbhost; database=dbr; user=myuser; password=mypasswd; type=Mysql dbr_bootstrap=1 > /path/to/my/DBR.conf
 
- 3. Register Schema
- 4. Register Instance
- 5. Scan an instance
- 6. Load Specifications
+ 4. Register Schema
+ 5. Register Instance
+ 6. Scan an instance
+ 7. Load Specifications
