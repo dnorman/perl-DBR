@@ -1,11 +1,14 @@
-1.3 - 05/23/2011
+perl-DBR CHANGE LOG
+===
+
+1.3 - Released 05/23/2011
 ---
   - consolidated test case and example schemas
   - created DBR::Sandbox to manage them
   - dramatically cleaned up / trimmed example scripts
   - hopefully fixed a minor issue causing cpantesters to fail
 
-1.2 - 05/20/2011
+1.2 - Released 05/20/2011
 ---
   - merged commonref_rowcache
     Allows for read-ahead for record objects that are already retrieved.
