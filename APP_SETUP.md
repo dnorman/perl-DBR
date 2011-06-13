@@ -12,12 +12,16 @@ Setup Steps:
 ---
 
  1. Create your DBR database
-   * SQLite:
-     > sqlite3 /path/to/my/dbr.sqlite < sql/dbr_schema_sqlite.sql
 
-   * Mysql:
-      `create database dbr;` ( database name and access control are totally up to you )
-      mysql -h mydbhost -u myuser -p'mypasswd' dbr < sql/dbr_schema_mysql.sql
+   SQLite:
+
+        sqlite3 /path/to/my/dbr.sqlite < sql/dbr_schema_sqlite.sql
+
+   Mysql:
+
+        create database dbr;` ( database name and access control are totally up to you )
+        mysql -h mydbhost -u myuser -p'mypasswd' dbr < sql/dbr_schema_mysql.sql
+
  2. Create your DBR.conf
     Location is up to you.
     For SQLite:[
