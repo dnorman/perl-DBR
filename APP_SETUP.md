@@ -6,7 +6,7 @@ This guide is intended to get you quickly set up the environment for your first 
 *FIRST* Before reading this
 ---
 
-See [README.md] and try out the examples
+See [README.md](https://github.com/dnorman/perl-DBR/blob/master/README.md) and try out some examples before trying to proceed here.
 
 
 Setup Steps:
@@ -36,11 +36,11 @@ Setup Steps:
 
     For SQLite:
 
-        echo name=dbrconf; class=master; dbfile=/path/to/my/dbr.sqlite; type=SQLite; dbr_bootstrap=1 > /path/to/my/DBR.conf
+        echo 'name=dbrconf; class=master; dbfile=/path/to/my/dbr.sqlite; type=SQLite; dbr_bootstrap=1' > /path/to/my/DBR.conf
 
     For Mysql:
 
-        echo hostname=mydbhost; database=dbr; user=myuser; password=mypasswd; type=Mysql dbr_bootstrap=1 > /path/to/my/DBR.conf
+        echo 'hostname=mydbhost; database=dbr; user=myuser; password=mypasswd; type=Mysql dbr_bootstrap=1' > /path/to/my/DBR.conf
 
  4. Register Schema
  5. Register Instance
