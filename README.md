@@ -30,6 +30,9 @@ To run the tests:
 The documentation:
 
     SETUP.md
+    doc/objects_and_methods.pdf
+    [The wiki (pretty flimsy right now) ](http://code.google.com/p/perl-dbr/w/list)
+    *more documentation coming soon*
 
 Resources:
 ---
