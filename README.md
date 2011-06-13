@@ -31,5 +31,5 @@ Resources:
 ---
 
   - [The latest source ( Please fork and contribute! )](http://github.com/dnorman/perl-DBR)
-  - [CPAN page](http://search.cpan.org/~impious/DBR-1.3/)
+  - [CPAN page](http://search.cpan.org/~impious/DBR/)
   - [The wiki (pretty flimsy right now) ](http://code.google.com/p/perl-dbr/w/list)
