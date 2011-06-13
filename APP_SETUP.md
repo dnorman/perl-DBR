@@ -17,6 +17,7 @@ Setup Steps:
     *Using the CPAN installer will not suffice for this step*
 
         git clone git://github.com/dnorman/perl-DBR.git
+        cd perl-DBR
 
  2. Create your DBR database
 
