@@ -30,6 +30,6 @@ To run the tests:
 Documentation / Resources:
 ---
   - [APP_SETUP.md](https://github.com/dnorman/perl-DBR/blob/master/APP_SETUP.md) ( First time setup instructions for your application )
-  - [The latest source ( Please fork and contribute! )](http://github.com/dnorman/perl-DBR)
+  - [The latest source](http://github.com/dnorman/perl-DBR) ( Please fork and contribute! )
   - [CPAN page](http://search.cpan.org/~impious/DBR/)
   - [The wiki (pretty flimsy right now) ](http://code.google.com/p/perl-dbr/w/list)
