@@ -63,7 +63,9 @@ Setup Steps:
 
  6. Scan an instance
 
-        bin/dbr-scan-db /path/to/my/DBR.conf.live myschema
+    This loads the table and field specifications into the DBR metadata database as defined in /path/to/my/DBR.conf
+
+        bin/dbr-scan-db /path/to/my/DBR.conf myschema
 
  7. Load Spec
 
