@@ -1,6 +1,6 @@
 Setting up your DBR application
 ===
-This guide is intended to get you quickly set up the environment for your first DBR application.
+This guide is intended to help you quickly set up the environment for your first DBR application.
 
 
 *FIRST* Before reading this
