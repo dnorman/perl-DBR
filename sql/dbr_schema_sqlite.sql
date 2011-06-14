@@ -39,8 +39,8 @@ CREATE TABLE dbr_fields (
   is_pkey tinyint(1) default '0',
   index_type tinyint(1) default NULL,
   trans_id tinyint(3)  default NULL,
-  regex varchar(250) default NULL
-  default_val varchar(250) default NULL,
+  regex varchar(250) default NULL,
+  default_val varchar(250) default NULL
 );
 
 CREATE TABLE dbr_relationships (

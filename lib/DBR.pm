@@ -24,7 +24,6 @@ my $CT;
 sub import {
       my $pkg = shift;
       my %params = @_;
-      my $dbr;
 
       my ($callpack, $callfile, $callline) = caller;
 
@@ -38,7 +37,7 @@ sub import {
 	    $conf = $params{conf};
 	    $app ||= $APP_BY_CONF{ $conf } ||= 'auto_' . $CT++; # use existing app id if conf exists, or make one up
 	    $CONF_BY_APP{ $app } = $conf;
-      }else{
+      }elsif (length $app){
 	    $conf = $CONF_BY_APP{ $app };
       }
 

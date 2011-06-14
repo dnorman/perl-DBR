@@ -12,7 +12,7 @@ use Test::More;
 
 my $dbr = setup_schema_ok('music');
 
-my $dbh = $dbr->connect('test');
+my $dbh = $dbr->connect('music');
 ok($dbh, 'dbr connect');
 my $rv;
 

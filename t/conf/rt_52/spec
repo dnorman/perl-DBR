@@ -1,3 +1,0 @@
-schema=test	table=test	field=status	cmd=TRANSLATOR	translator=ENUM
-schema=test	table=test	field=status	cmd=ENUMOPT	handle=zeroness	enum_id=1	override_id=0	name=zeroness
-schema=test	table=test	field=status	cmd=ENUMOPT	handle=oneness	enum_id=2	override_id=1	name=oneness

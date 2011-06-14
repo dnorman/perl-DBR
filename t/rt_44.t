@@ -12,7 +12,7 @@ use Test::More;
 
 my $dbr = setup_schema_ok('rt_44');
 
-my $dbh = $dbr->connect('test');
+my $dbh = $dbr->connect('rt_44');
 ok($dbh, 'dbr connect');
 
 my $items = eval{ $dbh->cart->all };

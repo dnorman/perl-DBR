@@ -13,7 +13,7 @@ use Test::More tests => 4;
 # As always, it's important that the sample database is not tampered with, otherwise our tests will fail
 my $dbr = setup_schema_ok('music');
 
-my $dbh = $dbr->connect('test');
+my $dbh = $dbr->connect('music');
 ok($dbh, 'dbr connect');
 
 my $count;

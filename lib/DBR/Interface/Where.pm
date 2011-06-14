@@ -227,7 +227,6 @@ sub _reljoin{
 							    where    => $where,
 							   ) or confess('failed to create query object');
 
-			print STDERR "SAME SCHEMA? '" . $relation->is_same_schema . "'\n";
 			my $runflag = ! $relation->is_same_schema;
  			my $subquery = DBR::Query::Part::Subquery->new($prevfield, $query, $runflag) or confess ('failed to create subquery object');
 			push @and, $subquery;
