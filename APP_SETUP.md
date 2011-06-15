@@ -34,32 +34,31 @@ Setup Steps:
 
     Location is up to you.
 
-    For SQLite:
+    For SQLite metadata DB:
 
         echo 'name=dbrconf; class=master; dbfile=/path/to/my/dbr.sqlite; type=SQLite; dbr_bootstrap=1' > /path/to/my/DBR.conf
 
-    For Mysql:
+    For a Mysql metadata DB:
 
         echo 'hostname=mydbhost; database=dbr; user=myuser; password=mypasswd; type=Mysql dbr_bootstrap=1' > /path/to/my/DBR.conf
 
  4. Register your schema
-
-    This step needs a little love, but for now:
-
-        mysql -e 'insert into dbr_schemas set handle="myschema", display_name="My Schema";' dbr
-        -OR-
-        sqlite /path/to/my/dbr.sqlite 'insert into dbr_schemas set handle="myschema", display_name="My Schema";'
+    
+        export DBR_CONF=/path/to/my/DBR.conf # can also specify -f /path/to/my/DBR.conf
+        dbr-util assert schema myschema "My Schema name"
 
  5. Register your instances
     Some people have different copies of the same database ( class = master|query )
 
-    This step needs a little love, but for now:
+    For a Mysql instance:
 
-        mysql -e 'insert into dbr_instances set schema_id = 1, handle="myschema", class="master", dbname="mydbname", username="myuser", password="mypasswd", host="mydbhost", module="Mysql";' dbr
-        -OR-
-        sqlite /path/to/my/dbr.sqlite 'insert into dbr_instances set schema_id = 1, handle="myschema", class="master", dbfile="/path/to/my/Application_DB.sqlite", module="SQLite"'
+        dbr-util assert instance -schema=myschema -class=master -module=mysql -host mydbhost -dbname myschema_db -username myuser -password 'mypassword'
 
-    *Note:* you may mix and match DB types. For instance, the DBR database could be Sqlite and the Application database could be mysql, or vice versa.
+    For a SQLite instance:
+    
+        dbr-util assert instance -schema=myschema -class=master -module=sqlite -dbfile=/path/to/my/DB.sqlite
+
+    *Note:* you may mix and match DB types. For instance, the DBR metadata database could be Sqlite and the Application database could be mysql, or vice versa.
 
  6. Scan an instance
 
