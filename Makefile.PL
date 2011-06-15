@@ -8,7 +8,7 @@ my $has_mysql = eval "require DBD::mysql";
 WriteMakefile(
 	      NAME            => 'DBR',
 	      VERSION         => $version,
-              EXE_FILES    => [qw'bin/dbr-admin bin/dbr-dump-spec bin/dbr-load-spec bin/dbr-scan-db'],
+              EXE_FILES    => [qw'bin/dbr-admin bin/dbr-dump-spec bin/dbr-load-spec bin/dbr-scan-db bin/dbr-config'],
 	      PREREQ_PM       => {
 				  'Carp'               => 0,
 				  'Clone'              => 0,
@@ -23,7 +23,9 @@ WriteMakefile(
 				  'DBD::SQLite'        => '1.20',
 				  'DBI'                => 0,
 				  'Digest::MD5'        => 0,
+				  'File::Path'         => '1.08',
 				  'FileHandle'         => 0,
+				  'Getopt::Long'       => 0,
 				  'Moose'              => 0,
 				  'POSIX'              => 0,
 				  'Scalar::Util'       => 0,
@@ -32,7 +34,7 @@ WriteMakefile(
 				  'Test::More'         => '0.87',
 				  'Time::HiRes'        => 0,
 				  'Time::ParseDate'    => 0,
-				  'File::Path'         => '1.08',
+				  'Text::SimpleTable::AutoWidth' => 0
 				 },
 
 	     );

@@ -34,32 +34,31 @@ Setup Steps:
 
     Location is up to you.
 
-    For SQLite:
+    For SQLite metadata DB:
 
         echo 'name=dbrconf; class=master; dbfile=/path/to/my/dbr.sqlite; type=SQLite; dbr_bootstrap=1' > /path/to/my/DBR.conf
 
-    For Mysql:
+    For a Mysql metadata DB:
 
         echo 'hostname=mydbhost; database=dbr; user=myuser; password=mypasswd; type=Mysql dbr_bootstrap=1' > /path/to/my/DBR.conf
 
  4. Register your schema
-
-    This step needs a little love, but for now:
-
-        mysql -e 'insert into dbr_schemas set handle="myschema", display_name="My Schema";' dbr
-        -OR-
-        sqlite /path/to/my/dbr.sqlite 'insert into dbr_schemas set handle="myschema", display_name="My Schema";'
+    
+        export DBR_CONF=/path/to/my/DBR.conf # can also specify -f /path/to/my/DBR.conf
+        dbr-config assert schema myschema "My Schema name"
 
  5. Register your instances
     Some people have different copies of the same database ( class = master|query )
 
-    This step needs a little love, but for now:
+    For a Mysql instance:
 
-        mysql -e 'insert into dbr_instances set schema_id = 1, handle="myschema", class="master", dbname="mydbname", username="myuser", password="mypasswd", host="mydbhost", module="Mysql";' dbr
-        -OR-
-        sqlite /path/to/my/dbr.sqlite 'insert into dbr_instances set schema_id = 1, handle="myschema", class="master", dbfile="/path/to/my/Application_DB.sqlite", module="SQLite"'
+        dbr-config assert instance -schema=myschema -class=master -module=mysql -host mydbhost -dbname myschema_db -username myuser -password 'mypassword'
 
-    *Note:* you may mix and match DB types. For instance, the DBR database could be Sqlite and the Application database could be mysql, or vice versa.
+    For a SQLite instance:
+    
+        dbr-config assert instance -schema=myschema -class=master -module=sqlite -dbfile=/path/to/my/DB.sqlite
+
+    *Note:* you may mix and match DB types. For instance, the DBR metadata database could be Sqlite and the Application database could be mysql, or vice versa.
 
  6. Scan an instance
 
@@ -67,8 +66,27 @@ Setup Steps:
 
         bin/dbr-scan-db /path/to/my/DBR.conf myschema
 
- 7. Load Spec
+ 7. Load data spec
 
-    This part needs some love
+    When you reach this point, DBR is now usable, but will lack specifications such as relationships and translators. There are two ways to define these.
+    1. DBR Admin
+       An ncurses based interactive administration tool that allows you to browse schemas, instances, enums, tables, etc. It's pretty clunky right now, but it allows you to define relationships and translators for the tables/fields that DBR scans. *Note: this is not very intuitive right now, but an improved version is in the works.*
 
+        dbr-admin /path/to/my/DBR.conf
+
+    2. dbr-load-spec
+
+       Takes tab delimited spec files which are pretty easy to write. See `example/schemas/music/spec` for a sample DBR spec file
+       To load a spec file:
+
+        dbr-load-spec /path/to/my/DBR.conf /path/to/my/specfile.tsv
+
+        Thats it!
+
+ 8. Writing your first test script
+
+    All you have to do is:
+    * `cp example/example_basic.pl ~/my_first_dbr_app.pl`
+    * remove the `use DBR::Sandbox` line
+    * customize for your config file / schema
 
