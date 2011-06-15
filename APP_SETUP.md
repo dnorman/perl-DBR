@@ -18,6 +18,9 @@ Setup Steps:
 
         git clone git://github.com/dnorman/perl-DBR.git
         cd perl-DBR
+        perl Makefile.PL
+        make
+        sudo make install # this installs the tools you will need for the below steps
 
  2. Create your DBR database
 
