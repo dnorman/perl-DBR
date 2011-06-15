@@ -73,6 +73,7 @@ Setup Steps:
 
     When you reach this point, DBR is now usable, but will lack specifications such as relationships and translators. There are two ways to define these.
     1. DBR Admin
+
        An ncurses based interactive administration tool that allows you to browse schemas, instances, enums, tables, etc. It's pretty clunky right now, but it allows you to define relationships and translators for the tables/fields that DBR scans. *Note: this is not very intuitive right now, but an improved version is in the works.*
 
         dbr-admin /path/to/my/DBR.conf
