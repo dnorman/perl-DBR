@@ -1,6 +1,13 @@
 perl-DBR CHANGE LOG
 ===
 
+1.5 - Released 06/16/2011
+---
+
+  - Added perldoc to a few places. Documentation is still dismal, but improving.
+  - Bugfix in dbr-config
+  - Corrected inaccuracies in APP_SETUP.md
+
 1.4 - Released 06/15/2011
 ---
 
