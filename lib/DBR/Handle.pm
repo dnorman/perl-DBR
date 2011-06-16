@@ -168,4 +168,77 @@ sub DESTROY{
 
 }
 
+
+=pod
+
+=head1 NAME
+
+DBR::Handle
+
+=head1 SYNOPSIS
+
+Represents a connection to a specific instance of a DBR schema
+ 
+ use DBR ( conf => '/path/to/my/DBR.conf' ); 
+ my $handle   = dbr_connect('music');
+
+ $handle->begin;
+ 
+ my $resultset = $handle->mytable->where( myfield => 'somevalue' );
+ my $record = $resultset->next;
+ print $record->myfield;
+ $record->myfield('somenewvalue');
+ 
+ $handle->commit;
+
+Note: Do not pass DBR handles around, especially if you are using transactions. Auto rollback is associated with the handle going out of scope.
+
+=head1 METHODS
+
+=head2 begin
+
+Begin a transaction;
+
+ $handle->begin();
+
+=head2 commit
+
+Commit a transaction
+
+ $handle->commit();
+
+=head2 rollback
+
+Roll back an open transaction
+
+ $handle->rollback();
+ 
+NOTE: any open transactions are automatically rolled back when the handle goes out of scope
+
+=head2 AUTOLOAD
+
+The handle object is aware of all tables in the associated DB schema,
+therefore all tables are available as virtual methods of a given handle.
+
+This is the primary way of gettig a table object.
+
+Some examples:
+ 
+ # Deconstructed example:
+ 
+ my $mytable = $handle->mytable;
+ my $resultsetAll  = $mytable->all;
+ my $resultsetSome = $mytable->where( somefield => 'whatever' );
+
+ # More normal example:
+ 
+ my $resultsetSome = $handle->mytable->where( somefield => 'whatever' );
+ where ( my $record = $resultsetSome->next ){
+      print $record->somefield . "\n";
+ }
+
+=cut
+
+
+
 1;
