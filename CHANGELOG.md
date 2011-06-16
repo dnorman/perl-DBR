@@ -1,6 +1,15 @@
 perl-DBR CHANGE LOG
 ===
 
+1.4 - Released 06/15/2011
+---
+
+  - Improved documentation ( still has a long way to go, admittedly )
+  - added `dbr-config` script
+    A utility to assist in configuring the DBR environment.
+    Currently supports listing and updating schemas and instances
+  - Fixed SQLite schema error
+
 1.3 - Released 05/23/2011
 ---
   - consolidated test case and example schemas
