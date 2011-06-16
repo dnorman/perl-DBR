@@ -39,11 +39,11 @@ Setup Steps:
 
     For SQLite metadata DB:
 
-        echo 'name=dbrconf; class=master; dbfile=/path/to/my/dbr.sqlite; type=SQLite; dbr_bootstrap=1' > /path/to/my/DBR.conf
+        echo 'name=dbrconf; class=master; type=SQLite; dbfile=/path/to/my/dbr.sqlite; dbr_bootstrap=1' > /path/to/my/DBR.conf
 
     For a Mysql metadata DB:
 
-        echo 'hostname=mydbhost; database=dbr; user=myuser; password=mypasswd; type=Mysql dbr_bootstrap=1' > /path/to/my/DBR.conf
+        echo 'name=dbrconf; class=master; type=Mysql; hostname=mydbhost; database=dbr; user=myuser; password=mypasswd; dbr_bootstrap=1' > /path/to/my/DBR.conf
 
  4. Register your schema
     
