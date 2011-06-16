@@ -8,6 +8,7 @@ package DBR;
 use strict;
 use DBR::Handle;
 use DBR::Config;
+use DBR::Config::Instance;
 use DBR::Misc::Session;
 use Scalar::Util 'blessed';
 use base 'DBR::Common';
@@ -37,7 +38,7 @@ sub import {
 	    $conf = $params{conf};
 	    $app ||= $APP_BY_CONF{ $conf } ||= 'auto_' . $CT++; # use existing app id if conf exists, or make one up
 	    $CONF_BY_APP{ $app } = $conf;
-      }elsif (length $app){
+      }elsif ( defined $app && length $app ){
 	    $conf = $CONF_BY_APP{ $app };
       }
 
@@ -97,7 +98,7 @@ sub new {
 			  ) or return $self->_error("Failed to load DBR conf file");
 
 
-
+      DBR::Config::Instance->flush_all_handles(); # Make it safer for forking
 
       return( $self );
 }
