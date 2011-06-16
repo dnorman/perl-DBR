@@ -192,6 +192,7 @@ sub assert_instance{
     
     my ($module) = grep { lc($_) eq lc($params{module}) } @MODULES;
     $module || die \"-module is required, Must be one of @MODULES";
+    $params{module} = $module;
     
     if (lc $module eq 'sqlite'){
         $params{dbfile} || die \"-dbfile is required";
