@@ -32,19 +32,36 @@ perl-DBR CHANGE LOG
 
 1.1
 ---
+  - resultset->count can now be trusted 
+    It should always work now regardless of whether you have fetched any records or not.
 
+  - Resultsets may now be refined
+    The following syntax is now possible:
 
+        my $items = $order->items->where( status => 'active' );
 
-1.1rc8
----
-  merged 1.1_features
+    This is infinately chainable, because you may now call ->where on any resultset to get a sub-resultset. In fact, the above example only initiates one query of the items table per chunk of 1,000 order records. This resulted from a major remodel of the relationship code to implement lazy execution at the time of the first ->next, rather than ->where.
 
-1.1rc7
----
-  merged pre_1.1
+  - Table inserts now enforce the non-null status on fields.
+    Any inserts into a table with one or more non-null fields will require that you provide a values for them. The only downside is that it does not respect database enforced default values. Some discussion of this one may be required prior to the final release of 1.1 as this may actually break some production code.
 
-1.0
-1.0.7-final
-1.0.7rc7
+  - New! Batshit crazy AND / OR logic
+    DBR::Util::Operator now exports AND and OR subroutines, with evil syntactic sugaryness. There is zero documentation on this right now, but the following sort of logic is now possible:
+
+        my $resultset = $dbrh->tablename->where(
+                                        ( status => 'active' )
+                                        OR
+                                        (
+                                          status  => 'retired',
+                                          thingus => GT 1,
+                                        )
+                                       );
+
+  - $dbrh->tablename->parse( somefield => 'somevalue' ) now works for all fields, regardless of whether they are translated fields or not.
+  - Added many new test cases
+  - Totally re-arranged most of the modules. The file tree is starting to make a little more sense now.
+  - Reverted dependency on File::Path to 1.08, because centos5 is stupid and cannot upgrade File::Path without totally repackaging perl itself.
+  - Regex enforcement is now available on all fields through the dbr metadata. ( admin tool does not yet support this )
+
 
 HERE BE DRAGONS
