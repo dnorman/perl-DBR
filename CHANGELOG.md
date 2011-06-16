@@ -21,14 +21,19 @@ perl-DBR CHANGE LOG
     adds the use_exceptions flag on DBR->new
     also adds a new syntax for using DBR in your libraries:
     In your base class:
-       use DBR (conf => '/path/to/conf_file.conf', app => 'myapp', logpath => '/path/to/logfile.log');
+
+        use DBR (conf => '/path/to/conf_file.conf', app => 'myapp', logpath => '/path/to/logfile.log');
+
     Then elsewhere:
-       use DBR ( app => 'myapp', use_exceptions => 1 ); 
-       my $db = dbr_connect('schema-name');
-       ...
+
+        use DBR ( app => 'myapp', use_exceptions => 1 ); 
+        my $db = dbr_connect('schema-name');
+        ...
 
 1.1
 ---
+
+
 
 1.1rc8
 ---
