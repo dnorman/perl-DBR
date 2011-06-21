@@ -132,6 +132,8 @@ sub format  {
       return strftime ($_[1], localtime($_[0][0]));
 }
 
+sub iso8601{ shift->format('%Y-%m-%dT%H:%M:%S%z') }
+
 sub midnight{
       my $self = shift;
 
