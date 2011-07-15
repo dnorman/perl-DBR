@@ -210,7 +210,7 @@ sub getrelation{
 
       if( defined($fidx) && exists($record->[$fidx]) ){
 	    $val = $record->[ $fidx ]; # My value
-	    @allvals = $self->_uniq( $val, map { $_->[ $fidx ] } grep {defined} @$rowcache ); # look forward in the rowcache and add those too
+	    @allvals = map { $_->[ $fidx ] } grep {defined} @$rowcache; # look forward in the rowcache and add those too
       }else{
 	    # I forget, I think I'm using scalar ref as a way to represent undef and still have a true rvalue *ugh*
 	    my $sref = $self->getfield($record,$field, 1 ); # go fetch the value in the form of a scalarref
@@ -222,7 +222,12 @@ sub getrelation{
       }
 
       my $rowcount = scalar @allvals; # Cheapest way to get a rowcount is here, before we filter
-
+      
+      # add val to the uniq input list and bump rowcount up to at least 1
+      # It's a cheap insurance policy in case of rowcache malfunction
+      $rowcount ||= 1;
+      @allvals = $self->_uniq( $val, @allvals ); 
+      
       unless($mapfield->is_nullable){ # Candidate for pre-defined global
 	    @allvals = grep { defined } @allvals;
       }
