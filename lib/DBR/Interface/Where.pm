@@ -6,6 +6,7 @@ use DBR::Query::Part;
 use Clone;
 use Digest::MD5 qw(md5_base64);
 use DBR::Misc::General;
+our @CARP_NOT = ('DBR::Interface::Object');
 
 sub new {
       my( $package ) = shift;
