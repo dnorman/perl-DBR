@@ -81,6 +81,7 @@ sub select {
 			      tables   => $Qtables,
 			      where    => $where,
 			      limit    => $limit,
+                              lock     => $params{'-lock'} ? 1 : 0,
 			     ) or return $self->_error('failed to create query object');
 
       if ($params{-count}) {
