@@ -150,7 +150,7 @@ use overload
 'nomethod' => sub {croak "Enum object: Invalid operation '$_[3]' The ways in which you can use an enum are restricted"}
 ;
 
-*TO_JSON = \&chunk;
+*TO_JSON = \&handle;
 
 sub id     { $_[0][0]->[ v_id     ] }
 sub handle { $_[0][0]->[ v_handle ] }
