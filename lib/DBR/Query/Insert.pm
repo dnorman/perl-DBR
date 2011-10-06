@@ -103,7 +103,7 @@ sub run{
       $conn->quiet_next_error if $self->quiet_error;
       $conn->prepSequence() or confess 'Failed to prepare sequence';
 
-      my $rows = $conn->do( $self->sql ) or return $self->_error("Insert failed");
+      my $rows = $conn->do( $self->sql ) or return $self->quiet_error ? undef : $self->_error("Insert failed");
 
       # Tiny optimization: if we are being executed in a void context, then we
       # don't care about the sequence value. save the round trip and reduce latency.
