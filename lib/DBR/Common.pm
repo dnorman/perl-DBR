@@ -126,7 +126,7 @@ sub _error     {
     
     if( $s && $s->use_exceptions ){
 	local $Carp::CarpLevel = 1;
-	confess $message;
+	croak $message;
     }
     
     return undef;
