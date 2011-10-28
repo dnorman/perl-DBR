@@ -116,16 +116,17 @@ sub _warn       {
 
 sub _error     {
     my $s = shift->_session;
+    my $message = shift;
 
     if($s){
-	$s->_log( shift, 'ERROR' )
+	$s->_log( $message, 'ERROR' );
     }else{
-	print STDERR "DBR ERROR: " . shift() . "\n";
+	print STDERR "DBR ERROR: $message\n";
     }
     
     if( $s && $s->use_exceptions ){
 	local $Carp::CarpLevel = 1;
-	confess shift;
+	confess $message;
     }
     
     return undef;
