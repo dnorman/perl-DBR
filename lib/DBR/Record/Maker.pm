@@ -77,7 +77,13 @@ sub _prep{
 		  if( $checkfield->is_pkey ){
 			if(!$field){
                               use Data::Dumper;
-			      return $self->_error('Resultset is missing primary key field (' . $checkfield->name . ') DBG: ' . Dumper( $self->{fieldmap}, \@fields, $checkfield, $checkfield->field_id ) );
+			      return $self->_error('Resultset is missing primary key field (' . $checkfield->name . ') DBG: ' .
+                                                   Dumper(
+                                                          \@fields,
+                                                          $checkfield,
+                                                          \@table_ids,
+                                                          $query
+                                                      ));
 			}
 
 			push @pk, $field->clone( with_index => 1 ); # Make a clean copy of the field object in case this one has an alias
