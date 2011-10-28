@@ -252,7 +252,7 @@ sub getrelation{
       my $prefields = $scope->fields or return $self->_error('Failed to determine fields to retrieve');
 
       my %uniq;
-      my @fields = grep { !$uniq{ $_->field_id }++ } ($mapfield, @$pk, @$prefields );
+      my @fields = grep { !$uniq{ $_->field_id }++ } (@$pk, $mapfield, @$prefields );
 
       my $mapinstance = $self->{instance};
       unless ( $relation->is_same_schema ){
