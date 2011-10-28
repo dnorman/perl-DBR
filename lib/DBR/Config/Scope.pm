@@ -70,7 +70,7 @@ sub _get_scope_id{
 
       my $scope_id = $SCOPE_CACHE{$digest}; # Check the cache!
       if($scope_id){
-	    $self->_logDebug2('Found cached scope');
+	    $self->_logDebug2('Found cached scope ' . $scope_id);
 	    return $scope_id;
       }
 
@@ -98,7 +98,11 @@ sub _get_scope_id{
 					 -quiet => 1,
 					);
 
-	    return $SCOPE_CACHE{$digest} = $scope_id if $scope_id;
+	    
+            if($scope_id){
+                  $self->_logDebug2( 'Registered scope ' . $scope_id );
+                  return $SCOPE_CACHE{$digest} = $scope_id;
+            }
       }
 
       return $self->_error('Something failed');
