@@ -49,10 +49,15 @@ sub all{
 
       my $pk = $table->primary_key or return $self->_error('Failed to fetch primary key');
       my $prefields = $scope->fields or return $self->_error('Failed to determine fields to retrieve');
-
+      
+      my %check = map { $_ => 1 } @{$table->field_ids};
       my %uniq;
-      my @fields = grep { !$uniq{ $_->field_id }++ } (@$pk, @$prefields);
-
+      my @fields = grep { !$uniq{ $_->field_id }++ && $check{ $_->field_id } } (@$pk, @$prefields);
+      
+      if( grep { !$check{ $_ } } keys %uniq ){
+	    $self->_warn("POSSIBLE SCOPE COLLISION: scope_id: $scope->{scope_id} ($scope->{ident})");
+      }
+      
       my $query = DBR::Query::Select->new(
 					  session  => $self->{session},
 					  instance => $self->{instance},
@@ -82,9 +87,13 @@ sub where{
       my $pk = $table->primary_key or return $self->_error('Failed to fetch primary key');
       my $prefields = $scope->fields or return $self->_error('Failed to determine fields to retrieve');
 
+      my %check = map { $_ => 1 } @{$table->field_ids};
       my %uniq;
-      my @fields = grep { !$uniq{ $_->field_id }++ } (@$pk, @$prefields);
-
+      my @fields = grep { !$uniq{ $_->field_id }++ && $check{ $_->field_id } } (@$pk, @$prefields);
+      
+      if( grep { !$check{ $_ } } keys %uniq ){
+	    $self->_warn("POSSIBLE SCOPE COLLISION: scope_id: $scope->{scope_id} ($scope->{ident})");
+      }
 
       my $builder = DBR::Interface::Where->new(
 					       session       => $self->{session},

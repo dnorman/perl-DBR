@@ -41,7 +41,7 @@ sub purge_all{
 
       return 1;
 }
-
+sub ident{ shift->{ident} }
 sub _get_scope_id{
       my $self = shift;
       my $offset = shift;
@@ -63,9 +63,9 @@ sub _get_scope_id{
       }
 
       my $ident = join('|',grep {$_} (@parts,$self->{extra_ident}));
-
+      
+      $self->{ident} = $ident;
       $self->_logDebug3("SCOPE: '$ident'");
-
       my $digest = md5_base64($ident);
 
       my $scope_id = $SCOPE_CACHE{$digest}; # Check the cache!

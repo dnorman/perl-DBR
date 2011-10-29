@@ -169,6 +169,11 @@ sub fields{
       ];
 }
 
+sub field_ids{
+      my $self = shift;
+      return [ values %{$FIELDS_BY_NAME{$self->{table_id}}} ]
+}
+
 sub req_fields{
       my $self = shift;
       [
