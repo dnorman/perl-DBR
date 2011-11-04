@@ -295,9 +295,11 @@ sub limit{
     my $self  = shift;
 	my $limit = int(shift) or croak "limit value is required";
 	
-    return DBR::ResultSet->new(
-			$self->[f_query]->transpose('Select', limit => $limit )
-		);
+    #return DBR::ResultSet->new(
+	#		$self->[f_query]->transpose('Select', limit => $limit )
+	#	);
+	$self->[f_query]->limit($limit);
+	return $self;
 }
 
 sub where {
