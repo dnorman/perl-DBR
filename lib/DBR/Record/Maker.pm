@@ -130,7 +130,7 @@ sub _prep{
 				helper => $helper,
 			       ) or return $self->_error('Failed to create accessor');
       }
-
+      
       foreach my $relation (@allrelations){
 	    $self->_mk_relation(
 				relation => $relation,
@@ -140,7 +140,7 @@ sub _prep{
 
       my $isa = qualify_to_ref( $self->{recordclass} . '::ISA');
       @{ *$isa } = ('DBR::Record::Base');
-
+      
       $self->_mk_method(
 			method => 'set',
  			helper => $helper,
@@ -298,9 +298,15 @@ sub DESTROY{ # clean up the temporary object from the symbol table
       my $class = $self->{recordclass};
       #$self->_logDebug2("Destroy $self->{name} ($class)");
       push @IDPOOL, $self->{classidx};
-
+      
       #print STDERR "DESTROY $class, $self->{classidx}\n";
-      Symbol::delete_package($class);
+      
+      ## Eeek, found a bug in the Symbol package.
+      ## This leaks memory:
+      # Symbol::delete_package($class);
+      ## Have to use this instead:
+      
+      delete $::{"$class::"};
 }
 
 1;
