@@ -135,17 +135,18 @@ sub _db_iterator{
     # IMPORTANT NOTE: circular reference hazard
     weaken ($self); # Weaken the refcount
     
+    my ($buddy, $commonref, $max, $row, $chunkno, @rows);
     my $endsub = sub {
         defined($self) or return DUMMY; # technically this could be out of scope because it's a weak ref
         
         $self->[f_count] ||= $sth->rows || 0;
         $self->[f_next]  = FIRST;
         $self->[f_state] = stCLEAN; # If we get here, then we hit the end, and no ->finish is required
+        $chunkno = 0;
         
         return DUMMY; # evaluates to false
     };
     
-    my ($buddy, $commonref, $max, $row, $chunkno, @rows);
     my $getchunk = sub {
         $sth->FETCH('Active') or return undef; # Swiped from DBI->fetchall_arrayref
         
