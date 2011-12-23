@@ -115,75 +115,63 @@ sub _execute{
 }
 
 sub _db_iterator{
-      my $self = shift;
-
-
-      my $record = $self->[f_query]->get_record_obj;
-      my $class  = $record->class;
-
-      my $sth    =  $self->[f_query]->run;
-
-      defined( my $rv = $sth->execute ) or confess 'failed to execute statement (' . $sth->errstr. ')';
-
-      $self->[f_state] = stACTIVE;
-
-      if( $self->[f_query]->instance->getconn->can_trust_execute_rowcount ){ # HERE - yuck... assumes this is same connection as the sth
-	    $self->[f_count] = $rv + 0;
-	    $self->[f_query]->_logDebug3('ROWS: ' . ($rv + 0));
-      }
-
-
-
-      # IMPORTANT NOTE: circular reference hazard
-      weaken ($self); # Weaken the refcount
-
-      my $endsub = sub {
-	    defined($self) or return DUMMY; # technically this could be out of scope because it's a weak ref
-
-	    $self->[f_count] ||= $sth->rows || 0;
-	    $self->[f_next]  = FIRST;
-	    $self->[f_state] = stCLEAN; # If we get here, then we hit the end, and no ->finish is required
-
-	    return DUMMY; # evaluates to false
-      };
-
-      my ($buddy, $commonref,$max,$row, @rows);
-      my $getchunk = sub {
-		
-		$sth->FETCH('Active') or return undef;
-		
-		($max,@rows) = (1000);
-		push @rows, [ @$row ] while( $max-- and $row = $sth->fetch );
-		
-		#if(@rows < 1000 ) {
-		#	$self->[f_rowcache] = \@rows;	
-		#}
-		
-	    $commonref = [ @rows ];
-	    map {weaken $_} @$commonref;
-	    $buddy = [ $commonref, $record ]; # buddy ref must contain the record object just to keep it in scope.
-	    
-	    return shift @rows;
-      };
-      # use a closure to reduce hash lookups
-      # It's very important that this closure is fast.
-      # This one routine has more of an effect on speed than anything else in the rest of the code
-
-      $self->[f_next] = sub {
-	    bless(
-		  (
-		   [
-		   (
-		    shift(@rows) || $getchunk->() || return $endsub->()
-		   ),
-		    $buddy
-		   ]
-		  ),
-		  $class
-		 );
-      };
-
-      return 1;
+    my $self = shift;
+    
+    my $record = $self->[f_query]->get_record_obj;
+    my $class  = $record->class;
+    my $sth    =  $self->[f_query]->run;
+    
+    defined( my $rv = $sth->execute ) or confess 'failed to execute statement (' . $sth->errstr. ')';
+    
+    $self->[f_state] = stACTIVE;
+    
+    if( $self->[f_query]->instance->getconn->can_trust_execute_rowcount ){ # HERE - yuck... assumes this is same connection as the sth
+        $self->[f_count] = $rv + 0;
+        $self->[f_query]->_logDebug3('ROWS: ' . ($rv + 0));
+    }
+    
+    # IMPORTANT NOTE: circular reference hazard
+    weaken ($self); # Weaken the refcount
+    
+    my $endsub = sub {
+        defined($self) or return DUMMY; # technically this could be out of scope because it's a weak ref
+        
+        $self->[f_count] ||= $sth->rows || 0;
+        $self->[f_next]  = FIRST;
+        $self->[f_state] = stCLEAN; # If we get here, then we hit the end, and no ->finish is required
+        
+        return DUMMY; # evaluates to false
+    };
+    
+    my ($buddy, $commonref,$max,$row, @rows);
+    my $getchunk = sub {
+        $sth->FETCH('Active') or return undef;
+        
+        ($max,@rows) = (1000);
+        push @rows, [ @$row ] while( $max-- and $row = $sth->fetch );
+        # >>> HERE <<< - Consider switching to mem iterator if first chunk and @rows < 1000
+        
+        $commonref = [ @rows ];
+        map {weaken $_} @$commonref;
+        $buddy = [ $commonref, $record ]; # buddy ref must contain the record object just to keep it in scope.
+        
+        return shift @rows;
+    };
+    # use a closure to reduce hash lookups
+    # It's very important that this closure is fast.
+    # This one routine has more of an effect on speed than anything else in the rest of the code
+    
+    $self->[f_next] = sub {
+        bless(
+            [
+            (shift(@rows) || $getchunk->() || return $endsub->()),
+            $buddy
+            ],
+            $class
+        );
+    };
+    
+    return 1;
 
 }
 
