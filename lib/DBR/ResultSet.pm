@@ -91,24 +91,22 @@ sub reset{
 }
 
 sub _first{
-      my $self = shift;
-
-      $self->_execute();
-      return $self->next;
+	$_[0]->_execute();
+	$_[0][ f_next ]->();
 }
 
 sub _execute{
       my $self = shift;
 
       $self->[f_state] == stCLEAN or croak "Cannot call _execute unless in a clean state";
-
+	  
       if( defined( $self->[f_splitval] ) ){
-
+		
 	    my $rows = $self->[f_rowcache] = $self->[f_query]->fetch_segment( $self->[f_splitval] ); # Query handles the sth
 	    $self->_mem_iterator;
 
       }else{
-
+		
 	    $self->_db_iterator;
 
       }
@@ -134,7 +132,7 @@ sub _db_iterator{
 	    $self->[f_query]->_logDebug3('ROWS: ' . ($rv + 0));
       }
 
-     
+
 
       # IMPORTANT NOTE: circular reference hazard
       weaken ($self); # Weaken the refcount
@@ -149,17 +147,23 @@ sub _db_iterator{
 	    return DUMMY; # evaluates to false
       };
 
-      my $buddy;
-      my $rows  = [];
-      my $commonref;
+      my ($buddy, $commonref,$max,$row, @rows);
       my $getchunk = sub {
-	    $rows = $sth->fetchall_arrayref(undef,1000) || return undef; # if cache is empty, fetch more
-	    
-	    $commonref = [ @$rows ];
+		
+		$sth->FETCH('Active') or return undef;
+		
+		($max,@rows) = (1000);
+		push @rows, [ @$row ] while( $max-- and $row = $sth->fetch );
+		
+		#if(@rows < 1000 ) {
+		#	$self->[f_rowcache] = \@rows;	
+		#}
+		
+	    $commonref = [ @rows ];
 	    map {weaken $_} @$commonref;
 	    $buddy = [ $commonref, $record ]; # buddy ref must contain the record object just to keep it in scope.
 	    
-	    return shift @$rows;
+	    return shift @rows;
       };
       # use a closure to reduce hash lookups
       # It's very important that this closure is fast.
@@ -170,7 +174,7 @@ sub _db_iterator{
 		  (
 		   [
 		   (
-		    shift(@$rows) || $getchunk->() || return $endsub->()
+		    shift(@rows) || $getchunk->() || return $endsub->()
 		   ),
 		    $buddy
 		   ]
