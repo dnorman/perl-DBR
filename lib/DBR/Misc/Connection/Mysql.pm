@@ -3,6 +3,15 @@ package DBR::Misc::Connection::Mysql;
 use strict;
 use base 'DBR::Misc::Connection';
 
+sub new {
+    my $self = shift->SUPER::new(@_);
+
+    # enable encoding on the client.  this is in ADDITION to setting it on
+    # the server, which is done by the connectstring.  Sigh.
+
+    $self->{dbh}->{mysql_enable_utf8} = 1;
+    $self;
+}
 
 sub getSequenceValue{
       my $self = shift;
