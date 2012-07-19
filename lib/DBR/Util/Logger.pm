@@ -129,6 +129,7 @@ sub log {
 
 	    $self->_prepdir($dirpath) || print STDERR "DBR::Util::Logger: FAILED to Prepare log path $dirpath\n";
 	    sysopen( $fh, $logpath, O_WRONLY|O_CREAT|O_APPEND, 0666 ) || print STDERR "DBR::Util::Logger: FAILED to open log $logpath\n";
+            binmode $fh, ':utf8';
 
 	    $self->{HANDLE} = $fh;
 
