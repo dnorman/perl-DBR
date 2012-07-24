@@ -10,7 +10,7 @@ use strict;
 use base 'DBR::Query';
 use Carp;
 
-sub _params    { qw (sets tables where limit quiet_error) }
+sub _params    { qw (sets tables where limit offset quiet_error) }
 sub _reqparams { qw (sets tables) }
 sub _validate_self{ 1 } # If I exist, I'm valid
 
@@ -40,7 +40,7 @@ sub sql{
 
       $sql = "UPDATE $tables SET $sets";
       $sql .= ' WHERE ' . $self->{where}->sql($conn) if $self->{where};
-      $sql .= ' LIMIT ' . $self->{limit}             if $self->{limit};
+      $sql .= ' LIMIT ' . $self->_limit_clause       if $self->{limit} || $self->{offset};
 
       $self->_logDebug2( $sql );
       return $sql;

@@ -302,6 +302,15 @@ sub limit{
 	return $self;
 }
 
+sub offset {
+    my $self = shift;
+    @_ or croak "offset value is required";
+    my $offset = int(shift);
+
+    $self->[f_query]->offset($offset);
+    return $self;
+}
+
 sub where {
        my $self = shift;
 

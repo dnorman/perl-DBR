@@ -102,6 +102,29 @@ sub limit{
   return $self;
 }
 
+sub offset{
+  my $self = shift;
+  exists( $_[0] ) or return $self->{offset} || undef;
+  $self->{offset} = shift || undef;
+
+  return $self;
+}
+
+sub _limit_clause {
+    my $self = shift;
+    my ($limit, $offset) = @{ $self }{ 'limit', 'offset' };
+
+    if ($limit && $offset) {
+        return "$offset, $limit";
+    } elsif ($limit) {
+        return "$limit";
+    } elsif ($offset) {
+        return "$offset, 999999999"; # hugenum :|
+    } else {
+        return "";
+    }
+}
+
 sub lock{
   my $self = shift;
   exists( $_[0] ) or return $self->{lock} || undef;

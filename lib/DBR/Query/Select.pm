@@ -11,7 +11,7 @@ use base 'DBR::Query';
 use Carp;
 use DBR::Record::Maker;
 
-sub _params    { qw (fields tables where builder limit lock quiet_error) }
+sub _params    { qw (fields tables where builder limit offset lock quiet_error) }
 sub _reqparams { qw (fields tables) }
 sub _validate_self{ 1 } # If I exist, I'm valid
 
@@ -45,7 +45,7 @@ sub sql{
       $sql = "SELECT $fields FROM $tables";
       $sql .= ' WHERE ' . $self->{where}->sql($conn) if $self->{where};
       $sql .= ' FOR UPDATE'                          if $self->{lock};
-      $sql .= ' LIMIT ' . $self->{limit}             if $self->{limit};
+      $sql .= ' LIMIT ' . $self->_limit_clause       if $self->{limit} || $self->{offset};
 
       $self->_logDebug2( $sql );
       return $sql;

@@ -10,7 +10,7 @@ use strict;
 use base 'DBR::Query';
 use Carp;
 
-sub _params    { qw (tables where limit quiet_error) }
+sub _params    { qw (tables where limit offset quiet_error) }
 sub _reqparams { qw (tables where) }
 sub _validate_self{ 1 } # If I exist, I'm valid
 
@@ -25,7 +25,7 @@ sub sql{
 
       $sql = "DELETE FROM $tables";
       $sql .= ' WHERE ' . $self->{where}->sql($conn) if $self->{where};
-      $sql .= ' LIMIT ' . $self->{limit}             if $self->{limit};
+      $sql .= ' LIMIT ' . $self->_limit_clause       if $self->{limit} || $self->{offset};
 
       $self->_logDebug2( $sql );
       return $sql;
