@@ -18,6 +18,8 @@ sub dummy_record{ DUMMY }
 sub hashmap_multi { wantarray?():{} }
 sub hashmap_single{ wantarray?():{} }
 
+sub limit    { shift }
+
 sub next     { DUMMY }
 sub where    { DUMMY }
 sub count    { 0     }
