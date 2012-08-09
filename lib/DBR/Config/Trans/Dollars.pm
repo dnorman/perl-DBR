@@ -42,6 +42,8 @@ use overload
 # comparisons
 '==' => sub { $_[0]->dollars == $_[1] },
 '!=' => sub { $_[0]->dollars != $_[1] },
+'eq' => sub { $_[0]->dollars == (0 + $_[1]) },
+'ne' => sub { $_[0]->dollars != (0 + $_[1]) },
 
 #operators
 '+'  => sub { new($_[0]->cents + _getcents($_[1])) },

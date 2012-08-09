@@ -47,14 +47,17 @@ use overload
       new ($_[2] ? $b - $a : $a - $b);
 },
 
+# comparisons
+'eq' => sub { $_[0]->value == (0 + $_[1]) },
+'ne' => sub { $_[0]->value != (0 + $_[1]) },
+
 '*'  => sub { new($_[0]->value * $_[1]) },
 '/'  => sub {
       my ($a,$b) = ($_[0]->value, $_[1] );
       new ($_[2] ? $b / $a : $a / $b);
 },
 
-'fallback' => 1,
-'nomethod' => sub {croak "Percent object: Invalid operation '$_[3]' The ways in which you can use percent objects is restricted"}
+'fallback' => 1
 ;
 
 *TO_JSON = \&format;
