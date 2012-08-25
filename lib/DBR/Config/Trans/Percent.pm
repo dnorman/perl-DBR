@@ -51,9 +51,9 @@ use overload
 'eq' => sub { $_[0]->value == (0 + $_[1]) },
 'ne' => sub { $_[0]->value != (0 + $_[1]) },
 
-'*'  => sub { new($_[0]->value * $_[1]) },
+'*'  => sub { new($_[0]->value * sprintf("%f",$_[1]) ) },
 '/'  => sub {
-      my ($a,$b) = ($_[0]->value, $_[1] );
+      my ($a,$b) = ($_[0]->value, sprintf("%f",$_[1]) );
       new ($_[2] ? $b / $a : $a / $b);
 },
 

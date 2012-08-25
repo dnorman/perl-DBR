@@ -52,9 +52,9 @@ use overload
       new ($_[2] ? $b - $a : $a - $b);
 },
 
-'*'  => sub { new($_[0]->cents * $_[1]) },
+'*'  => sub { new($_[0]->cents * sprintf("%f",$_[1]) ) },
 '/'  => sub {
-      my ($a,$b) = ($_[0]->cents, $_[1] );
+      my ($a,$b) = ($_[0]->cents, sprintf("%f",$_[1]) );
       new ($_[2] ? $b / $a : $a / $b);
 },
 
