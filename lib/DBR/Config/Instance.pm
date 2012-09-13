@@ -56,10 +56,12 @@ sub lookup{
       }else{
 	    my $handle = $params{handle} || return $self->_error('handle is required');
 	    my $class  = $params{class}  || 'master';
-
-	    $self->{guid} = $INSTANCE_MAP{$handle}->{$class} || $INSTANCE_MAP{$handle}->{'*'} or # handle aliases if there's no exact match
-	      return $self->_error("No DB instance found for '$handle','$class'");
-
+	    my $tag    = $params{tag}    || $self->{session}->tag;
+	    
+	    my $h = $INSTANCE_MAP{$handle} or return $self->_error("No DB instance found for handle '$handle'");
+	    
+	    $self->{guid} = $h->{$tag}{$class} || $h->{$tag}{'*'} || $h->{''}{$class} || $h->{''}{'*'} or # handle aliases if there's no exact match
+	      return $self->_error("No DB instance found for handle '$handle', class '$class', tag '$tag'");
       }
 
       $INSTANCES_BY_GUID{ $self->{guid} } or return $self->_error('no such guid');
@@ -84,7 +86,7 @@ sub load_from_db{
       return $self->_error('Failed to select instances') unless
 	my $instrows = $dbh->select(
 				    -table => 'dbr_instances',
-				    -fields => 'instance_id schema_id class dbname username password host dbfile module handle readonly'
+				    -fields => 'instance_id schema_id class dbname username password host dbfile module handle readonly tag'
 				   );
 
       my @instances;
@@ -123,6 +125,7 @@ sub register { # basically the same as a new
 		    hostname    => $spec->{hostname} || $spec->{host},
 		    user        => $spec->{username} || $spec->{user},
 		    dbfile      => $spec->{dbfile},
+		    tag         => $spec->{tag} || '',
 		    password    => $spec->{password},
 		    class       => $spec->{class}       || 'master', # default to master
 		    instance_id => $spec->{instance_id} || '',
@@ -153,18 +156,15 @@ sub register { # basically the same as a new
 	    $config->{connectstring} =~ s/-$key-/$config->{$key}/;
       }
 
-      #Reuse the guid if we are being reloaded
-      my $guid = $INSTANCE_MAP{ $config->{handle} }->{ $config->{class} } || $GUID++;
-
-      # Register this instance in the global repository
-      $INSTANCE_MAP{ $config->{handle}  }->{ $config->{class} } ||= $guid;
+      # Register or Reuse the guid
+      my $guid = $INSTANCE_MAP{ $config->{handle} }{ $config->{tag} }{ $config->{class} } ||= $GUID++;
 
       $INSTANCES_BY_GUID{ $guid } = $config;
       $self->{guid} = $config->{guid} = $guid;
       # Now we are cool to start calling accessors
 
       if ($spec->{alias}) {
-	    $INSTANCE_MAP{ $spec->{alias} }->{'*'} = $guid;
+	    $INSTANCE_MAP{ $spec->{alias} }{ $config->{tag} }{'*'} = $guid;
       }
 
       if ($config->{schema_id}){

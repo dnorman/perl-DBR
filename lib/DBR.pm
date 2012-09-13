@@ -70,6 +70,12 @@ sub import {
 	      $dbr->get_instance(@_);
 	};
         
+      *{"${callpack}::dbr_session"} =
+	sub {
+	      shift if blessed($_[0]) || $_[0]->isa( [caller]->[0] );
+	      $dbr->session;
+	};
+        
 
 }
 sub new {

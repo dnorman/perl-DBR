@@ -11,6 +11,7 @@ CREATE TABLE dbr_instances (
   schema_id int(10)  NOT NULL,
   handle varchar(50) NOT NULL,
   class varchar(50) NOT NULL,
+  tag varchar(250),
   dbname varchar(250),
   username varchar(250),
   password varchar(250),
