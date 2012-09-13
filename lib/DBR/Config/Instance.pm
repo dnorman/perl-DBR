@@ -61,7 +61,7 @@ sub lookup{
 	    my $h = $INSTANCE_MAP{$handle} or return $self->_error("No DB instance found for handle '$handle'");
 	    
 	    $self->{guid} = $h->{$tag}{$class} || $h->{$tag}{'*'} || $h->{''}{$class} || $h->{''}{'*'} or # handle aliases if there's no exact match
-	      return $self->_error("No DB instance found for handle '$handle', class '$class', tag '$tag'");
+	      return $self->_error("No DB instance found for $handle-$class-$tag");
       }
 
       $INSTANCES_BY_GUID{ $self->{guid} } or return $self->_error('no such guid');
