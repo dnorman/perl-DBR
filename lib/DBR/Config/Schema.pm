@@ -12,7 +12,7 @@ use DBR::Config::Table;
 use Clone;
 
 my %TABLES_BY_NAME;
-my %INSTANCES_BY_CLASS;
+my %INSTANCE_LOOKUP;
 my %SCHEMAS_BY_ID;
 my %SCHEMAS_BY_HANDLE;
 
@@ -81,9 +81,10 @@ sub _register_instance{
 
       my $schema_id = $params{schema_id} or die 'schema_id is required';
       my $class     = $params{class}     or die 'class is required';
+      defined(my $tag = $params{tag})    or die 'tag is required';
       my $guid      = $params{guid}      or die 'guid is required';
 
-      $INSTANCES_BY_CLASS{ $schema_id } -> { $class } = $guid;
+      $INSTANCE_LOOKUP{ $schema_id }{ $tag }{ $class } = $guid;
 
       return 1;
 }
@@ -148,8 +149,10 @@ sub tables{
 sub get_instance{
       my $self  = shift;
       my $class = shift || 'master';
+      my $tag   = shift;
+      $tag = '' if !defined($tag);
 
-      my $guid = $INSTANCES_BY_CLASS{ $self->{schema_id} } -> { $class } || return $self->_error("instance of class $class does not exist");
+      my $guid = $INSTANCE_LOOKUP{ $self->{schema_id} }{$tag}{ $class } || return $self->_error("instance of class $class does not exist");
 
       my $instance = DBR::Config::Instance->lookup(
 						   session => $self->{session},
@@ -163,13 +166,14 @@ sub instances{
 
       my @instances;
 
-      foreach my $guid (    values %{$INSTANCES_BY_CLASS{ $self->{schema_id}} }   ) {
-
-	    my $instance = DBR::Config::Instance->lookup(
-							 session => $self->{session},
-							 guid    => $guid,
-							) or return $self->_error('failed to create instance object');
-	    push @instances, $instance;
+      foreach my $classref ( values %{$INSTANCE_LOOKUP{ $self->{schema_id}} }   ) {
+            foreach my $guid ( values %$classref ){
+                  my $instance = DBR::Config::Instance->lookup(
+                                                               session => $self->{session},
+                                                               guid    => $guid,
+                                                              ) or return $self->_error('failed to create instance object');
+                  push @instances, $instance;
+            }
       }
 
 

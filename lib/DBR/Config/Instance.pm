@@ -171,6 +171,7 @@ sub register { # basically the same as a new
 	    DBR::Config::Schema->_register_instance(
 						    schema_id => $config->{schema_id},
 						    class     => $config->{class},
+						    tag       => $config->{tag},
 						    guid      => $guid,
 						   ) or return $self->_error('failed to register table');
       }
@@ -250,6 +251,7 @@ sub _new_connection{
 sub is_readonly   { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{readonly} }
 sub handle        { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{handle}   }
 sub class         { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{class}    }
+sub tag           { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{tag}    }
 sub guid          { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{guid}     }
 sub module        { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{module}   }
 sub dbr_bootstrap { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{dbr_bootstrap} }
