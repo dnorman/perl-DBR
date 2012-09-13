@@ -262,7 +262,9 @@ sub getrelation{
 
       my $mapinstance = $self->{instance};
       unless ( $relation->is_same_schema ){
-	    $mapinstance = $maptable->schema->get_instance( $mapinstance->class, $mapinstance->tag ) or return $self->_error('Failed to retrieve db instance for the maptable');
+	    my $tag = $mapinstance->tag;
+	    $tag = $self->{session}->tag if !length($tag); # I am not compelled by this. Seems like a hack
+	    $mapinstance = $maptable->schema->get_instance( $mapinstance->class, $tag ) or return $self->_error('Failed to retrieve db instance for the maptable');
       }
 
       $self->_logDebug2( "Relationship from instance " . $self->{instance}->guid . "->" . $mapinstance->guid );

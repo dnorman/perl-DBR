@@ -151,8 +151,9 @@ sub get_instance{
       my $class = shift || 'master';
       my $tag   = shift;
       $tag = '' if !defined($tag);
-
-      my $guid = $INSTANCE_LOOKUP{ $self->{schema_id} }{$tag}{ $class } || return $self->_error("instance of class $class does not exist");
+      
+      my $lu = $INSTANCE_LOOKUP{ $self->{schema_id} } || {};
+      my $guid = $lu->{$tag}{$class} || $lu->{''}{$class} or return $self->_error("instance " . $self->handle . "-$class-$tag does not exist");
 
       my $instance = DBR::Config::Instance->lookup(
 						   session => $self->{session},
