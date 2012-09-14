@@ -1,0 +1,1 @@
+schema=foobar	table=bar	field=foo_id	cmd=RELATION	reltable=foo	relfield=id	relname=foo	reverse_name=bars	type=CHILDOF
