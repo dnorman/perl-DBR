@@ -1,0 +1,1 @@
+schema=rt_gh2	table=field_values	field=field_id	cmd=RELATION	reltable=fields	relfield=id	relname=field	reverse_name=values	type=CHILDOF
