@@ -143,6 +143,7 @@ sub delete{
        return 1;
 }
 
+sub _instance{ shift->{instance} }
 
 # Fetch a field ONLY if it was not prefetched
 sub getfield{

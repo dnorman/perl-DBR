@@ -150,6 +150,12 @@ sub _prep{
 			method => 'delete',
  			helper => $helper,
  		       ) or $self->_error('Failed to create set method');
+      
+      $self->_mk_method(
+			method => '_instance',
+ 			helper => $helper,
+ 		       ) or $self->_error('Failed to create set method');
+
       return 1;
 }
 
