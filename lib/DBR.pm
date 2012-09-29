@@ -127,6 +127,7 @@ sub connect {
       my $self = shift;
       my $name = shift;
       my $class = shift;
+      my $tag = shift;
       my $flag;
 
       if ($class && $class eq 'dbh') {	# legacy
@@ -138,7 +139,8 @@ sub connect {
 						   dbr    => $self,
 						   session => $self->{session},
 						   handle => $name,
-						   class  => $class
+						   class  => $class,
+                                                   tag    => $tag
 						  ) or return $self->_error("No config found for db '$name' class '$class'");
 
       return $instance->connect($flag);
