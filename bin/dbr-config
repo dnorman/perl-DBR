@@ -174,7 +174,7 @@ sub assert_instance{
     $class || die \"-class is required, Must be one of @CLASSES";
     
     my $schemahandle = lc(delete $params{schema}) || die "-schema handle is required";
-    my $tag          = lc($params{tag} ||= '');
+    my $tag          = lc($params{tag}) || undef;
     
     my $schema = $dbrh->select( -table => 'dbr_schemas', -fields => 'schema_id handle', -where => { handle => $schemahandle }, -single => 1 )
       or die \"Could not find schema '$schemahandle'";
