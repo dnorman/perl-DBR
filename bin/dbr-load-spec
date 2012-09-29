@@ -4,10 +4,20 @@ use strict;
 use DBR;
 use DBR::Util::Logger;
 use DBR::Config::SpecLoader;
+use Getopt::Std;
 
+my %opts;
+getopt('f:d:', \%opts);
 
-my ($conffile, $spec_file) = @ARGV;
-my $confdb = 'dbrconf';
+my $conffile = $opts{'f'} || $ENV{DBR_CONF};
+my ($spec_file) = @ARGV;
+
+my $confdb = $opts{'d'} || 'dbrconf';
+
+unless($conffile && $spec_file){
+    print STDERR "Usage:\n\tdbr-load-spec -f /path/to/DBR.conf [-d confdb_handle ] /path/to/specfile";
+    exit;
+}
 
 my $logger = new DBR::Util::Logger(-logpath => 'dbr_loadspec.log', -logLevel => 'debug3') or die "Failed to create logger";
 my $dbr    = new DBR(

@@ -57,26 +57,12 @@ sub process_spec{
 	    }
 
 	    map {$spec->{ $_ } or die "Invalid Spec row: Missing $_"} qw'schema table field cmd';
-
-	
-	    if( ! $SCANS{ $spec->{schema} }++ ){
-		  #                           HERE - THIS \/ is wrong. Fix it. Should be asking the schema object for an instance
-		  my $scan_instance = $self->{dbr}->get_instance( $spec->{schema} ) or die "No config found for scandb $spec->{schema}";
-
-		  my $scanner = DBR::Config::ScanDB->new(
-							 session => $self->{dbr}->session,
-							 conf_instance => $self->{conf_instance},
-							 scan_instance => $scan_instance,
-							);
-
-
-		  $scanner->scan() or die "Failed to scan $spec->{schema}";
-	    }
-
+            
 	    my $schema = new DBR::Config::Schema(session => $self->{session}, handle => $spec->{schema}) or die "Schema $spec->{schema} not found";
 	    my $table = $schema->get_table( $spec->{table} ) or die "$spec->{table} not found in schema\n";
 	    my $field = $table->get_field ( $spec->{field} ) or die "$spec->{table}.$spec->{field} not found\n";
-        $SCHEMA_IDS{ $schema->schema_id } = 1;
+            $SCHEMA_IDS{ $schema->schema_id } = 1;
+            
 	    switch ( uc($spec->{cmd}) ){
 		  case 'TRANSLATOR' { $self->_do_translator( $schema, $table, $field, $spec ) }
 		  case 'RELATION'   { $self->_do_relation  ( $schema, $table, $field, $spec ) }
