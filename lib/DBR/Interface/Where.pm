@@ -217,7 +217,11 @@ sub _reljoin{
 
 			my $instance = $self->{instance};
 			unless ( $relation->is_same_schema ){
-			      $instance = $table->schema->get_instance( $instance->class ) or return $self->_error('Failed to retrieve db instance for subquery table');
+                              
+                              my $tag = $instance->tag;
+                              $tag = $self->{session}->tag if !length($tag); # I am not compelled by this. Seems like a hack
+                              
+			      $instance = $table->schema->get_instance( $instance->class, $tag ) or return $self->_error('Failed to retrieve db instance for subquery table');
 			}
 
  			my $query = DBR::Query::Select->new(
