@@ -8,7 +8,7 @@ use Getopt::Std;
 use Getopt::Long qw(GetOptionsFromArray);
 use Switch;
 
-my @CLASSES = qw'master query';
+my @CLASSES = qw'master query template';
 my @MODULES = qw'Mysql SQLite';
     
 my %opts;
@@ -133,10 +133,10 @@ sub list_schema{
 }
 sub list_instance{
     my $instances = $dbrh->select( -table => 'dbr_instances',
-                                -fields => 'instance_id schema_id handle class module dbname dbfile username host readonly' );
+                                -fields => 'instance_id schema_id handle class tag module dbname dbfile username host readonly' );
     return print "\nNo instances found\n\n" unless @$instances;
     
-    my $t1 = Text::SimpleTable::AutoWidth->new( captions => ['ID','Schema ID','Handle', 'Module', 'Connect', 'Class', 'Mode' ] );
+    my $t1 = Text::SimpleTable::AutoWidth->new( captions => ['ID','Schema ID','Handle', 'Module', 'Connect', 'Class', 'Tag', 'Mode' ] );
     
     foreach my $instance ( @$instances ){
         
@@ -151,6 +151,7 @@ sub list_instance{
             map { $_ || '' } @$instance{qw'instance_id schema_id handle module'},
             $connect,
             $instance->{class}    || '',
+            $instance->{tag}      || '',
             $instance->{readonly} ? 'RO' : 'RW',
         );
     }
@@ -163,7 +164,7 @@ sub list_instance{
 
 sub assert_instance{
     my %params = ();
-    my @fields = qw'class dbfile dbname username password host module';
+    my @fields = qw'class dbfile dbname username password host module tag';
     
     GetOptionsFromArray( \@_, \%params,
         map {"$_=s"} ( @fields, 'schema' ),
@@ -173,6 +174,7 @@ sub assert_instance{
     $class || die \"-class is required, Must be one of @CLASSES";
     
     my $schemahandle = lc(delete $params{schema}) || die "-schema handle is required";
+    my $tag          = lc($params{tag}) || undef;
     
     my $schema = $dbrh->select( -table => 'dbr_schemas', -fields => 'schema_id handle', -where => { handle => $schemahandle }, -single => 1 )
       or die \"Could not find schema '$schemahandle'";
@@ -182,7 +184,8 @@ sub assert_instance{
                             -fields => [@fields,qw'instance_id schema_id'],
                             -where => {
                                        schema_id => $schema->{schema_id},
-                                       class     => $class
+                                       class     => $class,
+                                       tag       => $tag
                                     },
                             -single => 1
                         );

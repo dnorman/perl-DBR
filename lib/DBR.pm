@@ -60,14 +60,26 @@ sub import {
       no strict 'refs';
       *{"${callpack}::dbr_connect"} =
 	sub {
-	      shift if blessed($_[0]) || $_[0]->isa( [caller]->[0] );
+	      shift if exists ($_[0]) && (blessed($_[0]) || $_[0]->isa( [caller]->[0] ));
 	      $dbr->connect(@_);
 	};
         
       *{"${callpack}::dbr_instance"} =
 	sub {
-	      shift if blessed($_[0]) || $_[0]->isa( [caller]->[0] );
+	      shift if exists ($_[0]) && (blessed($_[0]) || $_[0]->isa( [caller]->[0] ));
 	      $dbr->get_instance(@_);
+	};
+        
+      *{"${callpack}::dbr_schema"} =
+	sub {
+	      shift if exists ($_[0]) && (blessed($_[0]) || $_[0]->isa( [caller]->[0] ));
+	      $dbr->get_schema(@_);
+	};
+        
+      *{"${callpack}::dbr_session"} =
+	sub {
+	      shift if exists ($_[0]) && (blessed($_[0]) || $_[0]->isa( [caller]->[0] ));
+	      $dbr->session;
 	};
         
 
@@ -115,6 +127,7 @@ sub connect {
       my $self = shift;
       my $name = shift;
       my $class = shift;
+      my $tag = shift;
       my $flag;
 
       if ($class && $class eq 'dbh') {	# legacy
@@ -126,7 +139,8 @@ sub connect {
 						   dbr    => $self,
 						   session => $self->{session},
 						   handle => $name,
-						   class  => $class
+						   class  => $class,
+                                                   tag    => $tag
 						  ) or return $self->_error("No config found for db '$name' class '$class'");
 
       return $instance->connect($flag);
@@ -137,6 +151,7 @@ sub get_instance {
       my $self = shift;
       my $name = shift;
       my $class = shift;
+      my $tag = shift;
       my $flag;
 
       if ($class && $class eq 'dbh') {	# legacy
@@ -148,9 +163,21 @@ sub get_instance {
 						   dbr    => $self,
 						   session => $self->{session},
 						   handle => $name,
-						   class  => $class
+						   class  => $class,
+                                                   tag    => $tag
 						  ) or return $self->_error("No config found for db '$name' class '$class'");
       return $instance;
+}
+
+sub get_schema {
+      my $self = shift;
+      my $handle = shift;
+      
+      my $schema = DBR::Config::Schema->new(
+                                    session => $self->{session},
+                                    handle => $handle
+                                 ) or return $self->_error("No schema found for handle '$handle'");
+      return $schema;
 }
 
 sub timezone{

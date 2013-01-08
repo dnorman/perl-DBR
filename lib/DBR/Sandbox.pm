@@ -61,6 +61,15 @@ sub provision{
     ) or die 'failed to create dbr object';
     
     my $conf_instance = $dbr->get_instance('dbrconf') or die "No config found for confdb";
+    my $scan_instance = $dbr->get_instance($schema)   or die "No config found for $schema";
+    
+    my $scanner = DBR::Config::ScanDB->new(
+				     session => $dbr->session,
+				     conf_instance => $conf_instance,
+				     scan_instance => $scan_instance,
+				    );
+    
+    $scanner->scan or die "Failed to scan $schema";
     
     my $loader = DBR::Config::SpecLoader->new(
                       session       => $dbr->session,

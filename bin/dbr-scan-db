@@ -1,13 +1,27 @@
 #!/usr/bin/perl
 
 use DBR::Util::Logger;
+use DBR::Config::Instance;
 use DBR::Config::ScanDB;
+use Getopt::Std;
 
 use DBR;
 use strict;
 
-my ($conffile,$scandb,$confdb) = @ARGV;
-$confdb ||= 'dbrconf';
+my %opts;
+getopt('f:d:c:t:', \%opts);
+
+my $conffile = $opts{'f'} || $ENV{DBR_CONF};
+my $confdb = $opts{'d'} || 'dbrconf';
+my $class = $opts{'c'};
+my $tag = $opts{'t'};
+my ($scan_handle) = @ARGV;
+
+unless($conffile && $scan_handle){
+    print STDERR "Usage:\n\tdbr-scan-db -f /path/to/DBR.conf [-d confdb_handle ] [-c class_name] [-t tag_name] *instance_handle_to_scan*";
+    exit;
+}
+
 
 my $logger = new DBR::Util::Logger(-logpath => '/tmp/dbr_scan.log', -logLevel => 'debug3');
 my $dbr    = new DBR(
@@ -15,8 +29,14 @@ my $dbr    = new DBR(
 		     -conf   => $conffile,
 		    );
 
-my $conf_instance = $dbr->get_instance($confdb) or die "No config found for confdb $confdb";
-my $scan_instance = $dbr->get_instance($scandb) or die "No config found for scandb $scandb";
+my $conf_instance = DBR::Config::Instance->lookup( session => $dbr->session, handle => $confdb ) or die "No config found for confdb $confdb";
+
+my $scan_instance = DBR::Config::Instance->lookup(
+                                                session => $dbr->session,
+						handle  => $scan_handle,
+                                                class   => $class,
+                                                tag     => $tag
+					    ) or die "No config found for scandb $scan_handle";
 
 my $scanner = DBR::Config::ScanDB->new(
 				     session => $dbr->session,
@@ -25,5 +45,5 @@ my $scanner = DBR::Config::ScanDB->new(
 				    );
 
 
-$scanner->scan( pretty => 1 ) or die "Failed to scan $scandb";
+$scanner->scan( pretty => 1 ) or die "Failed to scan $scan_handle";
 print "DONE!\n";

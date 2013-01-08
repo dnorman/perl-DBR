@@ -14,6 +14,7 @@ sub new {
 		  admin    => $params{admin} ? 1 : 0,
 		  fudge_tz => $params{fudge_tz},
 		  use_exceptions => $params{use_exceptions} ? 1 : 0,
+                  tag      => defined($params{tag}) ? $params{tag} : ''
 		 };
 
       bless( $self, $package );
@@ -27,6 +28,14 @@ sub new {
       return $self;
 }
 
+sub tag{
+      my $self = shift;
+      if(exists $_[0]){
+            my $set = shift;
+            return $self->{tag} = defined($set) ? $set : '';
+      }
+      return $self->{tag};
+}
 
 sub timezone {
       my $self = shift;

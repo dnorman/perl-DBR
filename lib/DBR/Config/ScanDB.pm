@@ -177,7 +177,7 @@ sub update_fields{
       return $self->_error('failed to select from dbr_fields') unless
  	my $records = $dbh->select(
 				   -table  => 'dbr_fields',
-				   -fields => 'field_id table_id name data_type is_nullable is_signed max_value',
+				   -fields => 'field_id table_id name data_type is_nullable is_signed max_value is_pkey',
 				   -where  => {
 					       table_id  => ['d',$table_id]
 					      }
@@ -220,12 +220,20 @@ sub update_fields{
 	    }
 
  	    if ($record) {	# update
- 		  return $self->_error('failed to insert into dbr_tables') unless
- 		    $dbh->update(
- 				 -table  => 'dbr_fields',
- 				 -fields => $ref,
- 				 -where  => { field_id => ['d',$record->{field_id}] },
- 				);
+                  my %diff;
+                  foreach my $key (keys %$ref){
+                        my $val = $ref->{$key};
+                        $val = $val->[1] if ref($val) eq 'ARRAY';
+                        $diff{$key} = $ref->{$key} if $val ne $record->{$key};
+                  }
+                  if(%diff){
+                        return $self->_error('failed to insert into dbr_tables') unless
+                          $dbh->update(
+                                       -table  => 'dbr_fields',
+                                       -fields => \%diff,
+                                       -where  => { field_id => ['d',$record->{field_id}] },
+                                      );
+                  }
  	    } else {
  		  $ref->{name}     = $name;
  		  $ref->{table_id} = ['d', $table_id ];
