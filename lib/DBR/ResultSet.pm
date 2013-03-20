@@ -40,6 +40,10 @@ sub new {
 
 sub next { $_[0][ f_next ]->( $_[0] ) }
 
+sub lock {
+      $_[0][f_query]{lock} = 1;
+}
+
 sub dump{
       my $self = shift;
       my @fields = map { split(/\s+/,$_) } @_;
