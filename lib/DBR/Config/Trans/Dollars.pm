@@ -55,7 +55,13 @@ use overload
 '*'  => sub { new($_[0]->cents * sprintf("%f",$_[1]) ) },
 '/'  => sub {
       my ($a,$b) = ($_[0]->cents, sprintf("%f",$_[1]) );
-      new ($_[2] ? $b / $a : $a / $b);
+      if($_[2]){
+            ($a == 0) and croak "Illegal division by zero";
+            return new($b / $a)
+      }else{
+            ($b == 0) and croak "Illegal division by zero";
+            return new($a / $b)
+      }
 },
 
 'fallback' => 1;
