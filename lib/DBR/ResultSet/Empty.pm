@@ -19,6 +19,7 @@ sub hashmap_multi { wantarray?():{} }
 sub hashmap_single{ wantarray?():{} }
 
 sub limit    { shift }
+sub lock     { }
 
 sub next     { DUMMY }
 sub where    { DUMMY }
