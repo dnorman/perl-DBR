@@ -121,6 +121,9 @@ sub rollback{
       $self->{'_intran'} = 0;
       return 1;
 }
+sub add_rollback_hook { my $self = shift; $self->{conn}->add_rollback_hook(@_) }
+sub add_post_commit_hook { my $self = shift; $self->{conn}->add_post_commit_hook(@_) }
+sub add_pre_commit_hook { my $self = shift; $self->{conn}->add_pre_commit_hook(@_) }
 
 sub getserial{
       my $self = shift;

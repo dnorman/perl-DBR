@@ -48,6 +48,29 @@ sub ping {
       return 1;
 }
 
+# if you throw an exception or call back into DBR (including to add hooks) from a rollback hook,
+# DBR is not guaranteed to do anything remotely useful.
+sub add_rollback_hook {
+    my ($self, $hook) = @_;
+
+    return unless $self->{_intran};
+    push @{ $self->{_on_rollback} ||= [] }, $hook;
+}
+
+sub add_pre_commit_hook {
+    my ($self, $hook) = @_;
+
+    return $hook->() unless $self->{_intran};
+    push @{ $self->{_pre_commit} ||= [] }, $hook;
+}
+
+sub add_post_commit_hook {
+    my ($self, $hook) = @_;
+
+    return $hook->() unless $self->{_intran};
+    push @{ $self->{_post_commit} ||= [] }, $hook;
+}
+
 sub begin {
       my $self = shift;
       return $self->_error('Transaction is already open - cannot begin') if $self->{'_intran'};
@@ -64,9 +87,21 @@ sub commit{
       return $self->_error('Transaction is not open - cannot commit') if !$self->{'_intran'};
 
       $self->_logDebug('COMMIT');
+
+      my $precommit = $self->{_pre_commit};
+      while ($precommit && @$precommit) {
+          (shift @$precommit)->();
+      }
+
       $self->{dbh}->do('COMMIT') or return $self->_error('Failed to commit transaction');
 
       $self->{_intran} = 0;
+
+      my $postcommit = $self->{_post_commit};
+      $self->{_on_rollback} = $self->{_pre_commit} = $self->{_post_commit} = undef;
+      while ($postcommit && @$postcommit) {
+          (shift @$postcommit)->();
+      }
 
       return 1;
 }
@@ -79,6 +114,12 @@ sub rollback{
       $self->{dbh}->do('ROLLBACK') or return $self->_error('Failed to rollback transaction');
 
       $self->{_intran} = 0;
+
+      my $hooks = $self->{_on_rollback};
+      $self->{_on_rollback} = $self->{_pre_commit} = $self->{_post_commit} = undef;
+      while ($hooks && @$hooks) {
+          (pop @$hooks)->();
+      }
 
       return 1;
 }
