@@ -69,6 +69,8 @@ my %datatypes = (
 		 enum      => { id => 17 }, # I loathe mysql enums
 		 decimal   => { id => 18, numeric => 1, bits => 'NA'}, # HERE - may need a little more attention for proper range checking
 		 datetime  => { id => 19 },
+		 binary    => { id => 20 },
+		 varbinary => { id => 21 },
 		);
 
 my %datatype_lookup = map { $datatypes{$_}->{id} => {%{$datatypes{$_}}, handle => $_ }} keys %datatypes;
