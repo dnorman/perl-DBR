@@ -303,7 +303,7 @@ sub DESTROY{ # clean up the temporary object from the symbol table
       my $self = shift;
       my $class = $self->{recordclass};
       #$self->_logDebug2("Destroy $self->{name} ($class)");
-      push @IDPOOL, $self->{classidx};
+      unshift @IDPOOL, $self->{classidx};
       
       #print STDERR "DESTROY $class, $self->{classidx}\n";
       
@@ -312,11 +312,15 @@ sub DESTROY{ # clean up the temporary object from the symbol table
       # Symbol::delete_package($class);
       ## Have to use this instead:
       
-      delete $::{"$class::"};
+      no strict 'refs';
+      my $st = *{"${class}::"}{HASH};
+      for my $m (keys %$st) {
+          print STDERR "CLEAN $class\:\:$m\n";
+          next if $m eq 'ISA';
+          undef *{ "${class}::$m" };
+          delete $st->{$m};
+      }
+
 }
-
-1;
-
-
 
 1;
