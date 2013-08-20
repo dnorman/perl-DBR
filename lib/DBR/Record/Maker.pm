@@ -315,7 +315,7 @@ sub DESTROY{ # clean up the temporary object from the symbol table
       no strict 'refs';
       my $st = *{"${class}::"}{HASH};
       for my $m (keys %$st) {
-          print STDERR "CLEAN $class\:\:$m\n";
+          #print STDERR "CLEAN $class\:\:$m\n";
           next if $m eq 'ISA';
           undef *{ "${class}::$m" };
           delete $st->{$m};
