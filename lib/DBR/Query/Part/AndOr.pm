@@ -38,6 +38,8 @@ sub sql { # Used by AND/OR
       my $type = $self->type;
       $type =~ /^(AND|OR)$/ or return $self->_error('this sql function is only used for AND/OR');
 
+      return $self->trivial unless $self->children;
+
       my $sql;
       $sql .= '(' if $nested;
       $sql .= join(' ' . $type . ' ', map { $_->sql($conn,1) } $self->children );
@@ -54,6 +56,7 @@ use strict;
 our @ISA = ('DBR::Query::Part::AndOr');
 
 sub type { return 'AND' };
+sub trivial { return 'TRUE' }
 
 #If any children are empty, we are empty
 sub is_emptyset{
@@ -69,6 +72,7 @@ use strict;
 our @ISA = ('DBR::Query::Part::AndOr');
 
 sub type { return 'OR' };
+sub trivial { return 'FALSE' }
 
 # If any children are non-empty, then we are non-empty
 sub is_emptyset{

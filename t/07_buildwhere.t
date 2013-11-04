@@ -178,6 +178,16 @@ test(
     '(album_id = 1 AND rating = 900)',
 );
 
+test(
+    [ TREE_OR([ ]) ],
+    'TRUE',
+);
+
+test(
+    [ TREE_OR() ],
+    'FALSE',
+);
+
 done_testing();
 exit;
 

@@ -49,7 +49,6 @@ sub digest_clear{
 sub build{
       my $self = shift;
       my @input = @{shift()}; # Make a shallow copy
-      scalar (@input) || croak "input is required";
 
       my $pendgroup = { table => $self->{table} }; # prime the pump.
 
