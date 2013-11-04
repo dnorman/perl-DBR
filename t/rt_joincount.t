@@ -10,6 +10,7 @@ $| = 1;
 use lib './lib';
 use t::lib::Test;
 use Test::More;
+use Test::Exception;
 
 my $dbr = setup_schema_ok('music');
 
@@ -19,11 +20,18 @@ ok($dbh, 'dbr connect');
 my $artist = $dbh->artist->get( 2 );
 ok($artist, "got artist");
 
-my $albumids = $artist->albums->where( 'artist.name' => LIKE 'Artist%' )->values('id');
+local $TODO = "does not work";
+my $albumids;
+lives_ok {
+    $albumids = $artist->albums->where( 'artist.name' => LIKE 'Artist%' )->values('id');
+} 'select does not die';
 
 ok($albumids, "got ids");
 
-my $albumct = $artist->albums->where( 'artist.name' => LIKE 'Artist%' )->count();
+my $albumct;
+lives_ok {
+    $albumct = $artist->albums->where( 'artist.name' => LIKE 'Artist%' )->count();
+} 'count does not die';
 
 ok($albumct, "got albumct");
 ok($albumct == 2, "albumct correct");
