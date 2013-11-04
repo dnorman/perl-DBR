@@ -2,7 +2,7 @@ package DBR::Util::Operator;
 
 use strict;
 use base 'Exporter';
-our @EXPORT = qw(GT LT GE LE NOT LIKE NOTLIKE BETWEEN NOTBETWEEN AND OR);
+our @EXPORT = qw(GT LT GE LE NOT LIKE NOTLIKE BETWEEN NOTBETWEEN AND OR TREE_OR);
 use DBR::Misc::General; # imported utils
 
 # Object oriented
@@ -50,6 +50,10 @@ sub OR {
 	      (scalar (  grep { !(ref($_) eq 'DBR::_LOP') || $_->operator eq 'And' } @_ ) == @_) ? 1 : 0, # calculate only_contains_and
 	     ], 'DBR::_LOP' );
      }
+
+# This is a program-friendly version of OR with less magic.  It just counts as a single item in the enclosing AND-list, and has one or more AND-list children
+
+sub TREE_OR { bless [ 'TreeOr', [@_] ], 'DBR::_LOP' }
 
 package DBR::_LOP;
 use base 'DBR::Util::Operator';

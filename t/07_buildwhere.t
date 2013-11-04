@@ -163,6 +163,21 @@ test(
      'album_id IN (1,2) AND rating = 900'
     );
 
+test(
+    [ TREE_OR([ album_id => 1 ], [ rating => 'earbleed' ]) ],
+    'album_id = 1 OR rating = 900',
+);
+
+test(
+    [ date_released => GT 'November 26th 2005 PST', TREE_OR([ album_id => 1 ], [ rating => 'earbleed' ]) ],
+    '(album_id = 1 OR rating = 900) AND date_released > 1132992000',
+);
+
+test(
+    [ TREE_OR([ album_id => 1, rating => 'earbleed' ]) ],
+    '(album_id = 1 AND rating = 900)',
+);
+
 done_testing();
 exit;
 

@@ -59,6 +59,12 @@ sub build{
 	    my $next    = shift @input;
 	    if(ref($next) eq 'DBR::_LOP'){ # Logical OPerator
 		  my $op = $next->operator;
+
+                  if ($op eq 'TreeOr') {
+                      push @andparts, DBR::Query::Part::Or->new( map { scalar $self->build($_) } @{$next->value} );
+                      next;
+                  }
+
 		  scalar(@andparts) || $pendct || croak('Cannot use an operator without a preceeding comparison');
 
 		  if ($op eq 'And'){
