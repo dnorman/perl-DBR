@@ -12,6 +12,13 @@ use Digest::MD5 qw(md5_base64);
 my %SCOPE_CACHE;
 my %FIELD_CACHE;
 
+# see perlpragma(3) for details on %^H and the use of caller() below
+sub import {
+    my ($package, %params) = @_;
+    $^H{'DBR::scope_transparent'} = $params{'-transparent'} if defined $params{'-transparent'};
+    $^H{'DBR::scope_skip'} = $params{'-skip'} if defined $params{'-skip'};
+}
+
 sub new {
       my( $package ) = shift;
       my %params = @_;
@@ -26,8 +33,7 @@ sub new {
       return $self->_error('session is required') unless $self->{session};
       return $self->_error('conf_instance is required')   unless $self->{instance};
 
-      my $offset = $params{offset} || 1;
-      my $scope_id = $self->_get_scope_id($offset + 1) or return $self->_error('failed to determine scope_id');
+      my $scope_id = $self->_get_scope_id or return $self->_error('failed to determine scope_id');
 
       $self->{scope_id} = $scope_id;
 
@@ -44,22 +50,27 @@ sub purge_all{
 sub ident{ shift->{ident} }
 sub _get_scope_id{
       my $self = shift;
-      my $offset = shift;
+      my $offset = 1;
 
       my @parts;
       while($offset < 100){
-	    my (undef,$file,$line,$method) = caller($offset++);
+	    my ($file,$line,$method,$hints) = (caller($offset++))[1,2,3,10];
+            defined($line) or last;
+            my $transpar = $hints->{'DBR::scope_transparent'} || 0;
+            $offset += ($hints->{'DBR::scope_skip'} || 0);
 	    if($file =~ /^\//){ # starts with Slash
-		  $offset = 101; #everything is good
+		  #everything is good
 	    }else{
 		  if ($file !~ /^\(eval/){ # If it's an eval, then we do another loop
 			# Not an eval, just slap on the directory we are in and call it done
 			$file = $ENV{'PWD'} . '/' . $file;
-			$offset = 101;
-		  }
+		  } else {
+                      $transpar ||= 1;
+                  }
 	    }
 
-	    push @parts, $file . '*' . $line;
+	    push @parts, $file . '*' . $line unless $transpar >= 2;
+            last unless $transpar;
       }
 
       my $ident = join('|',grep {$_} (@parts,$self->{extra_ident}));

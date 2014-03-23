@@ -260,6 +260,7 @@ sub _eval_relation{
       my $r = shift;
       my $f = shift;
 
+      use DBR::Config::Scope -transparent => 2;
       return eval shift;
 }
 

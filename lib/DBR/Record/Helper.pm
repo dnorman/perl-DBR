@@ -253,11 +253,11 @@ sub getrelation{
       my $value    = $mapfield->makevalue( \@allvals );
       my $outwhere = DBR::Query::Part::Compare->new( field => $mapfield, value => $value );
 
+      use DBR::Config::Scope -transparent => 2;
       my $scope = DBR::Config::Scope->new(
 					  session       => $self->{session},
 					  conf_instance => $maptable->conf_instance,
 					  extra_ident   => $maptable->name,
-					  offset        => 2,  # because getrelation is being called indirectly, look at the scope two levels up
 					 ) or return $self->_error('Failed to get calling scope');
 
       my $pk        = $maptable->primary_key or return $self->_error('Failed to fetch primary key');

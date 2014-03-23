@@ -8,6 +8,7 @@ package DBR::Interface::Object;
 use strict;
 use base 'DBR::Common';
 use DBR::Config::Scope;
+use DBR::Config::Scope -transparent => 2;
 use DBR::ResultSet::Empty;
 use DBR::Query::Select;
 use DBR::Query::Insert;
