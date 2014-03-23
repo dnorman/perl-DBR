@@ -24,6 +24,14 @@ sub getSequenceValue{
 
 sub can_trust_execute_rowcount{ 1 } # NOTE: This should be variable when mysql_use_result is implemented
 
+sub qualify_table {
+    my $self = shift;
+    my $inst = shift;
+    my $table = shift;
+
+    return $self->quote_identifier($inst->database) . '.' . $self->quote_identifier($table);
+}
+
 sub quote {
     my $self = shift;
 

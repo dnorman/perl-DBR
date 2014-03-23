@@ -15,7 +15,7 @@ my $GUID = 1;
 
 #here is a list of the currently supported databases and their connect string formats
 my %connectstrings = (
-		      Mysql  => 'dbi:mysql:database=-database-;host=-hostname-;mysql_enable_utf8=1',
+		      Mysql  => 'dbi:mysql:host=-hostname-;mysql_enable_utf8=1',
 		      SQLite => 'dbi:SQLite:dbname=-dbfile-',
 		      Pg     => 'dbi:Pg:dbname=-database-;host=-hostname-',
 		     );
@@ -175,7 +175,7 @@ sub register { # basically the same as a new
 
       # Register or Reuse the guid
       my $guid = $INSTANCE_MAP{ $config->{handle} }{ $config->{tag} }{ $config->{class} } ||= $GUID++;
-      $SCHEMA_MAP{ $config->{schema_id} }{ $config->{tag} }{ $config->{class} } = $GUID;
+      $SCHEMA_MAP{ $config->{schema_id} }{ $config->{tag} }{ $config->{class} } = $guid;
 
       $INSTANCES_BY_GUID{ $guid } = $config;
       $self->{guid} = $config->{guid} = $guid;

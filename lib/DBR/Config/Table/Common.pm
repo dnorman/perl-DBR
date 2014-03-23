@@ -24,7 +24,8 @@ sub sql  {
       my $name  = $self->name;
       my $alias = $self->alias;
 
-      my $sql = $conn->quote_identifier($name);
+      my $instance = $self->sql_instance or confess('failed to fetch instance');
+      my $sql = $conn->can('qualify_table') ? $conn->qualify_table($instance, $name) : $conn->quote_identifier($name);
       $sql   .= ' AS ' . $conn->quote_identifier($alias) if $alias;
 
       return $sql;

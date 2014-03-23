@@ -133,6 +133,7 @@ sub insert {
 
       my $Qtable = DBR::Config::Table::Anon->new(
 						 session => $self->{session},
+                                                 instance => $self->{instance},
 						 name    => $table,
 						) or return $self->_error('Failed to create table object');
       my @sets;
@@ -175,6 +176,7 @@ sub update {
 
       my $Qtable = DBR::Config::Table::Anon->new(
 						 session => $self->{session},
+                                                 instance => $self->{instance},
 						 name    => $table,
 						) or return $self->_error('Failed to create table object');
       my $where;
@@ -223,6 +225,7 @@ sub delete {
 
       my $Qtable = DBR::Config::Table::Anon->new(
 						 session => $self->{session},
+                                                 instance => $self->{instance},
 						 name    => $table,
 						) or return $self->_error('Failed to create table object');
       my $where;
@@ -264,6 +267,7 @@ sub _tables{
 
 		  my $Qtable = DBR::Config::Table::Anon->new(
 							     session => $self->{session},
+                                                             instance => $self->{instance},
 							     name    => $table,
 							     alias   => $alias,
 							    ) or return $self->_error('Failed to create table object');
@@ -278,6 +282,7 @@ sub _tables{
 
 		  my $Qtable = DBR::Config::Table::Anon->new(
 							     session => $self->{session},
+                                                             instance => $self->{instance},
 							     name    => $table,
 							     alias   => $alias,
 							    ) or return $self->_error('Failed to create table object');
@@ -288,6 +293,7 @@ sub _tables{
 
 	    my $Qtable = DBR::Config::Table::Anon->new(
 						       session => $self->{session},
+                                                       instance => $self->{instance},
 						       name    => $tables,
 						      ) or return $self->_error('Failed to create table object');
 	    push @Qtables, $Qtable;

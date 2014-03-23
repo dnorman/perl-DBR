@@ -22,12 +22,14 @@ sub new{
       my %params = @_;
 
       my $self = {
-		  session =>  $params{session}
+		  session  =>  $params{session},
+                  instance =>  $params{instance}
 		 };
 
       bless( $self, $package );
 
       my $name  = $params{name} or return $self->_error('name is required');
+      $params{instance} or return $self->_error('instance is required');
       my $alias = $params{alias};
 
       return $self->_error("invalid name '$name'") unless $name =~ /^[A-Z][A-Z0-9_-]*$/i;
@@ -43,6 +45,7 @@ sub new{
 }
 
 sub name { $_[0]->{name} }
+sub sql_instance  { $_[0]{instance} }
 
 1;
 

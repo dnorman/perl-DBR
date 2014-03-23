@@ -265,5 +265,15 @@ sub conf_instance {
 					  ) or return $self->_error('Failed to fetch conf instance');
 }
 
+sub sql_instance {
+    my $self = shift;
+
+    $self->{instance_id} < 0 and confess("Attempt to use a table in a statement with no bound instance");
+
+    return DBR::Config::Instance->lookup(
+        session => $self->{session},
+        guid   => $self->{instance_id}
+    );
+}
 
 1;
