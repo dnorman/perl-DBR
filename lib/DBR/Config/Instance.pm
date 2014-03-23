@@ -22,6 +22,7 @@ my %connectstrings = (
 
 my %CONCACHE;
 my %INSTANCE_MAP;
+my %SCHEMA_MAP;
 my %INSTANCES_BY_GUID;
 
 
@@ -67,7 +68,23 @@ sub lookup{
       $INSTANCES_BY_GUID{ $self->{guid} } or return $self->_error('no such guid');
 
       return $self;
+}
 
+sub guess_sibling {
+    my $package = shift;
+    my %params = @_;
+
+    my $guid    = $params{guid};
+    my $session = $params{session};
+
+    return -1 if $params{guid} < 0;
+    my $self = $package->lookup( session => $params{session}, guid => $params{guid} ) or return -1;
+
+    my $sid = $params{schema_id};
+    my $tag = $self->tag || $session->tag;
+    my $class = $self->class;
+
+    return $SCHEMA_MAP{$sid}{$tag}{$class} || $SCHEMA_MAP{$sid}{''}{$class} || -1;
 }
 
 sub load_from_db{
@@ -158,6 +175,7 @@ sub register { # basically the same as a new
 
       # Register or Reuse the guid
       my $guid = $INSTANCE_MAP{ $config->{handle} }{ $config->{tag} }{ $config->{class} } ||= $GUID++;
+      $SCHEMA_MAP{ $config->{schema_id} }{ $config->{tag} }{ $config->{class} } = $GUID;
 
       $INSTANCES_BY_GUID{ $guid } = $config;
       $self->{guid} = $config->{guid} = $guid;
@@ -254,6 +272,7 @@ sub class         { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{class}    }
 sub tag           { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{tag}    }
 sub guid          { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{guid}     }
 sub module        { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{module}   }
+sub database      { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{database}      }
 sub dbr_bootstrap { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{dbr_bootstrap} }
 sub schema_id     { $INSTANCES_BY_GUID{ $_[0]->{guid} }->{schema_id} }
 sub name          { return $_[0]->handle . ' ' . $_[0]->class }
@@ -268,6 +287,7 @@ sub schema{
       my $schema = DBR::Config::Schema->new(
 					    session   => $self->{session},
 					    schema_id => $schema_id,
+                                            instance_id => $self->{guid},
 					   ) || return $self->_error("failed to fetch schema object for schema_id $schema_id");
 
       return $schema;

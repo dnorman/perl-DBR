@@ -89,7 +89,7 @@ sub _do_one_line {
 
     map {$spec->{ $_ } or die "Invalid Spec row: Missing $_"} qw'schema table field cmd';
 
-    my $schema = new DBR::Config::Schema(session => $self->{session}, handle => $spec->{schema}) or die "Schema $spec->{schema} not found";
+    my $schema = DBR::Config::Schema->new(instance_id => -1, session => $self->{session}, handle => $spec->{schema}) or die "Schema $spec->{schema} not found";
     my $table = $schema->get_table( $spec->{table} ) or die "$spec->{table} not found in schema\n";
     my $field = $table->get_field ( $spec->{field} ) or die "$spec->{table}.$spec->{field} not found\n";
     $self->{schema_ids}{ $schema->schema_id } = 1;
@@ -147,7 +147,7 @@ sub _do_relation   {
       my $toschema = $schema;
       if ( $spec->{reltable} =~ s/^(.*?)\.// ){
 	   my $toschema_name = $1;
-	   $toschema = new DBR::Config::Schema(session => $self->{session}, handle => $toschema_name )
+	   $toschema = DBR::Config::Schema->new(instance_id => -1, session => $self->{session}, handle => $toschema_name )
               or die "Schema $spec->{schema} not found";
       }
 

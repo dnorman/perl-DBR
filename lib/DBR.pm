@@ -175,6 +175,7 @@ sub get_schema {
       
       my $schema = DBR::Config::Schema->new(
                                     session => $self->{session},
+                                    instance_id => -1, # reflection use only
                                     handle => $handle
                                  ) or return $self->_error("No schema found for handle '$handle'");
       return $schema;

@@ -39,6 +39,7 @@ use constant ({
 	       O_index       => 2,
 	       O_table_alias => 3,
 	       O_alias_flag  => 4,
+               O_instance_id => 5,
 	      });
 
 my %VALCHECKS;
@@ -207,11 +208,12 @@ sub new {
       my %params = @_;
 
       # Order must match O_ constants
-      my $self = [$params{field_id}, $params{session}];
+      my $self = [$params{field_id}, $params{session}, undef, undef, undef, $params{instance_id}];
 
       bless( $self, $package );
 
       return $self->_error('field_id is required') unless $self->[O_field_id];
+      return $self->_error('instance_id is required') unless $self->[O_instance_id];
       return $self->_error('session is required' ) unless $self->[O_session];
 
       $FIELDS_BY_ID{ $self->[O_field_id] } or return ($params{'-silent'} ? () : $self->_error('invalid field_id'));
@@ -229,6 +231,8 @@ sub clone{
 		    $self->[O_session],
 		    $params{with_index} ? $self->[O_index]        : undef, # index
 		    $params{with_alias} ? $self->[O_table_alias]  : undef, #alias
+                    undef,
+                    $self->[O_instance_id],
 		   ],
 		   ref($self),
 		  );
@@ -261,6 +265,7 @@ sub default_val  { $FIELDS_BY_ID{  $_[0]->[O_field_id] }->[C_default]     }
 sub table    {
       return DBR::Config::Table->new(
 				     session   => $_[0][O_session],
+                                     instance_id => $_[0][O_instance_id],
 				     table_id => $FIELDS_BY_ID{  $_[0][O_field_id] }->[C_table_id]
 				    );
 }
@@ -278,6 +283,7 @@ sub translator{
       return DBR::Config::Trans->new(
 				     session  => $self->[O_session],
 				     field_id => $self->[O_field_id],
+                                     instance_id => $self->[O_instance_id],
 				     trans_id => $trans_id,
 				    );
 }

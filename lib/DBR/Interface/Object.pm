@@ -47,17 +47,8 @@ sub all{
 					  extra_ident   => $table->name,
 					 ) or return $self->_error('Failed to get calling scope');
 
-      my $pk = $table->primary_key or return $self->_error('Failed to fetch primary key');
-      my $prefields = $scope->fields or return $self->_error('Failed to determine fields to retrieve');
-      
-      my %check = map { $_ => 1 } @{$table->field_ids};
-      my %uniq;
-      my @fields = grep { !$uniq{ $_->field_id }++ && $check{ $_->field_id } } (@$pk, @$prefields);
-      
-      if( grep { !$check{ $_ } } keys %uniq ){
-	    $self->_warn("POSSIBLE SCOPE COLLISION: scope_id: $scope->{scope_id} ($scope->{ident})");
-      }
-      
+      my @fields = @{ $scope->fields($table) or return $self->_error('Failed to determine fields to retrieve') };
+
       my $query = DBR::Query::Select->new(
 					  session  => $self->{session},
 					  instance => $self->{instance},
@@ -84,16 +75,7 @@ sub where{
 
 
 
-      my $pk = $table->primary_key or return $self->_error('Failed to fetch primary key');
-      my $prefields = $scope->fields or return $self->_error('Failed to determine fields to retrieve');
-
-      my %check = map { $_ => 1 } @{$table->field_ids};
-      my %uniq;
-      my @fields = grep { !$uniq{ $_->field_id }++ && $check{ $_->field_id } } (@$pk, @$prefields);
-      
-      if( grep { !$check{ $_ } } keys %uniq ){
-	    $self->_warn("POSSIBLE SCOPE COLLISION: scope_id: $scope->{scope_id} ($scope->{ident})");
-      }
+      my @fields = @{ $scope->fields($table) or return $self->_error('Failed to determine fields to retrieve') };
 
       my $builder = DBR::Interface::Where->new(
 					       session       => $self->{session},
@@ -170,14 +152,7 @@ sub get{
 					  extra_ident   => $table->name,
 					 ) or return $self->_error('Failed to get calling scope');
 
-      my $prefields = $scope->fields or return $self->_error('Failed to determine fields to retrieve');
-
-      my %check = map { $_ => 1 } @{$table->field_ids};
-      my %uniq;
-      my @fields = grep { !$uniq{ $_->field_id }++ && $check{ $_->field_id } } (@$pk, @$prefields);
-      if( grep { !$check{ $_ } } keys %uniq ){
-	    $self->_warn("POSSIBLE SCOPE COLLISION: scope_id: $scope->{scope_id} ($scope->{ident})");
-      }
+      my @fields = @{ $scope->fields($table) or return $self->_error('Failed to determine fields to retrieve') };
 
       my $value = $field->makevalue( $pkval ) or return $self->_error("failed to build value object for ${\$field->name}");
 

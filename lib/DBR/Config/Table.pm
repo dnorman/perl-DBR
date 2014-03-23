@@ -118,12 +118,14 @@ sub new {
   my %params = @_;
   my $self = {
 	      session  => $params{session},
-	      table_id => $params{table_id}
+	      table_id => $params{table_id},
+              instance_id => $params{instance_id},
 	     };
 
   bless( $self, $package );
 
   return $self->_error('table_id is required') unless $self->{table_id};
+  return $self->_error('instance_id is required') unless $self->{instance_id};
   return $self->_error('session is required' ) unless $self->{session};
 
   $TABLES_BY_ID{ $self->{table_id} } or return $self->_error("table_id $self->{table_id} doesn't exist");
@@ -138,6 +140,7 @@ sub clone{
       return bless({
                   session   => $self->{session},
                   table_id  => $self->{table_id},
+                  instance_id => $self->{instance_id},
                   $params{with_alias} ? ( alias => $self->{alias} ) : (),
             },
            ref($self)
@@ -155,6 +158,7 @@ sub get_field{
 
       my $field = DBR::Config::Field->new(
 					  session   => $self->{session},
+                                          instance_id => $self->{instance_id},
 					  field_id => $field_id,
 					 ) or return $self->_error('failed to create table object');
       return $field;
@@ -164,7 +168,7 @@ sub fields{
       my $self  = shift;
       [
        map {
-	     DBR::Config::Field->new(session   => $self->{session}, field_id => $_ ) or return $self->_error('failed to create field object')
+	     DBR::Config::Field->new(session   => $self->{session}, instance_id => $self->{instance_id}, field_id => $_ ) or return $self->_error('failed to create field object')
 	   } values %{$FIELDS_BY_NAME{$self->{table_id}}}
       ];
 }
@@ -178,7 +182,7 @@ sub req_fields{
       my $self = shift;
       [
        map {
-	     DBR::Config::Field->new(session   => $self->{session}, field_id => $_ ) or return $self->_error('failed to create field object')
+	     DBR::Config::Field->new(session   => $self->{session}, instance_id => $self->{instance_id}, field_id => $_ ) or return $self->_error('failed to create field object')
 	   } @{ $REQ_FIELDS{ $self->{table_id} } }
       ];
 
@@ -187,7 +191,7 @@ sub primary_key{
       my $self = shift;
       [
        map {
-	     DBR::Config::Field->new(session   => $self->{session}, field_id => $_ ) or return $self->_error('failed to create field object')
+	     DBR::Config::Field->new(session   => $self->{session}, instance_id => $self->{instance_id}, field_id => $_ ) or return $self->_error('failed to create field object')
 	   } @{ $PK_FIELDS{ $self->{table_id} } }
       ];
 
@@ -203,6 +207,7 @@ sub get_relation{
 						session     => $self->{session},
 						relation_id => $relation_id,
 						table_id    => $self->{table_id},
+                                                instance_id => $self->{instance_id},
 					       ) or return $self->_error('failed to create relation object');
 
       return $relation;
@@ -219,6 +224,7 @@ sub relations{
 						      session      => $self->{session},
 						      relation_id => $relation_id,
 						      table_id    => $self->{table_id},
+                                                      instance_id => $self->{instance_id},
 						     ) or return $self->_error('failed to create relation object');
 	    push @relations, $relation;
       }
@@ -239,6 +245,7 @@ sub schema{
 
       my $schema = DBR::Config::Schema->new(
 					    session   => $self->{session},
+                                            instance_id => $self->{instance_id},
 					    schema_id => $schema_id,
 					   ) || return $self->_error("failed to fetch schema object for schema_id $schema_id");
 

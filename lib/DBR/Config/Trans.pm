@@ -69,11 +69,13 @@ sub new {
       my $self = {
 		  session  => $params{session},
 		  trans_id => $params{trans_id},
+                  instance_id => $params{instance_id},
 		  field_id => $params{field_id},
 		 };
 
       return $package->_error('trans_id must be specified') unless $self->{trans_id};
       return $self->_error('field_id is required')          unless $self->{field_id};
+      return $self->_error('instance_id is required')       unless $self->{instance_id};
 
       my $module = $MODULES{ $self->{trans_id} } or $self->_error('invalid module');
       $self->{module} = $module;
@@ -96,6 +98,7 @@ sub field{
       my $field = DBR::Config::Field->new(
 					  session  => $self->{session},
 					  field_id => $self->{field_id},
+                                          instance_id => $self->{instance_id},
 					 ) or return $self->_error('failed to create field object');
 
       return $field;

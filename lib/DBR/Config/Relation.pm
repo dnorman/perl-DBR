@@ -83,6 +83,7 @@ sub new {
       my $self = {
 		  session      => $params{session},
 		  relation_id => $params{relation_id},
+                  instance_id => $params{instance_id},
 		  table_id    => $params{table_id},
 		 };
 
@@ -90,7 +91,7 @@ sub new {
 
       return $self->_error('relation_id is required') unless $self->{relation_id};
       return $self->_error('table_id is required')    unless $self->{table_id};
-
+      return $self->_error('instance_id is required')    unless $self->{instance_id};
 
       my $ref = $RELATIONS_BY_ID{ $self->{relation_id} } or return $self->_error('invalid relation_id');
       return $self->_error("Invalid type_id $ref->{type}") unless $TYPES{ $ref->{type} };
@@ -109,6 +110,13 @@ sub new {
       }else{
 	    return $self->_error("table_id $self->{table_id} is invalid for this relationship");
       }
+
+      $self->{mapinstance_id} = -1;
+      $self->{mapinstance_id} = DBR::Config::Instance->guess_sibling(
+          session   => $self->{session},
+          guid      => $self->{instance_id},
+          schema_id => $self->maptable->schema_id,
+      );
 
       return( $self );
 }
@@ -129,6 +137,7 @@ sub field {
       my $field = DBR::Config::Field->new(
 					  session  => $self->{session},
 					  field_id => $field_id,
+                                          instance_id => $self->{instance_id},
 					 ) or return $self->_error('failed to create field object');
 
       return $field;
@@ -141,6 +150,7 @@ sub mapfield {
       my $field = DBR::Config::Field->new(
 					  session  => $self->{session},
 					  field_id => $mapfield_id,
+                                          instance_id => $self->{mapinstance_id},
 					 ) or return $self->_error('failed to create field object');
 
       return $field;
@@ -151,6 +161,7 @@ sub table {
 
       return DBR::Config::Table->new(
 				     session   => $self->{session},
+                                     instance_id => $self->{instance_id},
 				     table_id => $RELATIONS_BY_ID{  $self->{relation_id} }->{$self->{forward} . '_table_id'}
 				    );
 }
@@ -160,6 +171,7 @@ sub maptable {
 
       return DBR::Config::Table->new(
 				     session   => $self->{session},
+                                     instance_id => $self->{mapinstance_id},
 				     table_id => $RELATIONS_BY_ID{  $self->{relation_id} }->{$self->{reverse} . '_table_id'}
 				    );
 }

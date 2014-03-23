@@ -110,6 +110,9 @@ sub _get_scope_id{
 
 sub fields{
       my $self  = shift;
+      my $table = shift;
+      my $extra = shift;
+
       my $cache = $FIELD_CACHE{ $self->{scope_id} } ||= [undef,[]];
 
       my $fids;
@@ -132,18 +135,23 @@ sub fields{
 	    $cache->[1] = $fids;
       }
 
+      my $fields_r = $table->fields or return $self->_error('Failed to fetch table fields');
+      my $pkey_r = $table->primary_key or return $self->_error('Failed to fetch table primary key');
+
+      my %ok_fields;
+      map { $ok_fields{ $_->field_id } = $_ } @$fields_r;
+
+      my %used_fields;
+      map { $used_fields{ $_->field_id } = $_ } @$pkey_r;
+
       my @fields;
       foreach my $fid (@$fids){
-          my $field = DBR::Config::Field->new(
-              session  => $self->{session},
-              field_id => $fid,
-              -silent  => 1, # we would like to be able to add fields to the DB without troubling running programs, so ignore any "new" or otherwise invalid fields that get added.  see ROP-170
-          );
-          push @fields, $field if $field;
+          $used_fields{ $fid } = $ok_fields{ $fid } if $ok_fields{ $fid };
       }
 
+      map { $used_fields{ $_->field_id } = $_ } @$extra if $extra;
 
-      return \@fields;
+      return [values %used_fields];
 }
 
 sub addfield{

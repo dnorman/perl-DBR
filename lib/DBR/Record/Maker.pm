@@ -44,14 +44,14 @@ sub _prep{
 
       my @fields = $query->fields or confess 'Failed to get query fields';
 
-      my @table_ids;
+      my %orig_table;
       # It's important that we preserve the specific field objects from the query. They have payloads that new ones do not.
       foreach my $field (@fields){
 	    my $field_id = $field->field_id or next; # Anon fields have no field_id
 	    my $table_id = $field->table_id;
 	    $self->{fieldmap}->{ $field_id } = $field;
 
-	    push @table_ids, $table_id;
+	    $orig_table{$table_id} = $field->table;
       }
 
       my %tablemap;
@@ -59,12 +59,9 @@ sub _prep{
       my %flookup;
       my @allrelations;
       my @tablenames;
-      foreach my $table_id ($self->_uniq( @table_ids )){
-
-	    my $table = DBR::Config::Table->new(
-						session   => $self->{session},
-						table_id => $table_id,
-					       ) or return $self->_error('Failed to create table object');
+      foreach my $orig_table (values %orig_table){
+            my $table_id = $orig_table->table_id;
+	    my $table = $orig_table->clone or return $self->_error('Failed to create table object');
 
 	    my $allfields = $table->fields or return $self->_error('failed to retrieve fields for table');
 
@@ -81,7 +78,7 @@ sub _prep{
                                                    Dumper(
                                                           \@fields,
                                                           $checkfield,
-                                                          \@table_ids,
+                                                          [keys %orig_table],
                                                           $query
                                                       ));
 			}
