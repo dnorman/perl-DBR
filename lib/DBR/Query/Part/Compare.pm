@@ -57,6 +57,8 @@ sub new{
       if ($operator eq 'between' or $operator eq 'notbetween'){
 	    $value->count == 2 or croak "between/notbetween comparison requires two values";
 	    $sqlfunc = \&_betweensql;
+      }elsif ( $value->count == 0 ){
+            $sqlfunc  = $operator eq 'not' ? \&_always_sql : \&_never_sql;
       }elsif ( $value->count != 1 ){
 	    $operator = 'in'    if $operator eq 'eq';
 	    $operator = 'notin' if $operator eq 'not';
@@ -81,6 +83,8 @@ sub value    { return $_[0]->[F_VALUE] }
 sub sql   { shift->[F_SQLFUNC]->(@_) }
 
 sub _sql{ return $_[0]->field->sql($_[1]) . ' ' . $sql_ops{ $_[0]->operator } . ' ' . $_[0]->value->sql($_[1]) }
+sub _always_sql { '1 = 1' }
+sub _never_sql { '0 = 1' }
 
 sub _betweensql{
       my $quoted = $_[0]->value->quoted( $_[1] );
@@ -90,5 +94,4 @@ sub _betweensql{
 
 sub _validate_self{ 1 }
 
-#Might be buggy for nullsets with a notin operator? think about this.
-sub is_emptyset{ $_[0]->value->is_emptyset }
+sub is_emptyset{ $_[0][F_SQLFUNC] == \&_never_sql }

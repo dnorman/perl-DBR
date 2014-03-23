@@ -180,12 +180,17 @@ test(
 
 test(
     [ TREE_OR([ ]) ],
-    'TRUE',
+    '1 = 1',
 );
 
 test(
     [ TREE_OR() ],
-    'FALSE',
+    '0 = 1',
+);
+
+test(
+    [ album_id => [1,2], OR rating => [] ],
+    'album_id IN (1,2)',
 );
 
 done_testing();
