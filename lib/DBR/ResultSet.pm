@@ -326,10 +326,11 @@ sub order_by {
         my $table = $tables->[0]; # only the primary table is supported
         my $alias = $table->alias;
 
+        my $dir = ($field =~ s/^-//) ? 'DESC' : 'ASC';
         my $field_o = $table->get_field( $field ) or croak "Invalid field $field";
         $field_o->alias( $alias ) if $alias;
 
-        $field = DBR::Query::Part::OrderBy->new( $field_o ) or return $self->_error('failed to create order by object');
+        $field = DBR::Query::Part::OrderBy->new( $field_o, $dir ) or return $self->_error('failed to create order by object');
     }
 
     $self->[f_query]->orderby([ @{ $self->[f_query]->orderby || [] }, $field ]);
