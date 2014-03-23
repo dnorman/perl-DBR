@@ -75,7 +75,7 @@ sub sql{
 
       my $conn   = $self->instance->connect('conn') or return $self->_error('failed to connect');
       my $sql;
-      my $tables = join(',', map {$_->sql} @{$self->{tables}} );
+      my $tables = join(',', map {$_->sql($conn)} @{$self->{tables}} );
 
       my @fields;
       my @values;

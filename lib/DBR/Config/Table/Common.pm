@@ -20,11 +20,12 @@ sub validate { 1 }
 
 sub sql  {
       my $self = shift;
+      my $conn = shift;
       my $name  = $self->name;
       my $alias = $self->alias;
 
-      my $sql = $name;
-      $sql   .= ' AS ' . $alias if $alias;
+      my $sql = $conn->quote_identifier($name);
+      $sql   .= ' AS ' . $conn->quote_identifier($alias) if $alias;
 
       return $sql;
 }

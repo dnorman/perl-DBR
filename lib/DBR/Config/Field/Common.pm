@@ -58,19 +58,20 @@ sub validate { 1 }
 
 sub sql  {
       my $self = shift;
+      my $conn = shift;
       my $name  = $self->name;
       my $alias = $self->table_alias;
 
       my $sql;
-      $sql  = $alias . '.' if $alias;
-      $sql .= $name;
+      $sql  = $conn->quote_identifier($alias) . '.' if $alias;
+      $sql .= $conn->quote_identifier($name);
 
       if(defined($self->[O_alias_flag])){
 
 	    if ( $self->{O_alias_flag} == 1 ) {
-		  $sql .= " AS $name";
+		  $sql .= " AS " . $conn->quote_identifier($name);
 	    } elsif ( $self->{O_alias_flag} == 2 ) {
-		  $sql .= " AS '$alias.$name'";
+		  $sql .= " AS " . $conn->quote_identifier("$alias.$name");
 	    }
 
       }
