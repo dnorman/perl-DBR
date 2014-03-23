@@ -218,6 +218,7 @@ sub test{
       my $sql = $output->sql($conn);
       okq($sql,"Produce sql");
 
+      $sql =~ s/"//g; # don't care about quotes right now
       diag ("SQL:  $sql") if $sql ne $reference_sql;
       okq( $sql eq $reference_sql,"SQL correctness check: $reference_sql");
 

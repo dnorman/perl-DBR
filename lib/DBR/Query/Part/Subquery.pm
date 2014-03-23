@@ -47,12 +47,12 @@ sub sql   {
         return '0' unless @list; # HACK - this should abort the query this feeds into, but this will patch the bug for now
         
 	    if( $self->quoted ){
-		  return $self->field->sql($_[1]) . ' IN (' . join(',', map { $conn->quote( $_ ) } @list ) . ')';
+		  return $self->field->sql($conn) . ' IN (' . join(',', map { $conn->quote( $_ ) } @list ) . ')';
 	    }else{
-		  return $self->field->sql($_[1]) . ' IN (' . join(',', @list ) . ')';
+		  return $self->field->sql($conn) . ' IN (' . join(',', @list ) . ')';
 	    }
       }else{
-	    return $self->field->sql($_[1]) . ' IN (' . $self->query->sql($_[1]) . ')'
+	    return $self->field->sql($conn) . ' IN (' . $self->query->sql($conn) . ')'
       }
 }
 
