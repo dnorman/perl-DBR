@@ -345,7 +345,17 @@ sub where {
 				 );
 }
 
-sub delete { croak "Mass delete is not allowed. No cookie for you!" }
+sub delete { croak "Mass delete requires explicit delete_matched_records" }
+
+sub delete_matched_records {
+    my $self = shift;
+
+    if( defined $self->[f_query]->splitfield ){
+        croak "Mass delete not implemented for split queries";
+    }
+
+    return $self->[f_query]->transpose('Delete')->run;
+}
 
 # Dunno if I like this
 sub each {

@@ -102,6 +102,8 @@ sub _do_split{
       return \%groupby;
 }
 
+sub splitfield { return $_[0]->{splitfield} }
+
 
 sub get_record_obj{
       my $self = shift;
