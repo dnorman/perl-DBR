@@ -15,7 +15,7 @@ my ($spec_file) = @ARGV;
 my $confdb = $opts{'d'} || 'dbrconf';
 
 unless($conffile && $spec_file){
-    print STDERR "Usage:\n\tdbr-load-spec -f /path/to/DBR.conf [-d confdb_handle ] /path/to/specfile";
+    print STDERR "Usage:\n\tdbr-load-spec [-k] -f /path/to/DBR.conf [-d confdb_handle ] /path/to/specfile";
     exit;
 }
 
@@ -36,5 +36,5 @@ my $loader = DBR::Config::SpecLoader->new(
 
 
 my $spec = $loader->parse_file( $spec_file ) or die "Failed to open $spec_file";
-$loader->process_spec( $spec ) or die "Failed to process specs";
+$loader->process_spec( $spec, $opts{'k'} ) or die "Failed to process specs";
 

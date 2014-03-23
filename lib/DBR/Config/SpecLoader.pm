@@ -13,7 +13,7 @@ use DBR::Config::Trans;
 use DBR::Config::Relation;
 no warnings 'deprecated';
 use DBR::Config::ScanDB;
-use Switch;
+use Try::Tiny;
 
 my $trans_defs = DBR::Config::Trans->list_translators or die 'Failed to get translator list';
 my %trans_lookup; map {$trans_lookup{ uc($_->{name}) } = $_}  @$trans_defs;
@@ -42,40 +42,32 @@ sub new {
 sub process_spec{
       my $self = shift;
       my $specs = shift;
+      my $keep_going = shift;
 
       my $dbrh = $self->{conf_instance}->connect or die "Failed to connect to config db";
 
       $dbrh->begin();
 
-      my %SCANS;
-      my %SCHEMA_IDS;
-      my $sortval;
-      foreach my $spec ( @$specs ){
-	    my $oldtable = $spec->{table};
-	    if ( $spec->{table} =~ s/^(.*?)\.// ){
-		    $spec->{schema} ||= $1;
-	    }
-
-	    map {$spec->{ $_ } or die "Invalid Spec row: Missing $_"} qw'schema table field cmd';
-            
-	    my $schema = new DBR::Config::Schema(session => $self->{session}, handle => $spec->{schema}) or die "Schema $spec->{schema} not found";
-	    my $table = $schema->get_table( $spec->{table} ) or die "$spec->{table} not found in schema\n";
-	    my $field = $table->get_field ( $spec->{field} ) or die "$spec->{table}.$spec->{field} not found\n";
-            $SCHEMA_IDS{ $schema->schema_id } = 1;
-            
-	    switch ( uc($spec->{cmd}) ){
-		  case 'TRANSLATOR' { $self->_do_translator( $schema, $table, $field, $spec ) }
-		  case 'RELATION'   { $self->_do_relation  ( $schema, $table, $field, $spec ) }
-		  case 'REGEX'      { $self->_do_regex     ( $schema, $table, $field, $spec ) }
-		  case 'ENUMOPT'    { $self->_do_enumopt   ( $schema, $table, $field, $spec, ++$sortval ) }
-		  case 'DEFAULT'    { $self->_do_default   ( $schema, $table, $field, $spec ) }
-                  else { die "Invalid spec: unknown command $spec->{cmd}"}
-	    }
-      }
+    $self->{sortval} = 0;
+    $self->{schema_ids} = {};
+    foreach my $spec ( @$specs ){
+        if (!$keep_going) {
+            $self->_do_one_line($spec);
+        }
+        else {
+            try {
+                $self->_do_one_line($spec);
+            } catch {
+                my $err = $_;
+                $err =~ s/[;\t\r\n]//g;
+                print STDERR join('; ', (map { "$_=$spec->{$_}" } sort keys %$spec), "err=$err"), "\n";
+            };
+        }
+    }
 
       $dbrh->commit();
       
-      foreach my $schema_id ( keys %SCHEMA_IDS ) {
+      foreach my $schema_id ( keys %{ $self->{schema_ids} } ) {
             #HACK - the SpecLoader should load up the in-memory representation at the same time
             DBR::Config::Schema->load(
                   session   => $self->{session},
@@ -87,6 +79,30 @@ sub process_spec{
       return 1;
 }
 
+sub _do_one_line {
+    my ($self, $spec) = @_;
+
+    my $oldtable = $spec->{table};
+    if ( $spec->{table} =~ s/^(.*?)\.// ){
+        $spec->{schema} ||= $1;
+    }
+
+    map {$spec->{ $_ } or die "Invalid Spec row: Missing $_"} qw'schema table field cmd';
+
+    my $schema = new DBR::Config::Schema(session => $self->{session}, handle => $spec->{schema}) or die "Schema $spec->{schema} not found";
+    my $table = $schema->get_table( $spec->{table} ) or die "$spec->{table} not found in schema\n";
+    my $field = $table->get_field ( $spec->{field} ) or die "$spec->{table}.$spec->{field} not found\n";
+    $self->{schema_ids}{ $schema->schema_id } = 1;
+
+    my $cmd = uc($spec->{cmd});
+
+    if ($cmd eq 'TRANSLATOR')  { $self->_do_translator( $schema, $table, $field, $spec ) }
+    elsif ($cmd eq 'RELATION') { $self->_do_relation  ( $schema, $table, $field, $spec ) }
+    elsif ($cmd eq 'REGEX')    { $self->_do_regex     ( $schema, $table, $field, $spec ) }
+    elsif ($cmd eq 'ENUMOPT')  { $self->_do_enumopt   ( $schema, $table, $field, $spec, ++$self->{sortval} ) }
+    elsif ($cmd eq 'DEFAULT')  { $self->_do_default   ( $schema, $table, $field, $spec ) }
+    else                       { die "Invalid spec: unknown command $spec->{cmd}"}
+}
 
 # Did this one the new way cus it was easy, the rest will be redone at some point
 sub _do_translator {
