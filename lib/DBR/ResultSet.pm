@@ -315,6 +315,27 @@ sub offset {
     return $self;
 }
 
+sub order_by {
+    my $self = shift;
+    @_ or croak "order field is required";
+    @_ == 1 or croak "passing multiple values to order_by is reserved";
+    my $field = shift;
+
+    if (ref($field) ne 'DBR::Query::Part::OrderBy') {
+        my $tables = $self->[f_query]->tables;
+        my $table = $tables->[0]; # only the primary table is supported
+        my $alias = $table->alias;
+
+        my $field_o = $table->get_field( $field ) or croak "Invalid field $field";
+        $field_o->alias( $alias ) if $alias;
+
+        $field = DBR::Query::Part::OrderBy->new( $field_o ) or return $self->_error('failed to create order by object');
+    }
+
+    $self->[f_query]->orderby([ @{ $self->[f_query]->orderby || [] }, $field ]);
+    return $self;
+}
+
 sub where {
        my $self = shift;
 

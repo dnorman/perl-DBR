@@ -11,7 +11,7 @@ use base 'DBR::Query';
 use Carp;
 use DBR::Record::Maker;
 
-sub _params    { qw (fields tables where builder limit offset lock quiet_error) }
+sub _params    { qw (fields tables where builder limit offset orderby lock quiet_error) }
 sub _reqparams { qw (fields tables) }
 sub _validate_self{ 1 } # If I exist, I'm valid
 
@@ -44,6 +44,9 @@ sub sql{
 
       $sql = "SELECT $fields FROM $tables";
       $sql .= ' WHERE ' . $self->{where}->sql($conn) if $self->{where};
+      if (@{ $self->{orderby} || [] }) {
+          $sql .= ' ORDER BY ' . join(', ', map { $_->sql($conn) } @{ $self->{orderby} || [] });
+      }
       $sql .= ' FOR UPDATE'                          if $self->{lock};
       $sql .= ' LIMIT ' . $self->_limit_clause       if $self->{limit} || $self->{offset};
 
@@ -61,6 +64,11 @@ sub run {
 sub reset {
       my $self = shift;
       return $self->{sth} && $self->{sth}->finish;
+}
+
+sub orderby {
+    my $self = shift;
+    exists($_[0]) ? ($self->{orderby} = $_[0]) : $self->{orderby};
 }
 
 # HERE - it's a little funky that we are handling split queries here,
