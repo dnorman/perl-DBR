@@ -293,7 +293,7 @@ sub _parse_line{
 
       next if $line =~ /^\s*\#/; # skip comments
 
-      my @parts = split(/\t/,$line);
+      my @parts = split(/\t|\s*;\s*/,$line);
       return 1 unless @parts;
 
       my %params;
