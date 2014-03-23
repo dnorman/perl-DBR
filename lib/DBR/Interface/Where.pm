@@ -157,7 +157,7 @@ sub _process_comparison{
 			      # Any to_one relationship results in a join. we'll need some table aliases for later.
 			      # Do them now so everything is in sync. I originally assigned the alias in _reljoin,
 			      # but it didn't always alias the fields that needed to be aliased due to the order of execution.
-			      if( $relation->is_same_schema && $relation->is_to_one ){
+			      if( $relation->is_colocated && $relation->is_to_one ){
 				    croak ('No more than 25 tables allowed in a join') if $self->{aliascount} > 24;
 
 				    $cur_table ->alias() || $cur_table ->alias( chr(97 + $self->{aliascount}++)  ); # might be doing this one again
@@ -203,7 +203,7 @@ sub _reljoin{
 		  $prevfield ->table_alias( $prevalias ) if $prevalias;
 		  $field     ->table_alias( $alias     ) if $alias;
 
-		  if ($relation->is_same_schema && $relation->is_to_one) { # Do a join
+		  if ($relation->is_colocated && $relation->is_to_one) { # Do a join
 
 			$prevalias or die('Sanity error: prevtable alias is required');
 			$alias     or die('Sanity error: table alias is required');
@@ -221,7 +221,7 @@ sub _reljoin{
 			my $where = $self->_reljoin( $kid, \@tables ) or confess('_reljoin failed');
 
 			my $instance = $self->{instance};
-			unless ( $relation->is_same_schema ){
+			unless ( $relation->is_colocated ){
                               
                               my $tag = $instance->tag;
                               $tag = $self->{session}->tag if !length($tag); # I am not compelled by this. Seems like a hack
@@ -237,7 +237,7 @@ sub _reljoin{
 							    where    => $where,
 							   ) or confess('failed to create query object');
 
-			my $runflag = ! $relation->is_same_schema;
+			my $runflag = ! $relation->is_colocated;
  			my $subquery = DBR::Query::Part::Subquery->new($prevfield, $query, $runflag) or confess ('failed to create subquery object');
 			push @and, $subquery;
 		  }

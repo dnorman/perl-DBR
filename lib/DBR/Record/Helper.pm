@@ -264,7 +264,7 @@ sub getrelation{
       my @fields    = @{ $scope->fields( $maptable, [$mapfield] ) or return $self->_error('Failed to determine fields to retrieve') };
 
       my $mapinstance = $self->{instance};
-      unless ( $relation->is_same_schema ){
+      unless ( $relation->is_colocated ){
 	    my $tag = $mapinstance->tag;
 	    $tag = $self->{session}->tag if !length($tag); # I am not compelled by this. Seems like a hack
 	    $mapinstance = $maptable->schema->get_instance( $mapinstance->class, $tag ) or return $self->_error('Failed to retrieve db instance for the maptable');

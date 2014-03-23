@@ -87,6 +87,17 @@ sub guess_sibling {
     return $SCHEMA_MAP{$sid}{$tag}{$class} || $SCHEMA_MAP{$sid}{''}{$class} || -1;
 }
 
+sub is_colocated {
+    my $package = shift;
+    my $guid1 = shift;
+    my $guid2 = shift;
+
+    my $config1 = $INSTANCES_BY_GUID{$guid1};
+    my $config2 = $INSTANCES_BY_GUID{$guid2};
+
+    return $config1 && $config2 && $config1->{connectstring} eq $config2->{connectstring};
+}
+
 sub load_from_db{
 
       my( $package ) = shift;

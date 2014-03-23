@@ -66,8 +66,6 @@ sub load{
 							       ) or return $self->_error('failed to register from relationship');
 
 
-	    $relation->{same_schema} = ( $table1->{schema_id} == $table2->{schema_id} );
-
 	    $RELATIONS_BY_ID{ $relation->{relationship_id} } = $relation;
 	    push @rel_ids, $relation->{relationship_id};
 
@@ -185,8 +183,11 @@ sub is_to_one{
       return 0;
 }
 
-sub is_same_schema{ $RELATIONS_BY_ID{  shift->{relation_id} }->{same_schema} }
+sub is_colocated {
+    my $self = shift;
 
+    return $self->{instance_id} > 0 && $self->{mapinstance_id} > 0 && DBR::Config::Instance->is_colocated( $self->{instance_id}, $self->{mapinstance_id} );
+}
 
 sub index{
       my $self = shift;
