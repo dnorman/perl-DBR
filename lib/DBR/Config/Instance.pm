@@ -30,7 +30,7 @@ sub flush_all_handles {
       # can be run with or without an object
       my $cache = \%CONCACHE;
 
-      foreach my $guid (keys %INSTANCES_BY_GUID){
+      foreach my $guid (keys %$cache){
 	    my $conn = $cache->{ $guid };
 	    if($conn){
 		  $conn->disconnect();
@@ -225,14 +225,15 @@ sub connect{
 sub getconn{
       my $self = shift;
 
-      my $conn = $CONCACHE{ $self->{guid} };
+      my $config = $INSTANCES_BY_GUID{ $self->{guid} };
+      my $conn = $CONCACHE{ $config->{connectstring} };
 
       # conn-ping-zoom!!
       return $conn if $conn && $conn->ping; # Most of the time, we are done right here
 
       if ($conn) {
 	    $conn->disconnect();
-	    $conn = $CONCACHE{ $self->{guid} } = undef;
+	    $conn = $CONCACHE{ $config->{connectstring} } = undef;
 	    $self->_logDebug('Handle went stale');
       }
 
@@ -243,7 +244,7 @@ sub getconn{
 
       $self->_logDebug2('Connected');
 
-      return $CONCACHE{ $self->{guid} } = $conn;
+      return $CONCACHE{ $config->{connectstring} } = $conn;
 }
 
 sub _new_connection{
