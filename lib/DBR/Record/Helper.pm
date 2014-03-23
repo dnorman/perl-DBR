@@ -101,7 +101,7 @@ sub _set{
       my $table_id = shift;
       my $sets = shift;
 
-      my ($outwhere,$table) = $self->_pk_where($record,$table_id) or return $self->_error('failed to create where tree');
+      my ($outwhere,$table) = $self->_pk_where([$record],$table_id) or return $self->_error('failed to create where tree');
 
       my $query = DBR::Query::Update->new(
 					  session  => $self->{session},
@@ -129,7 +129,7 @@ sub delete{
 
        my ($table_id) = keys %{$self->{tablemap}};
 
-       my ($outwhere,$table) = $self->_pk_where($record,$table_id) or return $self->_error('failed to create where tree');
+       my ($outwhere,$table) = $self->_pk_where([$record],$table_id) or return $self->_error('failed to create where tree');
 
        my $query = DBR::Query::Delete->new(
 					   session  => $self->{session},
@@ -147,42 +147,53 @@ sub _instance{ shift->{instance} }
 
 # Fetch a field ONLY if it was not prefetched
 sub getfield{
-       my $self = shift;
-       my $record = shift;
-       my $field = shift;
-       my $want_sref = shift;
+    my $self = shift;
+    my $obj = shift;
+    my $field = shift;
+    my $want_sref = shift;
 
-       # Check to see if we've previously been assigned an index. if so, see if our record already has it fetched
-       # This could happen if the field was not fetched in the master query, but was already fetched with getfield
-       my $idx = $field->index;
-       return $record->[$idx] if defined($idx) && exists($record->[$idx]);
+    my $record = $obj->[0];
 
-       $self->{scope}->addfield($field) or return $self->_error('Failed to add field to scope');
+    # Check to see if we've previously been assigned an index. if so, see if our record already has it fetched
+    # This could happen if the field was not fetched in the master query, but was already fetched with getfield
+    my $idx = $field->index;
+    return $record->[$idx] if defined($idx) && exists($record->[$idx]);
 
-       my ($outwhere,$table)  = $self->_pk_where($record,$field->table_id) or return $self->_error('failed to create where tree');
+    $self->{scope}->addfield($field) or return $self->_error('Failed to add field to scope');
 
-       # Because we are doing a new select, which will set the indexes on
-       # its fields, we must clone the field provided by the original query
-       my $newfield = $field->clone;
+    my @or;
+    my @look = $self->_uniq( $record, grep( defined(), @{ $obj->[1][0] } ) );
+    my ($outwhere,$table,$ourpk,$newpk) = $self->_pk_where(\@look, $field->table_id) or return $self->_error('failed to create where tree');
 
-       my $query = DBR::Query::Select->new(
-					   session  => $self->{session},
-					   instance => $self->{instance},
-					   tables   => $table,
-					   where    => $outwhere,
-					   fields   => [ $newfield ] # use the new cloned field
-					  ) or return $self->_error('failed to create Query object');
+    my $cfield = $field->clone;
 
-       my $sth = $query->run or return $self->_error('failed to execute');
+    my $query = DBR::Query::Select->new(
+        session  => $self->{session},
+        instance => $self->{instance},
+        tables   => $table,
+        where    => $outwhere,
+        fields   => [ @$newpk, $cfield ] # use the new cloned field
+    ) or return $self->_error('failed to create Query object');
 
-       $sth->execute() or return $self->_error('Failed to execute sth');
-       my $row  = $sth->fetchrow_arrayref() or return $self->_error('Failed to fetchrow');
+    my $sth = $query->run or return $self->_error('failed to execute');
 
-       my $val = $row->[ $newfield->index ];
+    $sth->execute() or return $self->_error('Failed to execute sth');
 
-       $self->_setlocalval($record,$field,$val);
+    my %lut;
 
-       return $want_sref?\$val:$val; # return a scalarref if requested
+    my $e = qq{
+        while (my \$row = \$sth->fetchrow_arrayref()) {
+            \$lut${\ join "", map("{\$row->[".$_->index."]}",@$newpk) } = \$row->[${\$cfield->index}];
+        }
+        foreach my \$lr (\@look) {
+            \$self->_setlocalval(\$lr,\$field,\$lut${\ join "", map("{\$lr->[".$_->index."]}",@$ourpk) });
+        }
+    };
+    #print $e;
+    eval $e;
+    confess($@) if $@;
+
+    return $want_sref?\$record->[$field->index]:$record->[$field->index]; # return a scalarref if requested
 }
 
 sub getrelation{
@@ -214,7 +225,7 @@ sub getrelation{
 	    @allvals = map { $_->[ $fidx ] } grep {defined} @$rowcache; # look forward in the rowcache and add those too
       }else{
 	    # I forget, I think I'm using scalar ref as a way to represent undef and still have a true rvalue *ugh*
-	    my $sref = $self->getfield($record,$field, 1 ); # go fetch the value in the form of a scalarref
+	    my $sref = $self->getfield($obj,$field, 1 ); # go fetch the value in the form of a scalarref
 	    defined ($sref) or return $self->_error("failed to fetch the value of ${\ $field->name }");
 	    $val = $$sref;
 	    $fidx ||= $field->index;
@@ -280,6 +291,7 @@ sub getrelation{
 					 ) or return $self->_error('failed to create Query object');
 
 
+      # the following code contains a tacit assumption that we are either dealing with a single foreign key value, or else we have values for everything in the rowcache
       if($rowcount > 1){
 	    my $myresult;
 	    if($to1){
@@ -289,6 +301,7 @@ sub getrelation{
 
 		  # look forward in the rowcache and assign the resultsets for whatever we find
 		  foreach my $row (grep {defined} @$rowcache) {
+                      no warnings 'uninitialized';
 			$self->_setlocalval(
 					    $row,
 					    $relation,
@@ -328,24 +341,50 @@ sub getrelation{
 }
 
 sub _pk_where{
-      my $self = shift;
-      my $record = shift;
-      my $table_id = shift;
+    my $self = shift;
+    my $records = shift;
+    my $table_id = shift;
 
-      my $table = $self->{tablemap}->{ $table_id } || return $self->_error('Missing table for table_id ' . $table_id );
-      my $pk    = $self->{pkmap}->{ $table_id }    || return $self->_error('Missing primary key');
+    my $table = $self->{tablemap}->{ $table_id } || return $self->_error('Missing table for table_id ' . $table_id );
+    my $pk    = $self->{pkmap}->{ $table_id }    || return $self->_error('Missing primary key');
 
-      my @and;
-      foreach my $part (@{ $pk }){
+    $table = $table->clone;
+    my %clones;
+    map { $clones{$_->field_id} = $_->clone } @$pk;
 
-	    my $value = $part->makevalue( $record->[ $part->index ] ) or return $self->_error('failed to create value object');
-	    my $outfield = DBR::Query::Part::Compare->new( field => $part, value => $value ) or return $self->_error('failed to create compare object');
+    my $where;
+    if (@$pk == 1) {
+        # IN
+        my @vals;
+        my $ix = $pk->[0]->index;
+        foreach my $rec (@$records) {
+            push @vals, $rec->[$ix];
+        }
+        my $cpk = $clones{ $pk->[0]->field_id };
+        my $value = $cpk->makevalue( \@vals ) or return $self->_error('failed to create value object');
+        $where = DBR::Query::Part::Compare->new( field => $cpk, value => $value ) or return $self->_error('failed to create compare object');
+    }
+    else {
+        # Disjunctive normal form
+        my @or;
+        foreach my $rec (@$records) {
+            my @and;
 
-	    push @and, $outfield;
-      }
+            foreach my $part (@$pk) {
+                my $cpart = $clones{ $pk->[0]->field_id };
 
+                my $value = $cpart->makevalue( $rec->[ $part->index ] ) or return $self->_error('failed to create value object');
+                my $outfield = DBR::Query::Part::Compare->new( field => $cpart, value => $value ) or return $self->_error('failed to create compare object');
 
-      return (DBR::Query::Part::And->new(@and), $table);
+                push @and, $outfield;
+            }
+
+            push @or, DBR::Query::Part::And->new(@and);
+        }
+        $where = DBR::Query::Part::Or->new(@or);
+    }
+
+    return ($where, $table, $pk, [ map { $clones{ $_->field_id } } @$pk ]);
 }
 
 sub _setlocalval{

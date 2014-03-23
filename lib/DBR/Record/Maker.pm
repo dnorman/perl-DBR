@@ -184,7 +184,7 @@ sub _mk_accessor{
       if(defined $idx){ #did we actually fetch this?
 	    $value = $record . '[' . $idx . ']';
       }else{
-	    $value = "\$h->getfield( $record, \$f )";
+	    $value = "\$h->getfield( $obj, \$f )";
       }
 
       my $code;
