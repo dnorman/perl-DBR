@@ -102,22 +102,26 @@ sub _first{
 }
 
 sub _execute{
-      my $self = shift;
+    my $self = shift;
+    my $force_mem = shift;
 
-      $self->[f_state] == stCLEAN or croak "Cannot call _execute unless in a clean state";
+    $self->[f_state] == stCLEAN or croak "Cannot call _execute unless in a clean state";
 
-      if( defined( $self->[f_splitval] ) ){
+    if( defined( $self->[f_splitval] ) ){
 
-	    my $rows = $self->[f_rowcache] = $self->[f_query]->fetch_segment( $self->[f_splitval] ); # Query handles the sth
-	    $self->_mem_iterator;
+        $self->[f_rowcache] = $self->[f_query]->fetch_segment( $self->[f_splitval] ); # Query handles the sth
+        $self->_mem_iterator;
 
-      }else{
+    }elsif ($force_mem) {
 
-	    $self->_db_iterator;
+        $self->[f_rowcache] = $self->[f_query]->fetch_all_records;
+        $self->_mem_iterator;
 
-      }
+    } else {
+        $self->_db_iterator;
+    }
 
-      return 1;
+    return 1;
 }
 
 sub _db_iterator{
@@ -190,25 +194,13 @@ sub _db_iterator{
 sub _mem_iterator{
       my $self = shift;
 
-      my $record = $self->[f_query]->get_record_obj;
-      my $class  = $record->class;
-
-      my $buddy  = [ $self->[f_rowcache], $record ]; # buddy ref must contain the record object just to keep it in scope.
-
       my $rows  = $self->[f_rowcache];
       my $ct = 0;
 
       # use a closure to reduce hash lookups
       # It's very important that this closure is fast.
       # This one routine has more of an effect on speed than anything else in the rest of the code
-      $self->[f_next] = sub {
-	    bless( (
-		    [
-		     ($rows->[$ct++] or $ct = 0 or return DUMMY ),
-		     $buddy # buddy object comes along for the ride - to keep my recmaker in scope
-		    ]
-		   ),	$class );
-      };
+      $self->[f_next] = sub { ($rows->[$ct++] or $ct = 0 or return DUMMY ) };
 
       $self->[f_state] = stMEM;
       $self->[f_count] = @$rows;
@@ -217,26 +209,19 @@ sub _mem_iterator{
 }
 
 sub _fetch_all{
-      my $self = shift;
+    my $self = shift;
 
-      if( $self->[f_state] == stCLEAN ){
-	    $self->_execute;
-      }
+    if ($self->[f_state] == stACTIVE) {
+        $self->reset; # go back so we can fetch everything
+    }
 
-      if( $self->[f_state] == stMEM ){ # This should cover split queries
+    if( $self->[f_state] == stCLEAN ){
+        $self->_execute(1);
+    }
 
-	    return $self->[f_rowcache];
+    confess "should be in stMEM now" unless $self->[f_state] == stMEM;
 
-      }else{ # Must be stACTIVE
-
-	    my $sth = $self->[f_query]->run; # just gets the sth if it's already been run
-
-	    my $rows = $self->[f_rowcache] = $sth->fetchall_arrayref();
-
-	    $self->_mem_iterator(); # everything is in memory now, so use _mem_iterator
-
-	    return $rows;
-      }
+    return $self->[f_rowcache];
 }
 
 ###################################################
@@ -377,9 +362,7 @@ sub values {
 
       scalar(@fieldnames) or croak('Must provide a list of field names');
 
-      my $rows = $self->_fetch_all;
-
-      return wantarray?():[] unless $self->count > 0;
+      $self->_fetch_all; # TODO preserving old behavior of caching all values in memory.  is this really desired?
 
       my @parts;
       foreach my $fieldname (@fieldnames){
@@ -421,10 +404,6 @@ sub _lookuphash{
 
       return {} unless $self->count > 0;
 
-      my $record = $self->[f_query]->get_record_obj;
-      my $class  = $record->class;
-      my $buddy  = [ $self->[f_rowcache], $record ]; # buddy ref must contain the record object just to keep it in scope.
-
       my $code;
       foreach my $fieldname (@fieldnames){
 	    my @parts = split(/\.|\->/,$fieldname);
@@ -434,7 +413,7 @@ sub _lookuphash{
 
 	    $code .= "{ \$_->$fieldname }";
       }
-      my $part = ' map {  bless([$_,$buddy],$class)  } @{$rows}';
+      my $part = ' @{$rows}';
 
       if($mode eq 'multi'){
 	    $code = 'map {  push @{ $lookup' . $code . ' }, $_ }' . $part;

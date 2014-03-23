@@ -10,6 +10,7 @@ use strict;
 use base 'DBR::Query';
 use Carp;
 use DBR::Record::Maker;
+use Scalar::Util 'weaken';
 
 sub _params    { qw (fields tables where builder limit offset orderby lock quiet_error) }
 sub _reqparams { qw (fields tables) }
@@ -86,24 +87,37 @@ sub _do_split{
       # Should have a splitfield if we're getting here. Don't check for it. speeed.
       defined( my $idx = $self->{splitfield}->index ) or croak 'field object must provide an index';
 
-      my $sth = $self->run;
-
-      defined( $sth->execute ) or croak 'failed to execute statement (' . $sth->errstr. ')';
-
-      my $row;
-      my $code = 'while($row = $sth->fetch){ push @{$groupby{ $row->[' . $idx . '] }}, [@$row] }';
-      $self->_logDebug3($code);
-
       my %groupby;
-      eval $code;
-      $@ && confess $@;
 
-      $sth->finish;
+      # this was an eval, but there is scant to be gained replacing pp_padsv with pp_const
+      for my $rec ($self->fetch_all_records) {
+          push @{$groupby{ $rec->[0][$idx] }}, $rec;
+      }
+
       return \%groupby;
 }
 
-sub splitfield { return $_[0]->{splitfield} }
+sub fetch_all_records {
+    my $self = shift;
 
+    my $sth = $self->run;
+    defined( $sth->execute ) or croak 'failed to execute statement (' . $sth->errstr. ')';
+    my $rows = $sth->fetchall_arrayref or croak 'failed to execute statement (' . $sth->errstr . ')';
+    my $recobj = $self->get_record_obj;
+    my $class = $recobj->class;
+
+    my @out;
+    while (@$rows) {
+        my $chunk = [splice @$rows, 0, 1000];
+        my $buddy = [$chunk, $recobj];
+        push @out, map( bless([$_,$buddy],$class), @$chunk );
+        map { weaken $_ } @$chunk;
+    }
+
+    return wantarray ? @out : \@out;
+}
+
+sub splitfield { return $_[0]->{splitfield} }
 
 sub get_record_obj{
       my $self = shift;
