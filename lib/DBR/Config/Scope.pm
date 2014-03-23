@@ -134,11 +134,12 @@ sub fields{
 
       my @fields;
       foreach my $fid (@$fids){
-	     my $field = DBR::Config::Field->new(
-						 session   => $self->{session},
-						 field_id => $fid,
-					       ) or return $self->_error('failed to create table object');
-	    push @fields, $field;
+          my $field = DBR::Config::Field->new(
+              session  => $self->{session},
+              field_id => $fid,
+              -silent  => 1, # we would like to be able to add fields to the DB without troubling running programs, so ignore any "new" or otherwise invalid fields that get added.  see ROP-170
+          );
+          push @fields, $field if $field;
       }
 
 

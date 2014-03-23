@@ -214,7 +214,7 @@ sub new {
       return $self->_error('field_id is required') unless $self->[O_field_id];
       return $self->_error('session is required' ) unless $self->[O_session];
 
-      $FIELDS_BY_ID{ $self->[O_field_id] } or return $self->_error('invalid field_id');
+      $FIELDS_BY_ID{ $self->[O_field_id] } or return ($params{'-silent'} ? () : $self->_error('invalid field_id'));
 
       return( $self );
 }
