@@ -18,7 +18,6 @@ use Data::Dumper;
 use Getopt::Std;
 my %opts;
 getopts('dbqvl:',\%opts);
-$opts{d} = 1;
 
 sub okq {
       my ($test,$msg) = @_;
@@ -219,9 +218,8 @@ sub test{
       my $sql = $output->sql($conn);
       okq($sql,"Produce sql");
 
-      diag ("SQL:  $sql");
-      diag ("WANT: $reference_sql") if ! $opts{'q'};
-      okq( $sql eq $reference_sql,"SQL correctness check");
+      diag ("SQL:  $sql") if $sql ne $reference_sql;
+      okq( $sql eq $reference_sql,"SQL correctness check: $reference_sql");
 
       my ($start,$end,$seconds);
       my $before = Dumper($where);
