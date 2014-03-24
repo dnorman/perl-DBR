@@ -59,10 +59,24 @@ sub lookup{
 	    my $class  = $params{class}  || 'master';
 	    my $tag    = $params{tag}    || $self->{session}->tag;
 	    
-	    my $h = $INSTANCE_MAP{$handle} or return $self->_error("No DB instance found for handle '$handle'");
-	    
-	    $self->{guid} = $h->{$tag}{$class} || $h->{$tag}{'*'} || $h->{''}{$class} || $h->{''}{'*'} or # handle aliases if there's no exact match
-	      return $self->_error("No DB instance found for $handle-$class-$tag");
+            my $findit = sub {
+                my $h = $INSTANCE_MAP{$handle} or return;
+
+                return $h->{$tag}{$class} || $h->{$tag}{'*'} || $h->{''}{$class} || $h->{''}{'*'}; # handle aliases if there's no exact match
+            };
+
+            $self->{guid} = $findit->();
+            if (!$self->{guid}) {
+                for my $confguid (keys %INSTANCES_BY_GUID) {
+                    my $conf = $package->lookup( session => $params{session}, guid => $confguid ) or return $self->_error("Failed to fetch conf instance");
+                    next unless $conf->dbr_bootstrap;
+                    $package->load_from_db( parent_inst => $conf, session => $params{session} ) or return $self->_error("Failed to reload instances");
+                }
+                $self->{guid} = $findit->();
+            }
+            if (!$self->{guid}) {
+                return $self->_error("No DB instance found for $handle-$class-$tag");
+            }
       }
 
       $INSTANCES_BY_GUID{ $self->{guid} } or return $self->_error('no such guid');
@@ -110,10 +124,12 @@ sub load_from_db{
 
       my $parent = $params{parent_inst} || return $self->_error('parent_inst is required');
       my $dbh = $parent->connect || return $self->_error("Failed to connect to (@{[$parent->handle]} @{[$parent->class]})");
+      my $loaded = $INSTANCES_BY_GUID{ $parent->{guid} }{ loaded_instances } ||= [];
 
       return $self->_error('Failed to select instances') unless
 	my $instrows = $dbh->select(
 				    -table => 'dbr_instances',
+                                    -where  => (@$loaded ? { instance_id => [ "d!", @$loaded ] } : undef),
 				    -fields => 'instance_id schema_id class dbname username password host dbfile module handle readonly tag'
 				   );
 
@@ -125,6 +141,7 @@ sub load_from_db{
 					   spec   => $instrow
 					  ) || $self->_error("failed to load instance from database (@{[$parent->handle]} @{[$parent->class]})") or next;
 	    push @instances, $instance;
+            push @$loaded, $instrow->{instance_id};
       }
 
       return \@instances;
@@ -142,7 +159,6 @@ sub register { # basically the same as a new
       bless( $self, $package );
 
       return $self->_error( 'session is required'  ) unless $self->{session};
-
 
       my $spec = $params{spec} or return $self->_error( 'spec ref is required' );
 
