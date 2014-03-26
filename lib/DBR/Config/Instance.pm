@@ -30,11 +30,11 @@ sub flush_all_handles {
       # can be run with or without an object
       my $cache = \%CONCACHE;
 
-      foreach my $guid (keys %$cache){
-	    my $conn = $cache->{ $guid };
+      foreach my $cachekey (keys %$cache){
+	    my $conn = $cache->{ $cachekey };
 	    if($conn){
 		  $conn->disconnect();
-		  delete $cache->{ $guid };
+		  delete $cache->{ $cachekey };
 	    }
       }
 
