@@ -204,7 +204,7 @@ sub test{
       my $conn = $instance->connect('conn');
       okq($conn,'Connect');
 
-      my $table = $schema->get_table( 'album' ) or die("failed to look up table");
+      my $table = $schema->get_table( 'album', $instance ) or die("failed to look up table");
 
       my $builder = DBR::Interface::Where->new(
 					       session       => $session,

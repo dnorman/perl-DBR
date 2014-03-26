@@ -54,7 +54,7 @@ sub AUTOLOAD {
       return unless $method =~ /[^A-Z]/; # skip DESTROY and all-cap methods
       return $self->_error("Cannot autoload '$method' when no schema is defined") unless $self->{schema};
 
-      my $table = $self->{schema}->get_table( $method ) or return $self->_error("no such table '$method' exists in this schema");
+      my $table = $self->{schema}->get_table( $method, $self->{instance} ) or return $self->_error("no such table '$method' exists in this schema");
 
       my $object = DBR::Interface::Object->new(
 					       session   => $self->{session},

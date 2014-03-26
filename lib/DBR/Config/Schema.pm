@@ -96,13 +96,11 @@ sub new {
   my %params = @_;
   my $self = {
 	      session     => $params{session},
-              instance_id => $params{instance_id},
 	     };
 
   bless( $self, $package );
 
   return $self->_error('session is required') unless $self->{session};
-  return $self->_error('instance_id is required') unless $self->{instance_id};
 
   if ($params{schema_id}){
 	$self->{schema_id} = $params{schema_id};
@@ -120,19 +118,21 @@ sub new {
 sub get_table{
       my $self  = shift;
       my $tname = shift or return $self->_error('name is required');
+      my $inst = $_[0] && ref($_[0]) ? shift()->guid : shift() || -1;
 
       my $table_id = $TABLES_BY_NAME{ $self->{schema_id} } -> { $tname } || return $self->_error("table $tname does not exist");
 
       my $table = DBR::Config::Table->new(
 					  session   => $self->{session},
 					  table_id => $table_id,
-                                          instance_id => $self->{instance_id},
+                                          instance_id => $inst,
 					 ) or return $self->_error('failed to create table object');
       return $table;
 }
 
 sub tables{
       my $self  = shift;
+      my $inst = $_[0] && ref($_[0]) ? shift()->guid : shift() || -1;
 
       my @tables;
 
@@ -141,7 +141,7 @@ sub tables{
 	    my $table = DBR::Config::Table->new(
 						session   => $self->{session},
 						table_id => $table_id,
-                                                instance_id => $self->{instance_id},
+                                                instance_id => $inst,
 					       ) or return $self->_error('failed to create table object');
 	    push @tables, $table;
       }
