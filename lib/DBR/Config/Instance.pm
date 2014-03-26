@@ -315,7 +315,6 @@ sub schema{
       my $schema = DBR::Config::Schema->new(
 					    session   => $self->{session},
 					    schema_id => $schema_id,
-                                            instance_id => $self->{guid},
 					   ) || return $self->_error("failed to fetch schema object for schema_id $schema_id");
 
       return $schema;
