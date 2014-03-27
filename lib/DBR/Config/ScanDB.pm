@@ -68,7 +68,7 @@ sub scan_pkeys {
       my $sth;
       local $dbh->{PrintError} = 0;
       local $^W = 0;
-      eval { $sth= $dbh->primary_key_info(undef,undef,$table); };
+      eval { $sth= $dbh->primary_key_info(undef, $self->{scan_instance}->database, $table); };
       return $self->_error('failed call to primary_key_info') unless $sth;
       
       my %map = ();
@@ -89,7 +89,7 @@ sub scan_tables{
       my $dbh = $self->{scan_instance}->connect('dbh') || die "failed to connect to scanned db";
 
       return $self->_error('failed call to table_info') unless
-	my $sth = $dbh->table_info;
+	my $sth = $dbh->table_info( '', $self->{scan_instance}->database );
 
       my @tables;
       while (my $row = $sth->fetchrow_hashref()) {
@@ -114,7 +114,7 @@ sub scan_fields{
       my $dbh = $self->{scan_instance}->connect('dbh') || die "failed to connect to scanned db";
 
       return $self->_error('failed call to column_info') unless
-	my $sth = $dbh->column_info( undef, undef, $table, undef );
+	my $sth = $dbh->column_info( undef, $self->{scan_instance}->database , $table, undef );
 
       my @rows;
       while (my $row = $sth->fetchrow_hashref()) {
