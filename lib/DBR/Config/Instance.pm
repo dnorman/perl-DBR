@@ -109,7 +109,7 @@ sub is_colocated {
     my $config1 = $INSTANCES_BY_GUID{$guid1};
     my $config2 = $INSTANCES_BY_GUID{$guid2};
 
-    return $config1 && $config2 && $config1->{connectstring} eq $config2->{connectstring};
+    return $config1 && $config2 && _connectid($config1) eq _connectid($config2);
 }
 
 sub load_from_db{
@@ -249,18 +249,25 @@ sub connect{
       }
 }
 
+sub _connectid {
+    my $config = shift;
+
+    return join "\0", $config->{connectstring}, ($config->{user} || ''), ($config->{password} || '');
+}
+
 sub getconn{
       my $self = shift;
 
       my $config = $INSTANCES_BY_GUID{ $self->{guid} };
-      my $conn = $CONCACHE{ $config->{connectstring} };
+      my $dedup  = _connectid($config);
+      my $conn = $CONCACHE{ $dedup };
 
       # conn-ping-zoom!!
       return $conn if $conn && $conn->ping; # Most of the time, we are done right here
 
       if ($conn) {
 	    $conn->disconnect();
-	    $conn = $CONCACHE{ $config->{connectstring} } = undef;
+	    $conn = $CONCACHE{ $dedup } = undef;
 	    $self->_logDebug('Handle went stale');
       }
 
@@ -271,7 +278,7 @@ sub getconn{
 
       $self->_logDebug2('Connected');
 
-      return $CONCACHE{ $config->{connectstring} } = $conn;
+      return $CONCACHE{ $dedup } = $conn;
 }
 
 sub _new_connection{
