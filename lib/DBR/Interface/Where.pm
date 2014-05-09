@@ -22,7 +22,7 @@ sub new {
 
       bless( $self, $package );
 
-      $self->{tables} = [$self->{table}];
+      $self->{tables} = $params{tables} || [$self->{table}];
       $self->{aliascount} = 0;
 
       return( $self );
@@ -148,6 +148,8 @@ sub _process_comparison{
 			if( $ref->{been_here} ){ # Dejavu - merge any common paths together
 
 			      $cur_table = $ref->{table};  # next!
+                              $cur_table ->alias() || $cur_table ->alias( chr(97 + $self->{aliascount}++)  ); # might be doing this one again
+                              #print STDERR "BEEN HERE $cur_table->alias"
 
 			}else{
 

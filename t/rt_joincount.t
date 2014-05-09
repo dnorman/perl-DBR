@@ -20,10 +20,9 @@ ok($dbh, 'dbr connect');
 my $artist = $dbh->artist->get( 2 );
 ok($artist, "got artist");
 
-local $TODO = "does not work";
 my $albumids;
 lives_ok {
-    $albumids = $artist->albums->where( 'artist.name' => LIKE 'Artist%' )->values('id');
+    $albumids = $artist->albums->where( 'artist.name' => LIKE 'Artist%' )->values('artist_id');
 } 'select does not die';
 
 ok($albumids, "got ids");

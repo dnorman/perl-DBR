@@ -166,7 +166,8 @@ sub child_query{
       my $builder = $self->{builder} ||= DBR::Interface::Where->new(
 								    session       => $self->{session},
 								    instance      => $self->{instance},
-								    primary_table => $self->primary_table,
+                                                                    primary_table => $self->primary_table,
+								    tables        => $self->{tables},
 								   );
 
       my $ident = $builder->digest( $where );
@@ -188,6 +189,12 @@ sub _new_child_query{
 
       $child{where} = $self->{where} ? DBR::Query::Part::And->new( $self->{where}, $qpart ) : $qpart;
 
+      if($child{fields}){
+          my $alias = $self->primary_table->alias;
+          if($alias){
+              map { $_->table_alias($alias) } @{ $child{fields} };
+          }
+      }
       my $class = blessed($self);
       return bless(\%child, $class); # not even calling new
 }
