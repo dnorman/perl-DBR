@@ -81,6 +81,7 @@ sub scan_pkeys {
             next unless $row->{PK_NAME} eq 'PRIMARY KEY';
 	    my $table = $row->{TABLE_NAME} or return $self->_error('no TABLE_NAME!');
 	    my $field = $row->{COLUMN_NAME} or return $self->_error('no COLUMN_NAME!');
+            $field =~ s/"//g; # DBD::SQLite idiocy returns quoted pkeys
             $map{$table}->{$field} = 1;
       }
 
