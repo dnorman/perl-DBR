@@ -35,6 +35,9 @@ sub scan{
       my $self = shift;
       my %params = @_; 
 
+      my $dbh = $self->{conf_instance}->connect || die "failed to connect to config db";
+      $dbh->begin;
+
       my $tables = $self->scan_tables() || die "failed to scan tables";
       my $pkeys = $self->scan_pkeys(); # || die "failed to scan primary keys";
 
@@ -46,6 +49,8 @@ sub scan{
 
             $self->update_table($fields,$table,$pkey) or return $self->_error("failed to update table");
       }
+
+      $dbh->commit;
 
       #HACK - the scanner should load up the in-memory representation at the same time
       DBR::Config::Schema->load(
