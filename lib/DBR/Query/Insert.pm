@@ -87,7 +87,7 @@ sub sql{
       $sql = "INSERT INTO $tables (" . join (', ', @fields) . ') values (' . join (', ', @values) . ')';
 
       $sql .= ' WHERE ' . $self->{where}->sql( $conn ) if $self->{where};
-      $sql .= ' FOR UPDATE'                            if $self->{lock};
+      $sql .= ' FOR UPDATE'                            if $self->{lock} && $conn->can_lock;
       $sql .= ' LIMIT ' . $self->{limit}               if $self->{limit};
 
       $self->_logDebug2( $sql );

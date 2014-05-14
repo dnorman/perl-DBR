@@ -48,7 +48,7 @@ sub sql{
       if (@{ $self->{orderby} || [] }) {
           $sql .= ' ORDER BY ' . join(', ', map { $_->sql($conn) } @{ $self->{orderby} || [] });
       }
-      $sql .= ' FOR UPDATE'                          if $self->{lock};
+      $sql .= ' FOR UPDATE'                          if $self->{lock} && $conn->can_lock;
       $sql .= ' LIMIT ' . $self->_limit_clause       if $self->{limit} || $self->{offset};
 
       $self->_logDebug2( $sql );

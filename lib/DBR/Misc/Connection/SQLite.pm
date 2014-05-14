@@ -14,4 +14,6 @@ sub getSequenceValue{
 
 }
 
+sub can_lock { 0 }
+
 1;

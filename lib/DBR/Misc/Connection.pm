@@ -36,6 +36,7 @@ sub selectrow_array { my $self = shift;  return $self->_wrap($self->{dbh}->selec
 sub disconnect { my $self = shift; return $self->_wrap($self->{dbh}->disconnect(@_))  }
 sub quote { shift->{dbh}->quote(@_)  }
 sub quote_identifier { shift->{dbh}->quote_identifier(@_) }
+sub can_lock { 1 }
 
 sub ping {
       my $self = shift;
