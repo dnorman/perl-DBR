@@ -207,7 +207,11 @@ sub update_fields{
 	    if(defined $extra){
 		  $is_signed = ($extra =~ / unsigned/i)?0:1;
 		  $is_signed = 0 if $type =~ /unsigned/i; #Lame... SQLite sometimes returns the data type as 'int unsigned'
-	    }
+	    } else {
+                # SQLite has no unsigned types, or really types at all.  fake it by pulling a sign flag out of the type name
+                $is_signed = 1;
+                $is_signed = 0 if ($type =~ /UNSIGNED/i);
+            }
 	    $type =~ /^\s+|\s+$/g;
 	    ($type) = split (/\s+/,$type);
 	    my $typeid = DBR::Config::Field->get_type_id($type) or die( "Invalid type '$type'" );
