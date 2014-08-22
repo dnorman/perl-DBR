@@ -186,6 +186,7 @@ sub _gen_valcheck{ # Intentionally Non-oo
       my $code = join(' && ', @code);
 
       $code = "!defined(\$v)||($code)" if length($code) && $fieldref->[C_is_nullable];
+      $code = '1' unless length $code; # no constraints -> always pass, don't depend on the value itself being truthy
 
       #print STDERR "VALCHECK:$fieldref->[C_data_type], $code\t$R\n";
 
