@@ -314,7 +314,7 @@ sub order_by {
 
         my $dir = ($field =~ s/^-//) ? 'DESC' : 'ASC';
         my $field_o = $table->get_field( $field ) or croak "Invalid field $field";
-        $field_o->alias( $alias ) if $alias;
+        $field_o->table_alias( $alias ) if $alias;
 
         $field = DBR::Query::Part::OrderBy->new( $field_o, $dir ) or return $self->_error('failed to create order by object');
     }
