@@ -133,6 +133,8 @@ sub format  {
 }
 
 sub iso8601 {
+    return '' unless defined($_[0][0]);
+
     local($ENV{TZ}) = ${$_[0][1]}; tzset();
     my @lt = localtime($_[0][0]);
     my $tz = strftime("%z", @lt);
