@@ -117,6 +117,11 @@ sub is_null{
       return 0;
 }
 
+sub with_value {
+    my ($self, $value) = @_;
+    return bless({ %$self, value => $value }, ref($self));
+}
+
 sub is_emptyset{ $_[0]->count == 0 }
 
 sub quoted{

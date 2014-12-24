@@ -60,6 +60,7 @@ sub new{
       }elsif ( $value->count == 0 ){
             $sqlfunc  = $operator eq 'not' ? \&_always_sql : \&_never_sql;
       }elsif ( $value->count != 1 ){
+            $sqlfunc = \&_null_split_sql if grep { !defined } $value->raw;
 	    $operator = 'in'    if $operator eq 'eq';
 	    $operator = 'notin' if $operator eq 'not';
       }elsif ($value->is_null) {
@@ -90,6 +91,24 @@ sub _betweensql{
       my $quoted = $_[0]->value->quoted( $_[1] );
       @$quoted = sort {$a <=> $b} @$quoted;
       return $_[0]->field->sql($_[1]) . ' ' . $sql_ops{ $_[0]->operator } . " $quoted->[0] AND $quoted->[1]";
+}
+
+sub _null_split_sql {
+    my ($self, $conn) = @_;
+    my $val = $self->value;
+    my $nnullv = $val->with_value([grep {defined} $val->raw]);
+
+    my $ct = $nnullv->count;
+    my $negated = $self->operator ne 'in';
+    my $is_part = $self->field->sql($conn) . ($negated ? ' IS NOT NULL' : ' IS NULL');
+
+    if ($ct == 0) {
+        return $is_part;
+    }
+    else {
+        my $newop = $ct > 1 ? ($negated ? 'notin' : 'in') : ($negated ? 'not' : 'eq');
+        return '( ' . $is_part . ($negated ? ' AND ' : ' OR ') . $self->field->sql($conn) . ' ' . $sql_ops{$newop} . ' ' . $nnullv->sql($conn) . ' )';
+    }
 }
 
 sub _validate_self{ 1 }
