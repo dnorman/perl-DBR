@@ -132,7 +132,15 @@ sub format  {
       return strftime ($_[1], localtime($_[0][0]));
 }
 
-sub iso8601{ shift->format('%Y-%m-%dT%H:%M:%S%z') }
+sub iso8601 {
+    return '' unless defined($_[0][0]);
+
+    local($ENV{TZ}) = ${$_[0][1]}; tzset();
+    my @lt = localtime($_[0][0]);
+    my $tz = strftime("%z", @lt);
+    $tz =~ s/(\d{2})(\d{2})/$1:$2/;
+    return strftime ('%Y-%m-%dT%H:%M:%S', @lt) . $tz;
+}
 
 sub midnight{
       my $self = shift;
