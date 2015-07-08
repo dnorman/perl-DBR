@@ -24,6 +24,7 @@ sub lock     { }
 sub next     { DUMMY }
 sub where    { DUMMY }
 sub count    { 0     }
+sub order_by { DUMMY }
 
 sub TO_JSON { [] }
 
