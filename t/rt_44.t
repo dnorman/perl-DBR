@@ -58,4 +58,7 @@ while (my $item = $items->next()) {
   ok( !$@ && defined($foo_cents), 'foo_cents += price->cents (' . $foo_cents . ') ... ' . $@ );
 }
 
+$dbh->cart->get(4)->price(10 ** -15 + 1 - 1);
+is($dbh->cart->get(4)->price->cents, 0, 'rounding exponential notation correctly');
+
 done_testing();

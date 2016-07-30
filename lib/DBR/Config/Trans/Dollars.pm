@@ -22,7 +22,7 @@ sub backward{
 	    return $value->cents;
       }
 
-      $value =~ tr/0-9.-//cd; # the items listed are ALLOWED values
+      $value =~ tr/0-9e.-//cd; # the items listed are ALLOWED values
       unless(length($value)){
 	    $self->_error('invalid value specified');
 	    return ();
