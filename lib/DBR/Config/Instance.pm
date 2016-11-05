@@ -16,6 +16,7 @@ my $GUID = 1;
 #here is a list of the currently supported databases and their connect string formats
 my %connectstrings = (
 		      Mysql  => 'dbi:mysql:host=-hostname-;mysql_enable_utf8=1',
+		      Mysql_UDS => 'dbi:mysql:mysql_socket=[-hostname-];mysql_enable_utf8=1',
 		      SQLite => 'dbi:SQLite:dbname=-dbfile-',
 		      Pg     => 'dbi:Pg:dbname=-database-;host=-hostname-',
 		     );
@@ -182,6 +183,9 @@ sub register { # basically the same as a new
       return $self->_error( 'handle/name parameter is required'     ) unless $config->{handle};
 
       $config->{connectstring} = $connectstrings{$config->{module}} || return $self->_error("module '$config->{module}' is not a supported database type");
+      if ($config->{module} eq 'Mysql' && $config->{hostname} =~ m|^/|) {
+	    $config->{connectstring} = $connectstrings{Mysql_UDS};
+      }
 
       my $connclass = 'DBR::Misc::Connection::' . $config->{module};
       return $self->_error("Failed to Load $connclass ($@)") unless eval "require $connclass";
