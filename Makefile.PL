@@ -33,6 +33,7 @@ WriteMakefile(
 				  'Switch'	           => 0,
 				  'Symbol'             => 0,
 				  'Test::More'         => '0.87',
+                  'Test::Exception'    => 0,
 				  'Time::HiRes'        => 0,
 				  'Time::ParseDate'    => 0,
 				  'Text::SimpleTable::AutoWidth' => 0
