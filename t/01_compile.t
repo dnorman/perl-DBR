@@ -22,7 +22,7 @@ my $dbr = new DBR(
 	-logger   => $logger,
 	-conf     => $dbrconf,
 	-admin    => 1,
-	-fudge_tz => 1,
+	-fudge_tz => 0,
 ) or die 'failed to create dbr object';
 
 # diag("\$DBR::VERSION=$DBR::VERSION");
