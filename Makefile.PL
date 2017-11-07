@@ -10,10 +10,12 @@ test_requires "Test::More" => 0;
 test_requires "Test::Fatal" => 0;
 requires "XSLoader" => 0;
 
-rust_use_perl_xs { git=>"https://github.com/dnorman/perl-xs"  };
+rust_use_perl_xs { path => "../perl-xs"  };
 
 #TODO: Change this to use the crate once published to crates.io
 rust_requires "perl-sys" => { git=>"https://github.com/vickenty/perl-sys" };
+rust_requires "perlxs_derive" => { path => "../perl-xs/perlxs_derive"  };
+
 rust_write;
 
 WriteAll;
