@@ -1,8 +1,6 @@
 use std::cell::RefCell;
 use perl_xs::{ IV, DataRef };
-use perl_xs::convert::{FromKeyValueStack};
 use perl_xs::context::Context;
-use perlxs_derive::FromKeyValueStack;
 
 xs! {
     package DBR;
@@ -24,15 +22,19 @@ xs! {
     }
 }
 
-#[derive(Debug, FromKeyValueStack)]
+#[derive(FromKeyValueStack)]
 struct DBRBuilder {
     use_exceptions: bool,
     app:            Option<String>,
+    #[perlxs(key = "-conf")]
     conf:           Option<String>,
     logpath:        Option<String>,
     loglevel:       Option<String>,
+    #[perlxs(key = "-logger")]
     logger:         Option<String>,
+    #[perlxs(key = "-admin")]
     admin:          bool,
+    #[perlxs(key = "-fudge_tz")]
     fudge_tz:       bool,
 
 }
