@@ -1,13 +1,12 @@
 use std::cell::RefCell;
 use perl_xs::{ IV, DataRef };
-use perl_xs::context::Context;
 
 xs! {
     package DBR;
 
     sub new(ctx, class: String) {
         println!("new {:?}", class);
-        let dbrbuilder = DBRBuilder::from_kv_stack(&mut ctx, 1);
+        let dbrbuilder = DBRBuilder::from_perl_kv(&mut ctx, 1);
         println!("DBRBuilder {:?}", dbrbuilder);
 
         ctx.new_sv_with_data(RefCell::new(123)).bless(&class)
@@ -22,7 +21,7 @@ xs! {
     }
 }
 
-#[derive(FromKeyValueStack)]
+#[derive(FromPerlKV,Debug)]
 struct DBRBuilder {
     use_exceptions: bool,
     app:            Option<String>,
