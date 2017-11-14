@@ -1,4 +1,3 @@
-
 sub new {
       my( $package ) = shift;
       my %params = @_;

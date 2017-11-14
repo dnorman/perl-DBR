@@ -1,7 +1,3 @@
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License as
-# published by the Free Software Foundation.
-
 package DBR::Misc::Dummy;
 # I only ever evaluate to false...  false false falsey false
 # plus, when you call any method, I just return myself.
