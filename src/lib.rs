@@ -5,9 +5,14 @@ extern crate perl_sys;
 #[macro_use]
 extern crate perlxs_derive;
 
-mod dbr;
+mod context;
+mod session;
+use context::Context;
+use session:Session;
+
+mod wrapper;
 
 xs! {
     bootstrap boot_DBR;
-    use dbr;
+    use wrapper::dbr;
 }
