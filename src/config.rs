@@ -101,25 +101,25 @@ impl Config {
             }
         }
         
-        let mut handle = fields.get("handle");
-        if let None = handle {
-            handle = fields.get("name");
-        }
-        let mut module = fields.get("module");
-        if let None = module {
-            module = fields.get("type");
+        fn get_hks (hm: HashMap, keys: &[&str]) -> Option<String>{
+            for key in keys {
+                if let Some(v) = hm.get(key){
+                    return Some(v)
+                }
+            }
+            None
         }
 
         let instance = Instance{
-            handle:     handle.ok_or(ConfigError::MissingField("handle"))?,
-		    module:     handle.ok_or(ConfigError::MissingField("module"))?,
-		    database:   $spec->{dbname}   || $spec->{database},
-		    hostname:   $spec->{hostname} || $spec->{host},
-		    user:       $spec->{username} || $spec->{user},
-		    dbfile:     $spec->{dbfile},
-		    tag:        $spec->{tag} || '',
-		    password    => $spec->{password},
-		    class       => $spec->{class}       || 'master', # default to master
+            handle:     get_hks(fields,["handle","name"]).ok_or(ConfigError::MissingField("handle"))?,
+		    module:     get_hks(fields,["module","type"]).ok_or(ConfigError::MissingField("module"))?,
+		    database:   get_hks(fields,["dbname","database"]),
+		    hostname:   get_hks(fields,["hostname","host"]),
+		    user:       get_hks(fields,["username","user"]),
+		    dbfile:     fields.get("dbfile"),
+		    tag:        fields.get("tag"),
+		    password:   fields.get("password"),
+		    class       fields.get("class").unwrap_or("master"),
 		    instance_id => $spec->{instance_id} || '',
 		    schema_id   => $spec->{schema_id}   || '',
 		    allowquery  => $spec->{allowquery}  || 0,
