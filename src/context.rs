@@ -1,5 +1,6 @@
 use crate::Session;
 use crate::Context;
+use crate::config::Config;
 
 #[derive(FromPerlKV,Debug)]
 pub struct Options {
@@ -25,19 +26,20 @@ pub struct Options {
 }
 
 pub struct Context {
-    opts: Options
+    opts:   Options,
+    config: Config,
 }
 
 impl Context {
     pub fn new (opts:Options) -> Self {
 
-    let session = Session::new(opts);
-    let config = Config::new( session );
+    let config = Config::new(&opts);
     let mut context = Self{
-        opts
+        opts,
+        config
     };
 
-    config.load_file( &mut context, &opts );
+    self.config.load_file( &mut context, &opts );
 
     context
 }

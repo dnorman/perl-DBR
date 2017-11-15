@@ -6,9 +6,9 @@ extern crate perl_sys;
 extern crate perlxs_derive;
 
 mod context;
-mod session;
+mod config;
+mod error;
 use context::Context;
-use session:Session;
 
 mod wrapper;
 

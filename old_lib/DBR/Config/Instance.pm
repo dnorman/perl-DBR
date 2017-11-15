@@ -144,60 +144,11 @@ sub load_from_db{
 }
 
 sub register { # basically the same as a new
-      my( $package ) = shift;
-      $package = ref( $package ) || $package;
-      my %params = @_;
-
-
-      my $self = {
-		  session => $params{session}
-		 };
-      bless( $self, $package );
-
-      return $self->_error( 'session is required'  ) unless $self->{session};
 
       my $spec = $params{spec} or return $self->_error( 'spec ref is required' );
 
-      my $config = {
-		    handle      => $spec->{handle}   || $spec->{name},
-		    module      => $spec->{module}   || $spec->{type},
-		    database    => $spec->{dbname}   || $spec->{database},
-		    hostname    => $spec->{hostname} || $spec->{host},
-		    user        => $spec->{username} || $spec->{user},
-		    dbfile      => $spec->{dbfile},
-		    tag         => $spec->{tag} || '',
-		    password    => $spec->{password},
-		    class       => $spec->{class}       || 'master', # default to master
-		    instance_id => $spec->{instance_id} || '',
-		    schema_id   => $spec->{schema_id}   || '',
-		    allowquery  => $spec->{allowquery}  || 0,
-		    readonly    => $spec->{readonly}    || 0,
-		   };
+***
 
-      return $self->_error( 'module/type parameter is required'     ) unless $config->{module};
-      return $self->_error( 'handle/name parameter is required'     ) unless $config->{handle};
-
-      $config->{connectstring} = $connectstrings{$config->{module}} || return $self->_error("module '$config->{module}' is not a supported database type");
-      if ($config->{module} eq 'Mysql' && $config->{hostname} =~ m|^/|) {
-	    $config->{connectstring} = $connectstrings{Mysql_UDS};
-      }
-
-      my $connclass = 'DBR::Misc::Connection::' . $config->{module};
-      return $self->_error("Failed to Load $connclass ($@)") unless eval "require $connclass";
-
-      $config->{connclass} = $connclass;
-
-      my $reqfields = $connclass->required_config_fields or return $self->_error('Failed to determine required config fields');
-
-      foreach my $name (@$reqfields){
-	    return $self->_error( $name . ' parameter is required' ) unless $config->{$name};
-      }
-
-      $config->{dbr_bootstrap} = $spec->{dbr_bootstrap}? 1:0;
-
-      foreach my $key (keys %{$config}) {
-	    $config->{connectstring} =~ s/-$key-/$config->{$key}/;
-      }
 
       # Register or Reuse the guid
       my $guid = $INSTANCE_MAP{ $config->{handle} }{ $config->{tag} }{ $config->{class} } ||= $GUID++;
