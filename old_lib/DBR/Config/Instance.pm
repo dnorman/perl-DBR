@@ -8,13 +8,6 @@ use Carp;
 
 my $GUID = 1;
 
-#here is a list of the currently supported databases and their connect string formats
-# my %connectstrings = (
-# 		      Mysql  => 'dbi:mysql:host=-hostname-;mysql_enable_utf8=1',
-# 		      Mysql_UDS => 'dbi:mysql:mysql_socket=[-hostname-];mysql_enable_utf8=1',
-# 		      SQLite => 'dbi:SQLite:dbname=-dbfile-',
-# 		      Pg     => 'dbi:Pg:dbname=-database-;host=-hostname-',
-# 		     );
 
 my %CONCACHE;
 my %INSTANCE_MAP;
@@ -22,20 +15,6 @@ my %SCHEMA_MAP;
 my %INSTANCES_BY_GUID;
 
 
-sub flush_all_handles {
-      # can be run with or without an object
-      my $cache = \%CONCACHE;
-
-      foreach my $cachekey (keys %$cache){
-	    my $conn = $cache->{ $cachekey };
-	    if($conn){
-		  $conn->disconnect();
-		  delete $cache->{ $cachekey };
-	    }
-      }
-
-      return 1;
-}
 
 sub lookup{
       my $package = shift;
@@ -106,41 +85,6 @@ sub is_colocated {
     my $config2 = $INSTANCES_BY_GUID{$guid2};
 
     return $config1 && $config2 && _connectid($config1) eq _connectid($config2);
-}
-
-sub load_from_db{
-
-      my( $package ) = shift;
-      my %params = @_;
-
-      my $self = {
-		  session => $params{session},
-		 };
-      bless( $self, $package ); # Dummy object
-
-      my $parent = $params{parent_inst} || return $self->_error('parent_inst is required');
-      my $dbh = $parent->connect || return $self->_error("Failed to connect to (@{[$parent->handle]} @{[$parent->class]})");
-      my $loaded = $INSTANCES_BY_GUID{ $parent->{guid} }{ loaded_instances } ||= [];
-
-      return $self->_error('Failed to select instances') unless
-	my $instrows = $dbh->select(
-				    -table => 'dbr_instances',
-                                    -where  => (@$loaded ? { instance_id => [ "d!", @$loaded ] } : undef),
-				    -fields => 'instance_id schema_id class dbname username password host dbfile module handle readonly tag'
-				   );
-
-      my @instances;
-      foreach my $instrow (@$instrows){
-
-	    my $instance = $self->register(
-					   session => $self->{session},
-					   spec   => $instrow
-					  ) || $self->_error("failed to load instance from database (@{[$parent->handle]} @{[$parent->class]})") or next;
-	    push @instances, $instance;
-            push @$loaded, $instrow->{instance_id};
-      }
-
-      return \@instances;
 }
 
 sub register { # basically the same as a new

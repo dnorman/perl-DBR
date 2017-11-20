@@ -13,12 +13,12 @@ xs! {
 
         let context = Context::new(opts);
 
-        context.flush_all_handles(); // Make it safer for forking
+        context.close_all_filehandles(); // Make it safer for forking
         ctx.new_sv_with_data(RefCell::new(context)).bless(&class)
     }
     
     sub flush_handles(_ctx, this: DataRef<RefCell<IV>>) {
-        this.borrow_mut().flush_all_handles();
+        this.borrow_mut().close_all_filehandles();
     }
 
 //     sub setlogger {

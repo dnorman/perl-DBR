@@ -6,7 +6,7 @@ mod pg;
 mod sqlite;
 
 pub trait Adapter {
-
+    fn close_all_filehandles();
 }
 
 pub fn get_adapter ( section: ConfigHashMap ) -> Result<Adapter,ConfigError> {

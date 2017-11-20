@@ -3,7 +3,7 @@ use crate::Context;
 use crate::config::Config;
 
 #[derive(FromPerlKV,Debug)]
-pub struct Options {
+pub struct ContextOptions {
     use_exceptions: bool,
     
     app:            Option<String>,
@@ -31,17 +31,22 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn new (opts:Options) -> Self {
+    pub fn new (opts: DBROptions) -> Self {
+        let config = Config::new(&opts);
+        let mut context = Self{
+            opts,
+            config
+        };
 
-    let config = Config::new(&opts);
-    let mut context = Self{
-        opts,
-        config
-    };
+        self.config.load_file( &mut context, &opts );
 
-    self.config.load_file( &mut context, &opts );
-
-    context
+        context
+    }
+    pub fn close_all_filehandles (&mut self) {
+        for instance in self.instances.iter() {
+            instance.adapter.close_all_filehandles()
+        }
+    }
 }
     //   return $self->_error("Failed to create DBR::Util::Session object") unless
 	// $self->{session} = DBR::Misc::Session->new(

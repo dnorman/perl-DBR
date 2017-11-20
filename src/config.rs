@@ -119,77 +119,32 @@ impl Config {
 
     fn process_section(&mut self, mut section: ConfigHashMap) -> Result<(),ConfigError>{
 
-       let adapter = adapter::get_adapter( section )?
+        let adpt = adapter::get_adapter( section )?;
 
+        let instance = Instance {
+            adapter:       adpt,
             handle:        section.get(["handle","name"])?,
-		    tag:           section.get_opt(["tag"])?,
-		    class          section.get_opt(["class"]),
-		    instance_id:   section.get_opt(["instance_id"])?,
-		    schema_id:     section.get_opt(["schema_id"])?,
-		    allowquery:    section.get_opt(["allowquery"])?,
-		    readonly:      section.get_opt(["readonly"])?,
-            dbr_bootstrap: section.get_opt(["dbr_bootstrap"])?,
-
-
- 
-
-      my $connclass = 'DBR::Misc::Connection::' . $config->{module};
-      return $self->_error("Failed to Load $connclass ($@)") unless eval "require $connclass";
-
-      $config->{connclass} = $connclass;
-
-      my $reqfields = $connclass->required_config_fields or return $self->_error('Failed to determine required config fields');
-
-      foreach my $name (@$reqfields){
-	    return $self->_error( $name . ' parameter is required' ) unless $config->{$name};
-      }
-
-      $config->{dbr_bootstrap} = $spec->{dbr_bootstrap}? 1:0;
-
-      foreach my $key (keys %{$config}) {
-	    $config->{connectstring} =~ s/-$key-/$config->{$key}/;
-      }
-
+            tag:           section.get_opt(["tag"])?,
+            class          section.get_opt(["class"]).or("master".to_string()),
+            instance_id:   section.get_opt(["instance_id"])?,
+            schema_id:     section.get_opt(["schema_id"])?,
+            allowquery:    section.get_opt(["allowquery"])?,
+            readonly:      section.get_opt(["readonly"])?,
+        };
+         
         self.instances.push(instance.clone());
-
-        if instance.dbr_bootstrap {
-            
-        }
-    //     my $count;
-    //     foreach my $instspec (@conf){
-    //         $count++;
-
-    //         my $instance = DBR::Config::Instance->register(
-    //                             dbr    => $dbr,
-    //                             session => $self->{session},
-    //                             spec   => $instspec
-    //                             ) or $self->_error("failed to load DBR conf file '$file' (stanza #$count)") && next;
-    //         if($instance->dbr_bootstrap){
-    //         #don't bail out here on error
-    //         $self->load_dbconf(
-    //                     dbr      => $dbr,
-    //                     instance => $instance
-    //                     ) || $self->_error("failed to load DBR config tables") && next;
-    //         }
-    //     }
-
         self.loaded_files.push(filename);
+
+        if let Some(true) = section.get_opt(["dbr_bootstrap"])? {
+            self.load_dbconf(&instance)?;
+        }
+
         Ok()
 
     }
 
-    // sub load_dbconf{
-    //     my $self  = shift;
-    //     my %params = @_;
+    fn load_dbconf (&mut self, seed_instance: Instance) -> Result<(),ConfigError> {
 
-
-
-    //     my $dbr         = $params{'dbr'}      or return $self->_error( 'dbr parameter is required'    );
-    //     my $parent_inst = $params{'instance'} or return $self->_error( 'instance parameter is required' );
-
-
-
-    //     $self->_error("failed to create instance handles") unless
     //     my $instances = DBR::Config::Instance->load_from_db(
     //                                 session   => $self->{session},
     //                                 dbr      => $dbr,
@@ -212,3 +167,38 @@ impl Config {
     // }
 
 }
+
+// sub load_from_db{
+
+//       my( $package ) = shift;
+//       my %params = @_;
+
+//       my $self = {
+// 		  session => $params{session},
+// 		 };
+//       bless( $self, $package ); # Dummy object
+
+//       my $parent = $params{parent_inst} || return $self->_error('parent_inst is required');
+//       my $dbh = $parent->connect || return $self->_error("Failed to connect to (@{[$parent->handle]} @{[$parent->class]})");
+//       my $loaded = $INSTANCES_BY_GUID{ $parent->{guid} }{ loaded_instances } ||= [];
+
+//       return $self->_error('Failed to select instances') unless
+// 	my $instrows = $dbh->select(
+// 				    -table => 'dbr_instances',
+//                                     -where  => (@$loaded ? { instance_id => [ "d!", @$loaded ] } : undef),
+// 				    -fields => 'instance_id schema_id class dbname username password host dbfile module handle readonly tag'
+// 				   );
+
+//       my @instances;
+//       foreach my $instrow (@$instrows){
+
+// 	    my $instance = $self->register(
+// 					   session => $self->{session},
+// 					   spec   => $instrow
+// 					  ) || $self->_error("failed to load instance from database (@{[$parent->handle]} @{[$parent->class]})") or next;
+// 	    push @instances, $instance;
+//             push @$loaded, $instrow->{instance_id};
+//       }
+
+//       return \@instances;
+// }
