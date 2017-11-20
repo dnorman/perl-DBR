@@ -2,8 +2,12 @@ use std::io::{self, BufReader};
 use std::io::prelude::*;
 use std::fs::File;
 use regex::Regex;
+use std::mem;
+
+use util::PerlyBool;
 
 use crate::Session;
+use adapter::Adapter;
 
 pub struct Config {
     instances: Vec<Instance>,
@@ -15,25 +19,119 @@ pub struct Schema {
 }
 
 pub struct Instance {
+    adapter:    Adapter,
     handle      String,
-    module      String,
-    database    Option<String>,
-    hostname    Option<String>,
-    user        Option<String>,
-    dbfile      Option<String>,
     tag         Option<String>,
-    password    String,
     class:      String,
     instance_id Option<usize>,
     schema_id   Option<usize>,
-    allowquery: bool,
-    readonly    bool
+    allowquery: PerlyBool,
+    readonly:    PerlyBool,
+    dbr_bootstrap: PerlyBool
 };
 
-      $config->{connectstring} = $connectstrings{$config->{module}} || return $self->_error("module '$config->{module}' is not a supported database type");
-      if ($config->{module} eq 'Mysql' && $config->{hostname} =~ m|^/|) {
-	    $config->{connectstring} = $connectstrings{Mysql_UDS};
-      }
+pub (crate) struct ConfigHashMap(pub HashMap<String,String>);
+
+impl ConfigHashMap {
+    fn new () -> Self {
+        ConfigHashMap(HashMap::new())
+    }
+    fn get<T>(&self, keys: &[&str]) -> Result<T,ConfigError> 
+        where T: std::str::FromStr {
+        for key in keys {
+            if let Some(s) = self.hm.get(key) {
+                return match s.parse() {
+                    Ok(v)  => Ok(Some(v)),
+                    Err(_e) => Err(ConfigError::ParseField(key.to_string()))
+                }
+            }
+        }
+
+        Err(ConfigError::MissingField(keys[0]))
+    }
+    fn get_opt<T>(&self, keys: &[&str]) -> Result<Option<T>,ConfigError> 
+        where T: std::str::FromStr {
+        for key in keys {
+            if let Some(s) = self.hm.get(key) {
+                return match s.parse() {
+                    Ok(v)  => Ok(Some(v)),
+                    Err(_e) => Err(ConfigError::ParseField(key.to_string()))
+                }
+            }
+        }
+
+        Ok(None)
+    }
+}
+
+impl Config {
+    pub fn new -> Self {
+        Config::default()
+    }
+    pub fn load_file(context: &mut Context, filename: String ) -> Result<_,ConfigError> {
+
+        if self.loaded_files.contains(filename) {
+            return Err(ConfigLoadError::FileAlreadyLoaded);
+        }
+
+        let f = File::open(filename)?;
+        let mut buf_reader = BufReader::new(file);
+
+        let mut section = ConfigHashMap::new();
+        let mut sections = Vec::new();
+
+        // Strip comments, leading and traling whitespace
+        let re_strip   = Regex::new(r"(\#.*$|^\s*|\s*$)").unwrap();
+        let re_fdelim  = Regex::new(r"/\s*\;\s*/").unwrap();
+        let re_section = Regex::new(r"^---").unwrap();
+        let re_kv      = Regex::new(r"^(.+?)\s*=\s*(.+)$").unwrap();
+
+        for line in buf_reader.lines() {
+            let line = re_strip.replace_all(line?, "");
+
+            if line.len() == 0 {
+                continue;
+            }
+
+            if re_section.is_match(part) {
+                if section.0.len(){
+                    self.process_section( mem::replace(section,ConfigHashMap::new())?;
+                }
+                continue;
+            }
+
+            for part in line.split(&re_fdelim){
+                if let Some(caps) = re_kv.captures(part){
+                    let key = caps.get(0).unwrap();
+                    let val = caps.get(1).unwrap();
+                    fields.0.insert(key,val);
+                }
+            }
+            if 
+        }
+
+        if section.0.len(){
+            self.process_section( section )?;
+        }
+
+        Ok()
+    }
+
+    fn process_section(&mut self, mut section: ConfigHashMap) -> Result<(),ConfigError>{
+
+       let adapter = adapter::get_adapter( section )?
+
+            handle:        section.get(["handle","name"])?,
+		    tag:           section.get_opt(["tag"])?,
+		    class          section.get_opt(["class"]),
+		    instance_id:   section.get_opt(["instance_id"])?,
+		    schema_id:     section.get_opt(["schema_id"])?,
+		    allowquery:    section.get_opt(["allowquery"])?,
+		    readonly:      section.get_opt(["readonly"])?,
+            dbr_bootstrap: section.get_opt(["dbr_bootstrap"])?,
+
+
+ 
 
       my $connclass = 'DBR::Misc::Connection::' . $config->{module};
       return $self->_error("Failed to Load $connclass ($@)") unless eval "require $connclass";
@@ -52,82 +150,11 @@ pub struct Instance {
 	    $config->{connectstring} =~ s/-$key-/$config->{$key}/;
       }
 
-}
+        self.instances.push(instance.clone());
 
-
-impl Config {
-    pub fn new -> Self {
-        Config::default()
-    }
-    pub fn load_file(context: &mut Context, filename: String ) -> Result<(),ConfigError> {
-
-        if self.loaded_files.contains(filename) {
-            return Err(ConfigLoadError::FileAlreadyLoaded);
+        if instance.dbr_bootstrap {
+            
         }
-
-        let f = File::open(filename)?;
-        let mut buf_reader = BufReader::new(file);
-
-        let mut fields = Some(HashMap::new());
-        let mut sections = Vec::new();
-
-        // Strip comments, leading and traling whitespace
-        let re_strip   = Regex::new(r"(\#.*$|^\s*|\s*$)").unwrap();
-        let re_fdelim  = Regex::new(r"/\s*\;\s*/").unwrap();
-        let re_section = Regex::new(r"^---").unwrap();
-        let re_kv      = Regex::new(r"^(.+?)\s*=\s*(.+)$").unwrap();
-
-        for line in buf_reader.lines() {
-            let line = re_strip.replace_all(line?, "");
-
-            if line.len() == 0 {
-                continue;
-            }
-
-            if re_section.is_match(part) {
-                if fields.len(){
-                    sections.push(fields.take());
-                    fields = Some(HashMap::new());
-                }
-                continue;
-            }
-
-            for part in line.split(&re_fdelim){
-                if let Some(caps) = re_kv.captures(part){
-                    let key = caps.get(0).unwrap();
-                    let val = caps.get(1).unwrap();
-                    fields.insert(key,val);
-                }
-            }
-        }
-        
-        fn get_hks (hm: HashMap, keys: &[&str]) -> Option<String>{
-            for key in keys {
-                if let Some(v) = hm.get(key){
-                    return Some(v)
-                }
-            }
-            None
-        }
-
-        let instance = Instance{
-            handle:     get_hks(fields,["handle","name"]).ok_or(ConfigError::MissingField("handle"))?,
-		    module:     get_hks(fields,["module","type"]).ok_or(ConfigError::MissingField("module"))?,
-		    database:   get_hks(fields,["dbname","database"]),
-		    hostname:   get_hks(fields,["hostname","host"]),
-		    user:       get_hks(fields,["username","user"]),
-		    dbfile:     fields.get("dbfile"),
-		    tag:        fields.get("tag"),
-		    password:   fields.get("password"),
-		    class       fields.get("class").unwrap_or("master"),
-		    instance_id => $spec->{instance_id} || '',
-		    schema_id   => $spec->{schema_id}   || '',
-		    allowquery  => $spec->{allowquery}  || 0,
-		    readonly    => $spec->{readonly}    || 0,
-        }
-
-        self.instances.push(instance);
-
     //     my $count;
     //     foreach my $instspec (@conf){
     //         $count++;

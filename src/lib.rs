@@ -9,6 +9,7 @@ mod context;
 mod config;
 mod error;
 use context::Context;
+use util::*;
 
 mod wrapper;
 

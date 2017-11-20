@@ -3,7 +3,8 @@ use std::io;
 pub enum ConfigError{
     FileAlreadyLoaded,
     FileIo(std::io::Error),
-    MissingField(&'const str)
+    MissingField(&'static [&'static str]),
+    UnsupportedAdapter(String),
 }
 
 
