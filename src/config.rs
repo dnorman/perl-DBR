@@ -2,12 +2,14 @@ use std::io::{self, BufReader};
 use std::io::prelude::*;
 use std::fs::File;
 use regex::Regex;
+use std::collections::HashMap;
 use std::mem;
+use std::str::FromStr;
 
 use util::PerlyBool;
-
-use crate::Session;
-use adapter::Adapter;
+use session::Session;
+use adapter::{self,Adapter};
+use error::ConfigError;
 
 pub struct Config {
     instances: Vec<Instance>,
@@ -19,16 +21,15 @@ pub struct Schema {
 }
 
 pub struct Instance {
-    adapter:    Adapter,
-    handle      String,
-    tag         Option<String>,
-    class:      String,
-    instance_id Option<usize>,
-    schema_id   Option<usize>,
-    allowquery: PerlyBool,
-    readonly:    PerlyBool,
-    dbr_bootstrap: PerlyBool
-};
+    adapter:       Box<Adapter>,
+    handle:        String,
+    tag:           Option<String>,
+    class:         String,
+    instance_id:   Option<usize>,
+    schema_id:     Option<usize>,
+    allowquery:    PerlyBool,
+    readonly:      PerlyBool,
+}
 
 pub (crate) struct ConfigHashMap(pub HashMap<String,String>);
 
@@ -37,7 +38,7 @@ impl ConfigHashMap {
         ConfigHashMap(HashMap::new())
     }
     fn get<T>(&self, keys: &[&str]) -> Result<T,ConfigError> 
-        where T: std::str::FromStr {
+        where T: FromStr {
         for key in keys {
             if let Some(s) = self.hm.get(key) {
                 return match s.parse() {
@@ -50,7 +51,7 @@ impl ConfigHashMap {
         Err(ConfigError::MissingField(keys[0]))
     }
     fn get_opt<T>(&self, keys: &[&str]) -> Result<Option<T>,ConfigError> 
-        where T: std::str::FromStr {
+        where T: FromStr {
         for key in keys {
             if let Some(s) = self.hm.get(key) {
                 return match s.parse() {
@@ -65,17 +66,17 @@ impl ConfigHashMap {
 }
 
 impl Config {
-    pub fn new -> Self {
+    pub fn new() -> Self {
         Config::default()
     }
-    pub fn load_file(context: &mut Context, filename: String ) -> Result<_,ConfigError> {
+    pub fn load_file(&mut self, filename: String ) -> Result<(),ConfigError> {
 
         if self.loaded_files.contains(filename) {
-            return Err(ConfigLoadError::FileAlreadyLoaded);
+            return Err(ConfigError::FileAlreadyLoaded);
         }
 
         let f = File::open(filename)?;
-        let mut buf_reader = BufReader::new(file);
+        let mut buf_reader = BufReader::new(f);
 
         let mut section = ConfigHashMap::new();
         let mut sections = Vec::new();
@@ -93,9 +94,9 @@ impl Config {
                 continue;
             }
 
-            if re_section.is_match(part) {
-                if section.0.len(){
-                    self.process_section( mem::replace(section,ConfigHashMap::new())?;
+            if re_section.is_match(line) {
+                if section.0.len() {
+                    self.process_section( mem::replace(section,ConfigHashMap::new())? );
                 }
                 continue;
             }
@@ -104,17 +105,17 @@ impl Config {
                 if let Some(caps) = re_kv.captures(part){
                     let key = caps.get(0).unwrap();
                     let val = caps.get(1).unwrap();
-                    fields.0.insert(key,val);
+                    section.0.insert(key,val);
                 }
             }
-            if 
         }
 
         if section.0.len(){
             self.process_section( section )?;
         }
 
-        Ok()
+        self.loaded_files.push(filename);
+        Ok(())
     }
 
     fn process_section(&mut self, mut section: ConfigHashMap) -> Result<(),ConfigError>{
@@ -123,19 +124,20 @@ impl Config {
 
         let instance = Instance {
             adapter:       adpt,
-            handle:        section.get(["handle","name"])?,
-            tag:           section.get_opt(["tag"])?,
-            class          section.get_opt(["class"]).or("master".to_string()),
-            instance_id:   section.get_opt(["instance_id"])?,
-            schema_id:     section.get_opt(["schema_id"])?,
-            allowquery:    section.get_opt(["allowquery"])?,
-            readonly:      section.get_opt(["readonly"])?,
+            handle:        section.get(&["handle","name"])?,
+            tag:           section.get_opt(&["tag"])?,
+            class:         section.get_opt(&["class"]).or("master".to_string()),
+            instance_id:   section.get_opt(&["instance_id"])?,
+            schema_id:     section.get_opt(&["schema_id"])?,
+            allowquery:    section.get_opt(&["allowquery"])?,
+            readonly:      section.get_opt(&["readonly"])?,
         };
          
         self.instances.push(instance.clone());
-        self.loaded_files.push(filename);
 
-        if let Some(true) = section.get_opt(["dbr_bootstrap"])? {
+        
+        let dbr_bootstrap: Option<PerlyBool> = section.get_opt(&["dbr_bootstrap"])?;
+        if let Some(PerlyBool(true)) = dbr_bootstrap {
             self.load_dbconf(&instance)?;
         }
 
@@ -166,6 +168,7 @@ impl Config {
     //     return 1;
     // }
 
+    }
 }
 
 // sub load_from_db{
@@ -202,3 +205,13 @@ impl Config {
 
 //       return \@instances;
 // }
+
+#[cfg(test)]
+mod tests {
+    use config::Config;
+    #[test]
+    fn load_dbconf() {
+        let mut config = Config::new();
+        config.load_file("t/resource/dbr_conf_mysql_fake.conf");
+    }
+}

@@ -1,38 +1,37 @@
-use crate::error::ConfigError;
+use error::ConfigError;
+use adapter::Adapter;
 
 enum SQLiteConnMethod{
     File{
         filename: String
     },
 }
-impl PgConnMethod {
+impl SQLiteMethod {
     fn new (section: &ConfigHashMap) -> Result<Self,ConfigError> {
         
-        let mut filename   : String = section.get(["dbfile"])?;
+        let mut filename   : String = section.get(&["dbfile"])?;
 
-        SQLiteConnMethod::File{hostname, database};
+        Ok(SQLiteConnMethod::File{filename});
         
-    },
-
+    }
 }
 
-pub struct PostgreSQL {
-    method      MysqlConnMethod,
-    database    String,
-    user        String,
-    password    String
+pub struct SQLite {
+    method:      SQLiteConnMethod,
 }
 
 impl SQLite {
-    pub fn new () -> Result<PostgreSQL,ConfigError>{
+    pub fn new () -> Result<SQLite,ConfigError>{
         Sqlite {
-		    method:        SQLiteConnMethod::new(&section)?
+		    method: SQLiteConnMethod::new(&section)?
         }
     }
 }
 
 impl Adapter for SQLite {
-    fn connect {}
+    fn close_all_filehandles(&mut self){
+        unimplemented!()
+    }
 
     //     sub getSequenceValue{
     //       my $self = shift;

@@ -16,6 +16,8 @@ rust_use_perl_xs { git => "https://github.com/dnorman/perl-xs"  };
 rust_requires "perl-sys" => { git=>"https://github.com/vickenty/perl-sys" };
 rust_requires "perlxs_derive" => { git => "https://github.com/dnorman/perl-xs"  };
 
+rust_requires "regex" => "0.2";
+
 rust_write;
 
 WriteAll;

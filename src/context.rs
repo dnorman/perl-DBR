@@ -1,6 +1,4 @@
-use crate::Session;
-use crate::Context;
-use crate::config::Config;
+use config::Config;
 
 #[derive(FromPerlKV,Debug)]
 pub struct ContextOptions {
@@ -9,7 +7,7 @@ pub struct ContextOptions {
     app:            Option<String>,
 
     #[perlxs(key = "-conf")]
-    conf:           String,
+    conf:           Option<String>,
 
     logpath:        Option<String>,
 
@@ -26,20 +24,21 @@ pub struct ContextOptions {
 }
 
 pub struct Context {
-    opts:   Options,
+    opts:   ContextOptions,
     config: Config,
 }
 
 impl Context {
-    pub fn new (opts: DBROptions) -> Self {
+    pub fn new (opts: ContextOptions) -> Self {
         let config = Config::new(&opts);
         let mut context = Self{
             opts,
             config
         };
 
-        self.config.load_file( &mut context, &opts );
-
+        if let Some(ref conf_file) = opts.conf {
+            context.config.load_file( &conf_file );
+        }
         context
     }
     pub fn close_all_filehandles (&mut self) {
@@ -63,5 +62,3 @@ impl Context {
 	// 		   dbr  => $self,
 	// 		   file => $params{-conf}
 	// 		  ) or return $self->_error("Failed to load DBR conf file");
-
-}

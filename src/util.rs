@@ -1,5 +1,6 @@
 use std::ops::Deref;
 use core::str::ParseBoolError;
+use std::str::FromStr;
 
 // Silly newtype necessary for perl truthiness parsing
 #[derive(Debug)]
@@ -17,8 +18,6 @@ impl FromStr for PerlyBool {
     type Err = ParseBoolError;
     fn from_str(s: &str) -> Result<Self, ParseBoolError> {
         match s {
-        
-            => Ok(false),
             "" | "0" => Ok(PerlyBool(false)),
             _  => Ok(PerlyBool(true)),
         }

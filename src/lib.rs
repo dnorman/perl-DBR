@@ -5,11 +5,16 @@ extern crate perl_sys;
 #[macro_use]
 extern crate perlxs_derive;
 
+extern crate regex;
+extern crate core;
+
 mod context;
 mod config;
 mod error;
+mod util;
+mod adapter;
+
 use context::Context;
-use util::*;
 
 mod wrapper;
 

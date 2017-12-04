@@ -2,7 +2,7 @@ use std::io;
 
 pub enum ConfigError{
     FileAlreadyLoaded,
-    FileIo(std::io::Error),
+    FileIo(io::Error),
     MissingField(&'static [&'static str]),
     UnsupportedAdapter(String),
 }
