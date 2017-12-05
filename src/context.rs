@@ -1,5 +1,5 @@
-use config::Config;
 
+use config::Config;
 #[derive(FromPerlKV,Debug)]
 pub struct ContextOptions {
     use_exceptions: bool,
@@ -30,21 +30,19 @@ pub struct Context {
 
 impl Context {
     pub fn new (opts: ContextOptions) -> Self {
-        let config = Config::new(&opts);
+        let config = Config::new();
         let mut context = Self{
             opts,
             config
         };
 
         if let Some(ref conf_file) = opts.conf {
-            context.config.load_file( &conf_file );
+            context.config.load_file( conf_file );
         }
         context
     }
     pub fn close_all_filehandles (&mut self) {
-        for instance in self.instances.iter() {
-            instance.adapter.close_all_filehandles()
-        }
+        self.config.close_all_filehandles();
     }
 }
     //   return $self->_error("Failed to create DBR::Util::Session object") unless

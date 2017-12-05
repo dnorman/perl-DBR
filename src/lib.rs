@@ -1,3 +1,4 @@
+
 #[macro_use]
 extern crate perl_xs;
 #[macro_use]
@@ -14,7 +15,7 @@ mod error;
 mod util;
 mod adapter;
 
-use context::Context;
+//use context::Context;
 
 mod wrapper;
 

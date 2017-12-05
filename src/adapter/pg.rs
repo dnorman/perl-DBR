@@ -1,3 +1,5 @@
+
+use util::ConfigHashMap;
 use error::ConfigError;
 use adapter::Adapter;
 
@@ -9,12 +11,13 @@ enum PgConnMethod{
 }
 impl PgConnMethod {
     fn new (section: &ConfigHashMap) -> Result<Self,ConfigError> {
-        Ok(MysqlConnMethod::HostName{
+        Ok(PgConnMethod::HostName{
             hostname: section.get(&["hostname","host"])?,
             database: section.get(&["database","dbname"])?,
         })
     }
     fn connectstring(&self) -> String {
+        use self::PgConnMethod::*;
         match self {
             &HostName{ref hostname,ref database}   => format!("dbi:Pg:dbname={};host={}", database, hostname )
         }
@@ -22,14 +25,14 @@ impl PgConnMethod {
 }
 
 pub struct PostgreSQL {
-    method:      MysqlConnMethod,
+    method:      PgConnMethod,
     database:    String,
     user:        String,
     password:    String,
 }
 
 impl PostgreSQL {
-    pub fn new () -> Result<PostgreSQL,ConfigError>{
+    pub fn new (section: &ConfigHashMap) -> Result<PostgreSQL,ConfigError>{
         PostgreSQL {
 		    method:        PgConnMethod::new(&section)?,
             database:      section.get(&["database","dbname"])?,

@@ -9,7 +9,7 @@ pub trait Adapter {
     fn close_all_filehandles(&mut self);
 }
 
-pub fn get_adapter ( section: ConfigHashMap ) -> Result<Box<Adapter>,ConfigError> {
+pub fn get_adapter ( section: &ConfigHashMap ) -> Result<Box<Adapter>,ConfigError> {
 
     let name = section.get(["module","adapter","type"])?;
 

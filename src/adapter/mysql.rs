@@ -1,3 +1,6 @@
+use regex::Regex;
+
+use util::ConfigHashMap;
 use error::ConfigError;
 use adapter::Adapter;
 
@@ -5,6 +8,7 @@ enum MysqlConnMethod{
     HostName(String),
     SocketFile(String)
 }
+
 impl MysqlConnMethod {
     fn new (section: &ConfigHashMap) -> Result<Self,ConfigError> {
 
@@ -22,7 +26,7 @@ impl MysqlConnMethod {
                 }
             },
             (None,Some(s)) => {
-                Ok(MysqlConnMethod::SocketFile(h.clone()))
+                Ok(MysqlConnMethod::SocketFile(s.clone()))
             },
             _ => {
                 Err(ConfigError::MissingField(["hostname","dbfile"]))
@@ -30,9 +34,11 @@ impl MysqlConnMethod {
         }
     }
     fn connectstring(&self) -> String {
+
+        use self::MysqlConnMethod::*;
         match self {
             &HostName(ref h)   => format!("dbi:mysql:host={};mysql_enable_utf8=1", h ),
-            &SocketFile(ref s) => format!("dbi:mysql:mysql_socket={};mysql_enable_utf8=1", h )
+            &SocketFile(ref s) => format!("dbi:mysql:mysql_socket={};mysql_enable_utf8=1", s ),
         }
     }
 }
@@ -45,9 +51,9 @@ pub struct Mysql {
 }
 
 impl Mysql {
-    pub fn new () -> Result<Mysql,ConfigError>{
+    pub fn new (&section: ConfigHashMap) -> Result<Mysql,ConfigError>{
         Mysql {
-		    method:        MysqlConnMethod::new(&section)?,
+		    method:        MysqlConnMethod::new(section)?,
             database:      section.get(&["database","dbname"])?,
 		    user:          section.get(&["username","user"])?,
 		    password:      section.get(&["password"])?,

@@ -1,3 +1,5 @@
+
+use util::ConfigHashMap;
 use error::ConfigError;
 use adapter::Adapter;
 
@@ -6,7 +8,7 @@ enum SQLiteConnMethod{
         filename: String
     },
 }
-impl SQLiteMethod {
+impl SQLiteConnMethod {
     fn new (section: &ConfigHashMap) -> Result<Self,ConfigError> {
         
         let mut filename   : String = section.get(&["dbfile"])?;
@@ -21,8 +23,8 @@ pub struct SQLite {
 }
 
 impl SQLite {
-    pub fn new () -> Result<SQLite,ConfigError>{
-        Sqlite {
+    pub fn new (section: &ConfigHashMap) -> Result<SQLite,ConfigError>{
+        SQLite {
 		    method: SQLiteConnMethod::new(&section)?
         }
     }

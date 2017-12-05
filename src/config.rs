@@ -1,16 +1,15 @@
-use std::io::{self, BufReader};
+use std::io::BufReader;
 use std::io::prelude::*;
 use std::fs::File;
 use regex::Regex;
-use std::collections::HashMap;
 use std::mem;
-use std::str::FromStr;
 
 use util::PerlyBool;
-use session::Session;
 use adapter::{self,Adapter};
 use error::ConfigError;
+use util::ConfigHashMap;
 
+#[derive(Default)]
 pub struct Config {
     instances: Vec<Instance>,
     loaded_files: Vec<String>
@@ -31,45 +30,11 @@ pub struct Instance {
     readonly:      PerlyBool,
 }
 
-pub (crate) struct ConfigHashMap(pub HashMap<String,String>);
-
-impl ConfigHashMap {
-    fn new () -> Self {
-        ConfigHashMap(HashMap::new())
-    }
-    fn get<T>(&self, keys: &[&str]) -> Result<T,ConfigError> 
-        where T: FromStr {
-        for key in keys {
-            if let Some(s) = self.hm.get(key) {
-                return match s.parse() {
-                    Ok(v)  => Ok(Some(v)),
-                    Err(_e) => Err(ConfigError::ParseField(key.to_string()))
-                }
-            }
-        }
-
-        Err(ConfigError::MissingField(keys[0]))
-    }
-    fn get_opt<T>(&self, keys: &[&str]) -> Result<Option<T>,ConfigError> 
-        where T: FromStr {
-        for key in keys {
-            if let Some(s) = self.hm.get(key) {
-                return match s.parse() {
-                    Ok(v)  => Ok(Some(v)),
-                    Err(_e) => Err(ConfigError::ParseField(key.to_string()))
-                }
-            }
-        }
-
-        Ok(None)
-    }
-}
-
 impl Config {
     pub fn new() -> Self {
         Config::default()
     }
-    pub fn load_file(&mut self, filename: String ) -> Result<(),ConfigError> {
+    pub fn load_file(&mut self, filename: &String ) -> Result<(),ConfigError> {
 
         if self.loaded_files.contains(filename) {
             return Err(ConfigError::FileAlreadyLoaded);
@@ -88,7 +53,7 @@ impl Config {
         let re_kv      = Regex::new(r"^(.+?)\s*=\s*(.+)$").unwrap();
 
         for line in buf_reader.lines() {
-            let line = re_strip.replace_all(line?, "");
+            let line = re_strip.replace_all(&line?, "");
 
             if line.len() == 0 {
                 continue;
@@ -168,6 +133,11 @@ impl Config {
     //     return 1;
     // }
 
+    }
+    pub fn close_all_filehandles (&mut self) {
+        for instance in self.instances.iter() {
+            instance.adapter.close_all_filehandles()
+        }
     }
 }
 
