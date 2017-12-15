@@ -20,6 +20,7 @@ xs! {
     
     sub flush_handles(_ctx, context: DataRef<RefCell<Context>>) {
         context.borrow_mut().close_all_filehandles();
+        println!("Handles flushed");
     }
 
 //     sub setlogger {

@@ -63,7 +63,8 @@ impl Mysql {
 
 impl Adapter for Mysql {
     fn close_all_filehandles(&mut self){
-        unimplemented!()
+
+        //unimplemented!()
     }
     //fn connect() {
         //IMPORTANT: mysql_enable_utf8

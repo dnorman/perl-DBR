@@ -20,10 +20,11 @@ my $dbrconf = "/tmp/some/file.dbrconf";
 
 my $dbr = new DBR(
 	-logger   => $logger,
-	-conf     => $dbrconf,
+	-conf     => "t/resource/dbr_conf_mysql_fake.conf",
 	-admin    => 1,
 	-fudge_tz => 0,
 	use_exceptions => 1
 ) or die 'failed to create dbr object';
 
+$dbr->flush_handles;
 # diag("\$DBR::VERSION=$DBR::VERSION");
