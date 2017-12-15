@@ -1,4 +1,5 @@
 use std::ops::Deref;
+use core;
 use core::str::ParseBoolError;
 use std::str::FromStr;
 use std::collections::HashMap;
@@ -6,7 +7,7 @@ use std::collections::HashMap;
 use error::ConfigError;
 
 // Silly newtype necessary for perl truthiness parsing
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PerlyBool (pub bool);
 
 impl Deref for PerlyBool {
@@ -24,6 +25,12 @@ impl FromStr for PerlyBool {
             "" | "0" => Ok(PerlyBool(false)),
             _  => Ok(PerlyBool(true)),
         }
+    }
+}
+
+impl core::convert::From<bool> for PerlyBool{
+    fn from(v: bool) -> Self {
+        PerlyBool(v)
     }
 }
 

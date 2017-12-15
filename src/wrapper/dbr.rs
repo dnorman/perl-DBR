@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use perl_xs::{ IV, DataRef };
+use adapter::Adapter;
 
 use context::{Context,ContextOptions};
 

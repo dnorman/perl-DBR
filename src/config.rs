@@ -3,6 +3,7 @@ use std::io::prelude::*;
 use std::fs::File;
 use regex::Regex;
 use std::mem;
+use std::sync::Arc;
 
 use util::PerlyBool;
 use adapter::{self,Adapter};
@@ -16,11 +17,12 @@ pub struct Config {
 }
 
 pub struct Schema {
-    
 }
 
+#[derive(Clone)]
 pub struct Instance {
-    adapter:       Box<Adapter>,
+    // TODO: Adapter should probably not be an Arc
+    adapter:       Box<Arc<Adapter>>,
     handle:        String,
     tag:           Option<String>,
     class:         String,
@@ -44,7 +46,6 @@ impl Config {
         let mut buf_reader = BufReader::new(f);
 
         let mut section = ConfigHashMap::new();
-        let mut sections = Vec::new();
 
         // Strip comments, leading and traling whitespace
         let re_strip   = Regex::new(r"(\#.*$|^\s*|\s*$)").unwrap();
@@ -59,43 +60,43 @@ impl Config {
                 continue;
             }
 
-            if re_section.is_match(line) {
-                if section.0.len() {
-                    self.process_section( mem::replace(section,ConfigHashMap::new())? );
+            if re_section.is_match(&line) {
+                if section.0.len() > 0 {
+                    self.process_section( mem::replace(&mut section,ConfigHashMap::new()) );
                 }
                 continue;
             }
 
-            for part in line.split(&re_fdelim){
+            for part in re_fdelim.split(&line){
                 if let Some(caps) = re_kv.captures(part){
                     let key = caps.get(0).unwrap();
                     let val = caps.get(1).unwrap();
-                    section.0.insert(key,val);
+                    section.0.insert(key.as_str().to_string(), val.as_str().to_string());
                 }
             }
         }
 
-        if section.0.len(){
+        if section.0.len() > 0 {
             self.process_section( section )?;
         }
 
-        self.loaded_files.push(filename);
+        self.loaded_files.push( filename.clone() );
         Ok(())
     }
 
     fn process_section(&mut self, mut section: ConfigHashMap) -> Result<(),ConfigError>{
 
-        let adpt = adapter::get_adapter( section )?;
+        let adpt = adapter::get_adapter( &section )?;
 
         let instance = Instance {
-            adapter:       adpt,
-            handle:        section.get(&["handle","name"])?,
+            adapter:       Box::new(Arc::new(adpt)),
+            handle:        Arc::new(section.get(&["handle","name"])?),
             tag:           section.get_opt(&["tag"])?,
-            class:         section.get_opt(&["class"]).or("master".to_string()),
+            class:         section.get_opt(&["class"])?.unwrap_or("master".to_string()),
             instance_id:   section.get_opt(&["instance_id"])?,
             schema_id:     section.get_opt(&["schema_id"])?,
-            allowquery:    section.get_opt(&["allowquery"])?,
-            readonly:      section.get_opt(&["readonly"])?,
+            allowquery:    section.get_opt(&["allowquery"])?.unwrap_or(PerlyBool(true)),
+            readonly:      section.get_opt(&["readonly"])?.unwrap_or(PerlyBool(false)),
         };
          
         self.instances.push(instance.clone());
@@ -110,8 +111,8 @@ impl Config {
 
     }
 
-    fn load_dbconf (&mut self, seed_instance: Instance) -> Result<(),ConfigError> {
-
+    fn load_dbconf (&mut self, seed_instance: &Instance) -> Result<(),ConfigError> {
+        unimplemented!()
     //     my $instances = DBR::Config::Instance->load_from_db(
     //                                 session   => $self->{session},
     //                                 dbr      => $dbr,
