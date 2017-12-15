@@ -14,12 +14,12 @@ impl MysqlConnMethod {
 
         let re_mysqluds  = Regex::new(r"^/").unwrap();
         
-        let mut hostname   : Option<String> = section.get_opt(&["hostname","host"])?;
-        let mut socketfile : Option<String> = section.get_opt(&["dbfile","socket"])?;
+        let hostname   : Option<String> = section.get_opt(&["hostname","host"])?;
+        let socketfile : Option<String> = section.get_opt(&["dbfile","socket"])?;
 
         match (hostname,socketfile){
             (Some(h),_) => {
-                if re_mysqluds.is_match(h) {
+                if re_mysqluds.is_match(&h) {
                     Ok(MysqlConnMethod::SocketFile(h.clone()))
                 }else{
                     Ok(MysqlConnMethod::HostName(h.clone()))
@@ -29,7 +29,7 @@ impl MysqlConnMethod {
                 Ok(MysqlConnMethod::SocketFile(s.clone()))
             },
             _ => {
-                Err(ConfigError::MissingField(["hostname","dbfile"]))
+                Err(ConfigError::MissingField(&["hostname","dbfile"]))
             }
         }
     }
@@ -51,13 +51,13 @@ pub struct Mysql {
 }
 
 impl Mysql {
-    pub fn new (&section: ConfigHashMap) -> Result<Mysql,ConfigError>{
-        Mysql {
+    pub (crate) fn new (section: &ConfigHashMap) -> Result<Mysql,ConfigError>{
+        Ok(Mysql {
 		    method:        MysqlConnMethod::new(section)?,
             database:      section.get(&["database","dbname"])?,
 		    user:          section.get(&["username","user"])?,
 		    password:      section.get(&["password"])?,
-        }
+        })
     }
 }
 

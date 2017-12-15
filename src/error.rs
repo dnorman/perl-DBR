@@ -1,9 +1,11 @@
 use std::io;
 
+#[derive(Debug)]
 pub enum ConfigError{
     FileAlreadyLoaded,
     FileIo(io::Error),
     MissingField(&'static [&'static str]),
+    ParseField(&'static str),
     UnsupportedAdapter(String),
 }
 

@@ -32,13 +32,13 @@ pub struct PostgreSQL {
 }
 
 impl PostgreSQL {
-    pub fn new (section: &ConfigHashMap) -> Result<PostgreSQL,ConfigError>{
-        PostgreSQL {
+    pub (crate) fn new (section: &ConfigHashMap) -> Result<PostgreSQL,ConfigError>{
+        Ok(PostgreSQL {
 		    method:        PgConnMethod::new(&section)?,
             database:      section.get(&["database","dbname"])?,
 		    user:          section.get(&["username","user"])?,
 		    password:      section.get(&["password"])?,
-        }
+        })
     }
 }
 

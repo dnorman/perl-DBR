@@ -11,9 +11,9 @@ enum SQLiteConnMethod{
 impl SQLiteConnMethod {
     fn new (section: &ConfigHashMap) -> Result<Self,ConfigError> {
         
-        let mut filename   : String = section.get(&["dbfile"])?;
+        let filename   : String = section.get(&["dbfile"])?;
 
-        Ok(SQLiteConnMethod::File{filename});
+        Ok(SQLiteConnMethod::File{filename})
         
     }
 }
@@ -23,10 +23,10 @@ pub struct SQLite {
 }
 
 impl SQLite {
-    pub fn new (section: &ConfigHashMap) -> Result<SQLite,ConfigError>{
-        SQLite {
+    pub (crate) fn new (section: &ConfigHashMap) -> Result<SQLite,ConfigError>{
+        Ok(SQLite {
 		    method: SQLiteConnMethod::new(&section)?
-        }
+        })
     }
 }
 

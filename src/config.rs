@@ -3,7 +3,7 @@ use std::io::prelude::*;
 use std::fs::File;
 use regex::Regex;
 use std::mem;
-use std::sync::Arc;
+use std::sync::{Arc,Mutex};
 
 use util::PerlyBool;
 use adapter::{self,Adapter};
@@ -22,7 +22,7 @@ pub struct Schema {
 #[derive(Clone)]
 pub struct Instance {
     // TODO: Adapter should probably not be an Arc
-    adapter:       Box<Arc<Adapter>>,
+    adapter:       Arc<Mutex<Adapter>>,
     handle:        String,
     tag:           Option<String>,
     class:         String,
@@ -36,32 +36,34 @@ impl Config {
     pub fn new() -> Self {
         Config::default()
     }
-    pub fn load_file(&mut self, filename: &String ) -> Result<(),ConfigError> {
+    pub fn load_file(&mut self, filename: &str ) -> Result<(),ConfigError> {
 
-        if self.loaded_files.contains(filename) {
+        if self.loaded_files.contains(&filename.to_string()) {
             return Err(ConfigError::FileAlreadyLoaded);
         }
 
         let f = File::open(filename)?;
-        let mut buf_reader = BufReader::new(f);
+        let buf_reader = BufReader::new(f);
 
         let mut section = ConfigHashMap::new();
 
         // Strip comments, leading and traling whitespace
         let re_strip   = Regex::new(r"(\#.*$|^\s*|\s*$)").unwrap();
-        let re_fdelim  = Regex::new(r"/\s*\;\s*/").unwrap();
+        let re_fdelim  = Regex::new(r"\s*;\s*").unwrap();
         let re_section = Regex::new(r"^---").unwrap();
         let re_kv      = Regex::new(r"^(.+?)\s*=\s*(.+)$").unwrap();
 
         for line in buf_reader.lines() {
-            let line = re_strip.replace_all(&line?, "");
+            let line = line?;
+
+            let line = re_strip.replace_all(&line, "");
 
             if line.len() == 0 {
                 continue;
             }
 
             if re_section.is_match(&line) {
-                if section.0.len() > 0 {
+                if section.len() > 0 {
                     self.process_section( mem::replace(&mut section,ConfigHashMap::new()) );
                 }
                 continue;
@@ -69,28 +71,29 @@ impl Config {
 
             for part in re_fdelim.split(&line){
                 if let Some(caps) = re_kv.captures(part){
-                    let key = caps.get(0).unwrap();
-                    let val = caps.get(1).unwrap();
-                    section.0.insert(key.as_str().to_string(), val.as_str().to_string());
+                    let key = caps.get(1).unwrap();
+                    let val = caps.get(2).unwrap();
+
+                    section.insert(key.as_str().to_string(), val.as_str().to_string());
                 }
             }
         }
 
-        if section.0.len() > 0 {
+        if section.len() > 0 {
             self.process_section( section )?;
         }
 
-        self.loaded_files.push( filename.clone() );
+        self.loaded_files.push( filename.to_string() );
         Ok(())
     }
 
-    fn process_section(&mut self, mut section: ConfigHashMap) -> Result<(),ConfigError>{
+    fn process_section(&mut self, section: ConfigHashMap) -> Result<(),ConfigError>{
 
         let adpt = adapter::get_adapter( &section )?;
 
         let instance = Instance {
-            adapter:       Box::new(Arc::new(adpt)),
-            handle:        Arc::new(section.get(&["handle","name"])?),
+            adapter:       adpt,
+            handle:        section.get(&["handle","name"])?,
             tag:           section.get_opt(&["tag"])?,
             class:         section.get_opt(&["class"])?.unwrap_or("master".to_string()),
             instance_id:   section.get_opt(&["instance_id"])?,
@@ -107,11 +110,12 @@ impl Config {
             self.load_dbconf(&instance)?;
         }
 
-        Ok()
+        Ok(())
 
     }
 
-    fn load_dbconf (&mut self, seed_instance: &Instance) -> Result<(),ConfigError> {
+    fn load_dbconf (&mut self, _seed_instance: &Instance) -> Result<(),ConfigError> {
+
         unimplemented!()
     //     my $instances = DBR::Config::Instance->load_from_db(
     //                                 session   => $self->{session},
@@ -136,8 +140,8 @@ impl Config {
 
     }
     pub fn close_all_filehandles (&mut self) {
-        for instance in self.instances.iter() {
-            instance.adapter.close_all_filehandles()
+        for instance in self.instances.iter_mut() {
+            instance.adapter.lock().unwrap().close_all_filehandles()
         }
     }
 }
@@ -183,6 +187,6 @@ mod tests {
     #[test]
     fn load_dbconf() {
         let mut config = Config::new();
-        config.load_file("t/resource/dbr_conf_mysql_fake.conf");
+        config.load_file("t/resource/dbr_conf_mysql_fake.conf").unwrap();
     }
 }

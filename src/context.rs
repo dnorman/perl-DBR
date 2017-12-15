@@ -36,7 +36,7 @@ impl Context {
             config
         };
 
-        if let Some(ref conf_file) = opts.conf {
+        if let Some(ref conf_file) = context.opts.conf {
             context.config.load_file( conf_file );
         }
         context

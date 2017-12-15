@@ -1,25 +1,25 @@
 use std::cell::RefCell;
-use perl_xs::{ IV, DataRef };
-use adapter::Adapter;
+use perl_xs::{ DataRef };
 
 use context::{Context,ContextOptions};
+use perl_xs::FromPerlKV;
 
 xs! {
     package DBR;
 
     sub new(ctx, class: String) {
         println!("new {:?}", class);
-        let opts = ContextOptions::from_perl_kv(&mut ctx, 1);
+        let opts = ContextOptions::from_perl_kv(&mut ctx, 1).unwrap_or_else(|e| croak!(format!("{}",e)) );
         println!("Context Options {:?}", opts );
 
-        let context = Context::new(opts);
+        let mut context = Context::new(opts);
 
         context.close_all_filehandles(); // Make it safer for forking
         ctx.new_sv_with_data(RefCell::new(context)).bless(&class)
     }
     
-    sub flush_handles(_ctx, this: DataRef<RefCell<IV>>) {
-        this.borrow_mut().close_all_filehandles();
+    sub flush_handles(_ctx, context: DataRef<RefCell<Context>>) {
+        context.borrow_mut().close_all_filehandles();
     }
 
 //     sub setlogger {
