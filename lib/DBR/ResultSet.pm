@@ -301,6 +301,18 @@ sub offset {
     return $self;
 }
 
+# Pretty evil, because DBR doesnt currently track index names, so we just have to treat this as a string
+sub force_index {
+    my $self = shift;
+    @_ or croak "index name is required";
+    my $index_name = shift;
+
+    $self->[f_query]->force_index($index_name);
+    return $self;
+}
+
+
+
 sub order_by {
     my $self = shift;
     @_ or croak "order field is required";

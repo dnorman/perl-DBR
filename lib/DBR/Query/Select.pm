@@ -44,6 +44,7 @@ sub sql{
       my $fields = join(',', map { $_->sql( $conn ) } @{$self->{fields}} );
 
       $sql = "SELECT $fields FROM $tables";
+      $sql .= ' FORCE INDEX (' . $conn->quote_identifier($self->{force_index}) . ') ' if $self->{force_index};
       $sql .= ' WHERE ' . $self->{where}->sql($conn) if $self->{where};
       if (@{ $self->{orderby} || [] }) {
           $sql .= ' ORDER BY ' . join(', ', map { $_->sql($conn) } @{ $self->{orderby} || [] });

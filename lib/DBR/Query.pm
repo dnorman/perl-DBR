@@ -102,6 +102,15 @@ sub limit{
   return $self;
 }
 
+sub force_index{
+  my $self = shift;
+  exists( $_[0] ) or return $self->{force_index} || undef;
+  $self->{force_index} = length($index_name) ? $index_name : undef;
+
+  return $self;
+}
+
+
 sub offset{
   my $self = shift;
   exists( $_[0] ) or return $self->{offset} || undef;
