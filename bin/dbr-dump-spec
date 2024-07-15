@@ -287,7 +287,8 @@ EOF
 }
 
 sub all_tables {
-      my $inst = $dbr->get_instance( $schemaname ) or die "failed to get instance!\n";
+      my $tag = $schemaname =~ /^(ops|config)$/ ? 'c1' : undef;
+      my $inst = $dbr->get_instance( $schemaname, undef, $tag ) or die "failed to get instance!\n";
       my $schema = $inst->schema or die "failed to get schema from instance!\n";
       my $tables = $schema->tables or die "failed to get tables from schema!\n";
       my @all = map { $_->name } @{$tables};
